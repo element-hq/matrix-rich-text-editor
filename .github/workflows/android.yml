@@ -94,7 +94,7 @@ jobs:
             ./**/build/reports/screenshots/**
 
       - name: Upload unit test coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: build/reports/jacoco/generateUnitTestCoverageReport/generateUnitTestCoverageReport.xml
           fail_ci_if_error: false
@@ -103,7 +103,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload instrumentation test coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: build/reports/jacoco/generateInstrumentationTestCoverageReport/generateInstrumentationTestCoverageReport.xml
           fail_ci_if_error: false
