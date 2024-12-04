@@ -6,7 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
-import { ComposerUpdate } from '../generated/wysiwyg';
+import { ComposerUpdate } from '@vector-im/matrix-wysiwyg-wasm';
+
 import { ACTION_TYPES, SUGGESTIONS } from './constants';
 import { AllowedMentionAttributes, LinkEvent } from './useListeners/types';
 

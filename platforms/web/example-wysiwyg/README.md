@@ -18,7 +18,7 @@ and open the URL that is printed on the console.
     npm create vite@latest example-wysiwyg -- --template react-ts
     cd example-wysiwyg
     npm install
-    npm add '@vector-im/matrix-wysiwyg'
+    npm add '@vector-im/matrix-wysiwyg-wasm'
     ```
 * Edit example-wysiwyg/src/App.tsx to look how it looks in this repo.
 * Edit example-wysiwyg/index.html to set the page title and remove favicon.

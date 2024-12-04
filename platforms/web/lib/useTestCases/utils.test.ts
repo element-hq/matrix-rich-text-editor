@@ -6,7 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
-import init from '../../generated/wysiwyg';
+import init from '@vector-im/matrix-wysiwyg-wasm';
+
 import { Actions } from './types';
 import {
     escapeHtml,

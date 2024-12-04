@@ -7,12 +7,12 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { MouseEvent as ReactMouseEvent } from 'react';
-
 import {
     ComposerModel,
     MenuStateUpdate,
     SuggestionPattern,
-} from '../../generated/wysiwyg';
+} from '@vector-im/matrix-wysiwyg-wasm';
+
 import { processEvent, processInput } from '../composer';
 import {
     getCurrentSelection,

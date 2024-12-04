@@ -7,8 +7,11 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { RefObject, useEffect, useRef, useState } from 'react';
+import {
+    ComposerModel,
+    SuggestionPattern,
+} from '@vector-im/matrix-wysiwyg-wasm';
 
-import { ComposerModel, SuggestionPattern } from '../../generated/wysiwyg';
 import { isClipboardEvent, isInputEvent } from './assert';
 import { handleInput, handleKeyDown, handleSelectionChange } from './event';
 import {

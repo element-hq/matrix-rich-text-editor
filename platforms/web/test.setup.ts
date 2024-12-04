@@ -6,21 +6,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
-// We are using node api here
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import fs from 'node:fs/promises';
-import path from 'path';
+import path from 'node:path';
 
-globalThis.fetch = (url): Promise<Buffer> => {
+globalThis.fetch = async (url): Promise<Response> => {
     // wysiwyg.js binding uses fetch to get the wasm file
     // we return manually here the wasm file
     if (url instanceof URL && url.href.includes('wysiwyg_bg.wasm')) {
-        const wasmPath = path.resolve(__dirname, 'generated/wysiwyg_bg.wasm');
-        return fs.readFile(wasmPath);
+        const wasmPath = path.resolve(
+            __dirname,
+            '..',
+            '..',
+            'bindings',
+            'wysiwyg-wasm',
+            'pkg',
+            'wysiwyg_bg.wasm',
+        );
+        return new Response(await fs.readFile(wasmPath), {
+            headers: { 'Content-Type': 'application/wasm' },
+        });
     } else {
         throw new Error('fetch is not defined');
     }
@@ -28,7 +34,9 @@ globalThis.fetch = (url): Promise<Buffer> => {
 
 // Work around missing ClipboardEvent type
 class MyClipboardEvent {}
-globalThis.ClipboardEvent = MyClipboardEvent as ClipboardEvent;
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+globalThis.ClipboardEvent = MyClipboardEvent as unknown as ClipboardEvent;
 
 afterEach(() => {
     cleanup();
