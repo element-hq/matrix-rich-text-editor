@@ -10,7 +10,8 @@ Please see LICENSE in the repository root for full details.
 import {
     // eslint-disable-next-line camelcase
     new_composer_model,
-} from '../generated/wysiwyg.js';
+} from '@vector-im/matrix-wysiwyg-wasm';
+
 import { initOnce } from './useComposerModel.js';
 
 const NEWLINE_CHAR = '\n';

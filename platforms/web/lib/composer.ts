@@ -10,7 +10,8 @@ import {
     ComposerModel,
     ComposerUpdate,
     SuggestionPattern,
-} from '../generated/wysiwyg';
+} from '@vector-im/matrix-wysiwyg-wasm';
+
 import {
     WysiwygInputEvent,
     InputEventProcessor,

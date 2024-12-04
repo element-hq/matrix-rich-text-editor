@@ -7,7 +7,6 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { RefObject, useCallback, useEffect, useState } from 'react';
-
 // rust generated bindings
 import init, {
     ComposerModel,
@@ -15,7 +14,8 @@ import init, {
     new_composer_model,
     // eslint-disable-next-line camelcase
     new_composer_model_from_html,
-} from '../generated/wysiwyg.js';
+} from '@vector-im/matrix-wysiwyg-wasm';
+
 import { replaceEditor } from './dom';
 
 let initStarted = false;

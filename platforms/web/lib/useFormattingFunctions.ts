@@ -7,6 +7,7 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { RefObject, useMemo } from 'react';
+import { ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { BlockType, FormattingFunctions } from './types';
 import { sendWysiwygInputEvent } from './useListeners';
@@ -16,7 +17,6 @@ import {
     LinkEvent,
     SuggestionEvent,
 } from './useListeners/types';
-import { ComposerModel } from '../generated/wysiwyg';
 
 export function useFormattingFunctions(
     editorRef: RefObject<HTMLElement | null>,

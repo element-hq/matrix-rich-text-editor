@@ -1,9 +1,10 @@
 {
-  "name": "wysiwyg-wasm",
+  "name": "@vector-im/matrix-wysiwyg-wasm",
   "version": "2.37.14",
   "homepage": "https://gitlab.com/andybalaam/wysiwyg-rust",
   "description": "WASM bindings for wysiwyg-rust",
   "license": "AGPL-3.0",
+  "type": "module",
   "collaborators": [
     "Andy Balaam <andy.balaam@matrix.org>"
   ],
@@ -17,13 +18,21 @@
     "messaging",
     "wysiwyg"
   ],
-  "main": "wysiwyg.js",
-  "types": "pkg/wysiwyg.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    "." : {
+      "import": "./index.js",
+      "types": "./index.d.ts"
+    }
+  },
   "files": [
     "pkg/wysiwyg_bg.wasm",
     "pkg/wysiwyg_bg.wasm.d.ts",
     "pkg/wysiwyg.js",
-    "pkg/wysiwyg.d.ts"
+    "pkg/wysiwyg.d.ts",
+    "index.d.ts",
+    "index.js"
   ],
   "devDependencies": {
     "wasm-pack": "^0.13.0",
@@ -34,8 +43,8 @@
     "node": ">= 10"
   },
   "scripts": {
-    "dev-build": "WASM_BINDGEN_WEAKREF=1 wasm-pack build --profiling --target web --out-name wysiwyg --out-dir ./pkg",
-    "build": "RUSTFLAGS='-C opt-level=s' WASM_BINDGEN_WEAKREF=1 wasm-pack build --release --target web --out-name wysiwyg --out-dir ./pkg",
+    "dev-build": "WASM_BINDGEN_WEAKREF=1 wasm-pack build --profiling --target bundler --out-name wysiwyg --out-dir ./pkg",
+    "build": "RUSTFLAGS='-C opt-level=s' WASM_BINDGEN_WEAKREF=1 wasm-pack build --release --target bundler --out-name wysiwyg --out-dir ./pkg",
     "test": "jest --verbose",
     "doc": "typedoc --tsconfig ."
   }

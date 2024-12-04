@@ -12,7 +12,8 @@ import {
     ComposerUpdate,
     // eslint-disable-next-line camelcase
     new_composer_model_from_html,
-} from '../../generated/wysiwyg';
+} from '@vector-im/matrix-wysiwyg-wasm';
+
 import { getCurrentSelection } from '../dom';
 import { TraceAction } from '../types';
 import { isSelectTuple } from './assert';

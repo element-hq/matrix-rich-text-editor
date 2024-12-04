@@ -10,7 +10,8 @@ import init, {
     // eslint-disable-next-line camelcase
     new_composer_model,
     SuggestionPattern,
-} from '../generated/wysiwyg';
+} from '@vector-im/matrix-wysiwyg-wasm';
+
 import { SUGGESTIONS } from './constants';
 import {
     getSuggestionChar,

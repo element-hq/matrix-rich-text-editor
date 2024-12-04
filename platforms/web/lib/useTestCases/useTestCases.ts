@@ -7,8 +7,8 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { ComposerModel } from '../../generated/wysiwyg';
 import { Actions } from './types';
 import {
     getSelectionAccordingToActions,
