@@ -40,6 +40,13 @@ Requirements:
 yarn install
 ```
 
+If your environment supports the experimental [ES Module Integration Proposal for WebAssembly](https://github.com/WebAssembly/esm-integration),
+you can instead use that, by setting the `matrix-org:wasm-esm` custom [export condition](https://nodejs.org/api/packages.html#conditional-exports).
+This is only supported when the library is imported as an ES Module. For example:
+- In Webpack, set [`experiments.asyncWebAssembly`](https://webpack.js.org/configuration/experiments/#experiments)
+  to `true` and [`resolve.conditionNames`](https://webpack.js.org/configuration/resolve/#resolveconditionnames)
+  to `["matrix-org:wasm-esm", "..."]` (the `"..."` preserves default condition names).
+
 ### Dev
 
 #### Folder structure

@@ -6,7 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
-import { SuggestionPattern } from '../generated/wysiwyg';
+import { SuggestionPattern } from '@vector-im/matrix-wysiwyg-wasm';
+
 import { SUGGESTIONS } from './constants';
 import { MappedSuggestion, SuggestionChar, SuggestionType } from './types';
 

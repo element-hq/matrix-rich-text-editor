@@ -9,8 +9,6 @@
         "url": "https://github.com/element-hq/matrix-rich-text-editor"
     },
     "license": "AGPL-3.0",
-    "main": "./dist/matrix-wysiwyg.umd.cjs",
-    "module": "./dist/matrix-wysiwyg.js",
     "exports": {
         ".": {
             "import": "./dist/matrix-wysiwyg.js",
@@ -26,7 +24,7 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "dev": "vite",
-        "build": "vite build && node scripts/hack_myfetch.js",
+        "build": "vite build",
         "build:demo": "vite build -c vite.demo.config.ts",
         "preview": "vite preview",
         "typecheck": "tsc --noEmit",
@@ -37,7 +35,7 @@
         "test:watch": "vitest --pool=forks",
         "test:ui": "vitest --ui",
         "coverage": "vitest run --coverage --pool=forks",
-        "update": "cd ../../bindings/wysiwyg-wasm && npm run build && cp -f ./pkg/*wysiwyg* ../../platforms/web/generated && cd ../../platforms/web && yarn build"
+        "update": "cd ../../bindings/wysiwyg-wasm && yarn build && cd ../../platforms/web && yarn build"
     },
     "peerDependencies": {
         "react": "^18.2.0"
@@ -71,11 +69,16 @@
         "prettier": "2.8.8",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "replace": "^1.2.1",
         "typescript": "^4.7.4",
         "vite": "5.3.3",
         "vite-plugin-dts": "^4.3.0",
         "vitest": "^2.1.8",
         "vitest-sonar-reporter": "^0.5.0"
-    }
+    },
+    "dependencies": {
+        "@vector-im/matrix-wysiwyg-wasm": "link:../../bindings/wysiwyg-wasm"
+    },
+    "bundledDependencies": [
+        "@vector-im/matrix-wysiwyg-wasm"
+    ]
 }

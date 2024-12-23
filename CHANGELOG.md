@@ -7,6 +7,7 @@
 - [Web] Add typescript checking to bindings/wysiwyg-wasm.
 - [Web] Update vite and related packages.
 - [Web] Simplify build scripts.
+- [Web] Publish a dual CJS/ESM package with platform-specific loaders.
 
 # [2.37.14]
 - [Android] Have separate modes for parsing HTML for 'editor mode' and 'message mode' using `isEditor: Boolean` parameter.

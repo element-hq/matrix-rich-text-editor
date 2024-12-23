@@ -1,9 +1,10 @@
 {
-  "name": "wysiwyg-wasm",
+  "name": "@vector-im/matrix-wysiwyg-wasm",
   "version": "2.37.14",
   "homepage": "https://gitlab.com/andybalaam/wysiwyg-rust",
   "description": "WASM bindings for wysiwyg-rust",
   "license": "AGPL-3.0",
+  "type": "module",
   "collaborators": [
     "Andy Balaam <andy.balaam@matrix.org>"
   ],
@@ -17,15 +18,40 @@
     "messaging",
     "wysiwyg"
   ],
-  "main": "wysiwyg.js",
-  "types": "pkg/wysiwyg.d.ts",
+  "exports": {
+    ".": {
+      "matrix-org:wasm-esm": {
+        "types": "./index.d.ts",
+        "default": "./index-wasm-esm.js"
+      },
+      "require": {
+        "types": "./index.d.ts",
+        "node": "./node.cjs",
+        "default": "./index.cjs"
+      },
+      "import": {
+        "types": "./index.d.ts",
+        "node": "./node.js",
+        "default": "./index.js"
+      }
+    }
+  },
   "files": [
+    "pkg/wysiwyg_bg.js",
+    "pkg/wysiwyg_bg.cjs",
     "pkg/wysiwyg_bg.wasm",
     "pkg/wysiwyg_bg.wasm.d.ts",
-    "pkg/wysiwyg.js",
-    "pkg/wysiwyg.d.ts"
+    "pkg/wysiwyg.d.ts",
+    "index.d.ts",
+    "index.js",
+    "index.cjs",
+    "index-wasm-esm.js",
+    "node.js",
+    "node.cjs"
   ],
   "devDependencies": {
+    "@babel/cli": "^7.23.5",
+    "@babel/plugin-transform-modules-commonjs": "^7.25.9",
     "@types/node": "^22.10.2",
     "jest": "^28.1.0",
     "typedoc": "^0.26.0",
@@ -36,9 +62,10 @@
     "node": ">= 10"
   },
   "scripts": {
-    "dev-build": "WASM_BINDGEN_WEAKREF=1 wasm-pack build --profiling --target web --out-name wysiwyg --out-dir ./pkg",
-    "build": "yarn build:cjs && yarn lint",
-    "build:cjs": "RUSTFLAGS='-C opt-level=s' WASM_BINDGEN_WEAKREF=1 wasm-pack build --release --target web --out-name wysiwyg --out-dir ./pkg",
+    "dev-build": "WASM_BINDGEN_WEAKREF=1 wasm-pack build --profiling --target bundler --out-name wysiwyg --out-dir ./pkg",
+    "build": "yarn build:esm && yarn build:cjs && yarn lint",
+    "build:esm": "RUSTFLAGS='-C opt-level=s' WASM_BINDGEN_WEAKREF=1 wasm-pack build --release --target bundler --out-name wysiwyg --out-dir ./pkg",
+    "build:cjs": "babel pkg/wysiwyg_bg.js --out-dir pkg --out-file-extension .cjs --plugins @babel/plugin-transform-modules-commonjs",
     "lint": "tsc --noEmit",
     "test": "jest --verbose",
     "doc": "typedoc --tsconfig ."

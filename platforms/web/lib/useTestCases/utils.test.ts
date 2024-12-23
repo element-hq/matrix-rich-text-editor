@@ -6,7 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
-import init from '../../generated/wysiwyg';
+import { initAsync } from '@vector-im/matrix-wysiwyg-wasm';
+
 import { Actions } from './types';
 import {
     escapeHtml,
@@ -14,9 +15,7 @@ import {
     getSelectionAccordingToActions,
 } from './utils';
 
-beforeAll(async () => {
-    await init();
-});
+beforeAll(initAsync);
 
 describe('getSelectionAccordingToActions', () => {
     it('Should return -1, -1 for selection when there are no actions', () => {

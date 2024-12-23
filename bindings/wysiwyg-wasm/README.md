@@ -11,9 +11,9 @@ WASM/JavaScript bindings for wysiwyg-rust.
 
 ```sh
 cd bindings/wysiwyg-wasm
-npm install
-npm run build
-#npm run test (no tests yet)
+yarn
+yarn build
+#yarn test (no tests yet)
 ```
 
 This will generate:
@@ -26,15 +26,24 @@ pkg/matrix_sdk_wysiwyg.js
 ... plus other files
 ```
 
-These files should be copied into a web project and imported with code like:
+You can then consume these files in your project by linking the package in your package.json:
+
+```json
+{
+  "dependencies": {
+    "@matrix-org/matrix-sdk-wysiwyg-wasm": "link:../../bindings/wysiwyg-wasm"
+  }
+}
+```
+
+And consume with code like this:
 
 ```html
 <script type="module">
-import init, { some_method_from_rust }
-    from './generated/matrix_sdk_wysiwyg.js';
+import { initAsync, some_method_from_rust } from '@matrix-org/matrix-sdk-wysiwyg-wasm';
 
 async function run() {
-    await init();
+    await initAsync();
     some_method_from_rust();
 }
 
@@ -45,8 +54,8 @@ run();
 ## Profiling
 
 To generate a debugging/profiling Wasm module, use the following command
-instead of `npm run build`:
+instead of `yarn build`:
 
 ```sh
-$ npm run dev-build
+$ yarn dev-build
 ```
