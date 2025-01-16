@@ -108,3 +108,41 @@ tasks.withType(Test) {
     jacoco.includeNoLocationClasses = true
     jacoco.excludes = ['jdk.internal.*']
 }
+
+mavenPublishing {
+    coordinates(property("MAVEN_GROUP"), property("POM_ARTIFACT_ID"), property("MAVEN_VERSION_NAME"))
+    if (!providers.gradleProperty("mavenCentralUsername")) {
+        println("No maven central provider")
+    }
+    pom {
+        name = "Matrix Rich Text Editor - Compose"
+        description.set("Cross-platform rich text editor that generates HTML output.")
+        inceptionYear.set("2022")
+        url.set("https://github.com/element-hq/matrix-rich-text-editor")
+        licenses {
+            license {
+                name.set("GNU Affero General Public License (AGPL) version 3.0")
+                url.set("https://www.gnu.org/licenses/agpl-3.0.txt")
+                distribution.set("https://www.gnu.org/licenses/agpl-3.0.txt")
+            }
+            license {
+                name.set("Element Commercial License")
+                url.set("https://raw.githubusercontent.com/element-hq/matrix-rich-text-editor/refs/heads/main/LICENSE-COMMERCIAL")
+                distribution.set("https://raw.githubusercontent.com/element-hq/matrix-rich-text-editor/refs/heads/main/LICENSE-COMMERCIAL")
+            }
+        }
+        developers {
+            developer {
+                id.set("matrixdev")
+                name.set("matrixdev")
+                url.set("https://github.com/element-hq/")
+                email.set("android@element.io")
+            }
+        }
+        scm {
+            url.set("https://github.com/element-hq/matrix-rich-text-editor/")
+            connection.set("scm:git:git://github.com/element-hq/matrix-rich-text-editor.git")
+            developerConnection.set("scm:git:ssh://git@github.com/element-hq/matrix-rich-text-editor.git")
+        }
+    }
+}

@@ -20,7 +20,7 @@ SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 VERSION=$1
 CARGO_REGEX="s/^version\s*=\s*\".*\"/version = \"$VERSION\"/g"
 PACKAGE_JSON_REGEX="s/\"version\":\s*\".*\"/\"version\": \"$VERSION\"/g"
-GRADLE_PROPERTIES_REGEX="s/^VERSION_NAME=.*$/VERSION_NAME=$VERSION/g"
+GRADLE_PROPERTIES_REGEX="s/^MAVEN_VERSION_NAME=.*$/MAVEN_VERSION_NAME=$VERSION/g"
 
 echo "Updating Rust"
 $SED_CMD "$CARGO_REGEX" $SCRIPT_PATH/bindings/wysiwyg-ffi/Cargo.toml
