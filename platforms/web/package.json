@@ -8,7 +8,7 @@
         "type": "git",
         "url": "https://github.com/element-hq/matrix-rich-text-editor"
     },
-    "license": "AGPL-3.0",
+    "license": "See license in README.md file in the root of this repository",
     "exports": {
         ".": {
             "import": "./dist/matrix-wysiwyg.js",

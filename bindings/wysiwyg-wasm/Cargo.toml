@@ -5,7 +5,7 @@ homepage = "https://gitlab.com/andybalaam/wysiwyg-rust"
 repository = "https://gitlab.com/andybalaam/wysiwyg-rust"
 description = "WASM bindings for wysiwyg-rust"
 keywords = ["matrix", "chat", "messaging", "composer", "wysiwyg"]
-license = "AGPL-3.0"
+license = "See license in README.md file in the root of this repository"
 name = "wysiwyg-wasm"
 version = "2.38.0"
 rust-version = { workspace = true }
