@@ -52,6 +52,16 @@ Rust bindings like those generated here, see
   - used while writing tests, to persuade the browser to select text in the
   same way as if it had been done manually.
 
-## License
+## Copyright & License
 
-[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt)
+Copyright (c) 2022-2024 The Matrix.org Foundation C.I.C.
+
+Copyright (c) 2024-2025 New Vector Ltd
+
+This software is multi licensed by New Vector Ltd (Element). It can be used either:
+
+(1) for free under the terms of the GNU Affero General Public License (as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version); OR
+
+(2) for free under the terms of the GNU General Public License (as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version); OR
+
+(3) under the terms of a paid-for Element Commercial License agreement between you and Element (the terms of which may vary depending on what you and Element have agreed to). Unless required by applicable law or agreed to in writing, software distributed under the Licenses is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the Licenses for the specific language governing permissions and limitations under the Licenses.
