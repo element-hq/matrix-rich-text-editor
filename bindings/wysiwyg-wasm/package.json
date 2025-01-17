@@ -3,7 +3,7 @@
   "version": "2.38.0",
   "homepage": "https://gitlab.com/andybalaam/wysiwyg-rust",
   "description": "WASM bindings for wysiwyg-rust",
-  "license": "See license in README.md file in the root of this repository",
+  "license": "SEE LICENSE IN README.md",
   "type": "module",
   "collaborators": [
     "Andy Balaam <andy.balaam@matrix.org>"

@@ -4,7 +4,7 @@ homepage = "https://github.com/element-hq/matrix-rich-text-editor"
 repository = "https://github.com/element-hq/matrix-rich-text-editor"
 description = "Utilities for Matrix mentions"
 keywords = ["matrix", "chat", "messaging"]
-license = "See license in README.md file in the root of this repository"
+license-file = { workspace = true }
 name = "matrix_mentions"
 version = "0.1.0"
 edition = "2021"

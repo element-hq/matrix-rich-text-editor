@@ -5,7 +5,7 @@ homepage = "https://gitlab.com/andybalaam/wysiwyg-rust"
 repository = "https://gitlab.com/andybalaam/wysiwyg-rust"
 description = "Model code to power a rich text editor for Matrix"
 keywords = ["matrix", "chat", "messaging", "composer", "wysiwyg"]
-license = "See license in README.md file in the root of this repository"
+license-file = { workspace = true }
 name = "wysiwyg"
 version = "2.38.0"
 rust-version = { workspace = true }
