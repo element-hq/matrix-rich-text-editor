@@ -1,5 +1,10 @@
 # Changelog
 
+# [2.38.1]
+- [Android] Workaround bug that caused the next focus view search loop when the editor is used in a Compose context, causing ANRs.
+- [Android] Fix crashes when either the editor or the rendering views contain a code block and their size changes, making the previously calculated and cached coordinates for rendering the code block invalid.
+- [Common] Change licensing to AGPLv3 + Element Commercial license. 
+
 # [2.38.0]
 - [Rust] Bump Rust version to `1.76`.
 - [Web] Bump wasm-pack version to `0.13.1`.
