@@ -300,8 +300,28 @@ internal class HtmlToSpansParser(
     }
 
     private fun SpannableStringBuilder.addLeadingLineBreakForBlockNode(element: Element) {
-        if (element.isBlock && element.previousElementSibling()?.takeIf { it.tagName() != "br" } != null) {
+        fun isBlankTextNode(node: Node?): Boolean {
+            return node is TextNode && node.isBlank
+        }
+        fun isLineBreak(node: Node?): Boolean {
+            return node is Element && node.tagName() == "br"
+        }
+
+        // If current element is not a block there's no need to add line breaks
+        if (!element.isBlock) return
+
+        // Pick the previous sibling node in the DOM
+        var previousSibling = element.previousSibling()
+
+        // If the previous sibling was a text node with only whitespace we're not interested in it, keep going back
+        if (previousSibling != null && isBlankTextNode(previousSibling)) {
+            previousSibling = previousSibling.previousSibling()
+        }
+
+        // If the previous sibling was a line break or an empty text node, there is no need to add a line break
+        if (previousSibling != null && !isLineBreak(previousSibling) && !isBlankTextNode(previousSibling)) {
             append('\n')
+
             // If we're not in editor mode, add another line break to separate blocks
             if (!isEditor) {
                 append('\n')
@@ -349,10 +369,10 @@ internal class HtmlToSpansParser(
         var reachedNonWhite = false
         val text = wholeText
         // Special case for when there's a single space
-        if (stripLeading && wholeText == " ") return wholeText
+        if (stripLeading && text == " ") return text
         val result = StringUtil.borrowBuilder()
         var i = 0
-        while (i < wholeText.length) {
+        while (i < text.length) {
             val c = text.codePointAt(i)
             if (StringUtil.isActuallyWhitespace(c)) {
                 if (c == NBSP.code) {
@@ -360,6 +380,8 @@ internal class HtmlToSpansParser(
                 } else if ((stripLeading && !reachedNonWhite) || lastWasWhite) {
                     i += Character.charCount(c)
                     continue
+                } else if (c == '\n'.code && i == text.length - 1) {
+                    // Do nothing, this is probably just an HTML formatting line break
                 } else {
                     result.append(' ')
                 }

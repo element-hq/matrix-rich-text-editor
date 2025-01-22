@@ -77,6 +77,35 @@ class HtmlToSpansParserTest {
     }
 
     @Test
+    fun testListsWithPreviousText() {
+        val html = """
+            Hey
+            <ol>
+                <li>ordered1</li>
+                <li>ordered2</li>
+            </ol>
+            <ul> 
+                <li>bullet1</li>
+                <li>bullet2</li>
+            </ul>
+        """.trimIndent()
+        val spanned = convertHtml(html)
+
+        assertThat(spanned.toString(), equalTo("Hey\nordered1\nordered2\nbullet1\nbullet2"))
+
+        assertThat(
+            spanned.dumpSpans().joinToString(",\n"), equalTo(
+                """
+                    ordered1: io.element.android.wysiwyg.view.spans.OrderedListSpan (4-12) fl=#17,
+                    ordered2: io.element.android.wysiwyg.view.spans.OrderedListSpan (13-21) fl=#17,
+                    bullet1: io.element.android.wysiwyg.view.spans.UnorderedListSpan (22-29) fl=#17,
+                    bullet2: io.element.android.wysiwyg.view.spans.UnorderedListSpan (30-37) fl=#17
+                """.trimIndent()
+            )
+        )
+    }
+
+    @Test
     fun testLineBreaks() {
         val html = "Hello<br>world"
         val spanned = convertHtml(html)
