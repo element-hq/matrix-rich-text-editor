@@ -1,5 +1,9 @@
 # Changelog
 
+# [2.38.2]
+- [Android] Add line break between text nodes and block element.
+- [Web] Update vite to v6.0.9 to fix CVE in the dependency.
+
 # [2.38.1]
 - [Android] Workaround bug that caused the next focus view search loop when the editor is used in a Compose context, causing ANRs.
 - [Android] Fix crashes when either the editor or the rendering views contain a code block and their size changes, making the previously calculated and cached coordinates for rendering the code block invalid.

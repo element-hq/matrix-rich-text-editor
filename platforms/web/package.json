@@ -1,6 +1,6 @@
 {
     "name": "@vector-im/matrix-wysiwyg",
-    "version": "2.38.1",
+    "version": "2.38.2",
     "type": "module",
     "description": "Wysiwyg composer for Element Web using React",
     "author": "New Vector Ltd.",
