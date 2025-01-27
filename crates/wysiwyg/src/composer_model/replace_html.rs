@@ -6,15 +6,15 @@
 
 use crate::dom::nodes::dom_node::DomNodeKind;
 use crate::dom::nodes::DomNode;
+use crate::dom::parser::parse;
 use crate::dom::unicode_string::UnicodeStrExt;
+use crate::dom::DomCreationError;
 use crate::dom::{DomLocation, Range};
 use crate::{
     ComposerModel, ComposerUpdate, DomHandle, Location, SuggestionPattern,
     UnicodeString,
 };
 use std::cmp::min;
-use crate::dom::parser::parse;
-use crate::dom::DomCreationError;
 
 impl<S> ComposerModel<S>
 where
@@ -28,16 +28,16 @@ where
         if self.has_selection() {
             self.do_replace_text(S::default());
         }
-        let new_dom = parse(&new_html.to_string()).unwrap().document_node().clone();
+        let new_dom = parse(&new_html.to_string())
+            .unwrap()
+            .document_node()
+            .clone();
         let (start, end) = self.safe_selection();
         let range = self.state.dom.find_range(start, end);
 
         let new_cursor_index = start + new_dom.text_len();
 
-        let handle = self
-            .state
-            .dom
-            .insert_node_at_cursor(&range, new_dom);
+        let handle = self.state.dom.insert_node_at_cursor(&range, new_dom);
 
         // manually move the cursor to the end of the mention
         self.state.start = Location::from(new_cursor_index);

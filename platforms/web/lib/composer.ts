@@ -67,10 +67,17 @@ export function processInput(
     if (isClipboardEvent(event)) {
         const htmlData = event.clipboardData?.getData('text/html');
         if (htmlData) {
-            return action(composerModel.replace_html(htmlData), 'replace_html_paste');
+            return action(
+                composerModel.replace_html(htmlData),
+                'replace_html_paste',
+            );
         }
         const data = event.clipboardData?.getData('text/plain') ?? '';
-        return action(composerModel.replace_text(data), 'replace_text_paste', data);
+        return action(
+            composerModel.replace_text(data),
+            'replace_text_paste',
+            data,
+        );
     }
 
     switch (event.inputType) {
