@@ -4,22 +4,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-use crate::dom::nodes::dom_node::DomNodeKind;
-use crate::dom::nodes::DomNode;
+use crate::dom::nodes::{ContainerNodeKind, DomNode};
 use crate::dom::parser::parse;
-use crate::dom::unicode_string::UnicodeStrExt;
-use crate::dom::DomCreationError;
-use crate::dom::{DomLocation, Range};
-use crate::{
-    ComposerModel, ComposerUpdate, DomHandle, Location, SuggestionPattern,
-    UnicodeString,
-};
-use std::cmp::min;
+use crate::{ComposerModel, ComposerUpdate, Location, UnicodeString};
 
 impl<S> ComposerModel<S>
 where
     S: UnicodeString,
 {
+    /// Attempts to clear out all the cruft from pasted HTML
+    /// to get the basic formatted content.
+    fn get_root_content(&mut self, root: DomNode<S>) -> Option<DomNode<S>> {
+        match root {
+            DomNode::Container(c) => match c.kind() {
+                ContainerNodeKind::Generic => match c.get_child(0) {
+                    Some(child) => self.get_root_content(child.clone()),
+                    None => None,
+                },
+                _ => Some(DomNode::Container(c)),
+            },
+            _ => Some(root),
+        }
+    }
+
     /// Replaces text in the current selection with new_text.
     /// Treats its input as plain text, so any HTML code will show up in
     /// the document (i.e. it will be escaped).
@@ -28,16 +35,17 @@ where
         if self.has_selection() {
             self.do_replace_text(S::default());
         }
-        let new_dom = parse(&new_html.to_string())
-            .unwrap()
-            .document_node()
-            .clone();
+        let new_dom =
+            parse(&new_html.to_string()).unwrap().into_document_node();
+
+        // Strip away any empty container nodes.
+        let content_dom = self.get_root_content(new_dom).unwrap();
+
         let (start, end) = self.safe_selection();
         let range = self.state.dom.find_range(start, end);
 
-        let new_cursor_index = start + new_dom.text_len();
-
-        let handle = self.state.dom.insert_node_at_cursor(&range, new_dom);
+        let new_cursor_index = start + content_dom.text_len();
+        let handle = self.state.dom.insert_node_at_cursor(&range, content_dom);
 
         // manually move the cursor to the end of the mention
         self.state.start = Location::from(new_cursor_index);
