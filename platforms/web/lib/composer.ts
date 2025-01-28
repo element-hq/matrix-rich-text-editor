@@ -66,17 +66,18 @@ export function processInput(
 
     if (isClipboardEvent(event)) {
         const htmlData = event.clipboardData?.getData('text/html');
-        if (htmlData) {
+        const plainData = event.clipboardData?.getData('text/plain') ?? '';
+        if (htmlData && htmlData !== plainData) {
             return action(
                 composerModel.replace_html(htmlData),
                 'replace_html_paste',
+                htmlData,
             );
         }
-        const data = event.clipboardData?.getData('text/plain') ?? '';
         return action(
-            composerModel.replace_text(data),
+            composerModel.replace_text(plainData),
             'replace_text_paste',
-            data,
+            plainData,
         );
     }
 
