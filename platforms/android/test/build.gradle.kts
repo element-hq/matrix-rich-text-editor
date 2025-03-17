@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "io.element.android.wysiwyg.test"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 21
