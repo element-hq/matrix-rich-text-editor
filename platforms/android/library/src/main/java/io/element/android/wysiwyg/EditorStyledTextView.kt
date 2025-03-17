@@ -22,6 +22,7 @@ import androidx.core.text.getSpans
 import com.sun.jna.internal.Cleaner
 import io.element.android.wysiwyg.display.MentionDisplayHandler
 import io.element.android.wysiwyg.internal.view.EditorEditTextAttributeReader
+import io.element.android.wysiwyg.link.Link
 import io.element.android.wysiwyg.utils.HtmlConverter
 import io.element.android.wysiwyg.utils.RustCleanerTask
 import io.element.android.wysiwyg.view.StyleConfig
@@ -67,8 +68,8 @@ open class EditorStyledTextView : AppCompatTextView {
     var mentionDisplayHandler: MentionDisplayHandler? = null
     private var htmlConverter: HtmlConverter? = null
 
-    var onLinkClickedListener: ((String) -> Unit)? = null
-    var onLinkLongClickedListener: ((String) -> Unit)? = null
+    var onLinkClickedListener: ((Link) -> Unit)? = null
+    var onLinkLongClickedListener: ((Link) -> Unit)? = null
 
     var onTextLayout: ((Layout) -> Unit)? = null
 
@@ -86,23 +87,45 @@ open class EditorStyledTextView : AppCompatTextView {
                 onLinkClickedListener != null || onLinkLongClickedListener != null
 
             private fun handleLinkClicks(
-                motionEvent: MotionEvent, listener: (String) -> Unit
+                motionEvent: MotionEvent, listener: (Link) -> Unit,
             ): Boolean {
                 val spans = findSpansForTouchEvent(motionEvent)
                 for (span in spans) {
                     when (span) {
                         is URLSpan -> {
-                            listener(span.url)
+                            val text = getTextForSpan(span) ?: span.url
+                            listener(
+                                Link(
+                                    url = span.url,
+                                    text = text,
+                                )
+                            )
                             return true
                         }
 
                         is PillSpan -> {
-                            span.url?.let(listener)
+                            span.url?.let { url ->
+                                val text = getTextForSpan(span) ?: url
+                                listener(
+                                    Link(
+                                        url = url,
+                                        text = text,
+                                    )
+                                )
+                            }
                             return true
                         }
 
                         is CustomMentionSpan -> {
-                            span.url?.let(listener)
+                            span.url?.let { url ->
+                                val text = getTextForSpan(span) ?: url
+                                listener(
+                                    Link(
+                                        url = url,
+                                        text = text,
+                                    )
+                                )
+                            }
                             return true
                         }
 
@@ -220,7 +243,7 @@ open class EditorStyledTextView : AppCompatTextView {
     }
 
     private fun createHtmlConverter(
-        styleConfig: StyleConfig, mentionDisplayHandler: MentionDisplayHandler?
+        styleConfig: StyleConfig, mentionDisplayHandler: MentionDisplayHandler?,
     ): HtmlConverter {
         return HtmlConverter.Factory.create(context = context,
             styleConfig = styleConfig,
@@ -257,5 +280,11 @@ open class EditorStyledTextView : AppCompatTextView {
         } else {
             emptyArray()
         }
+    }
+
+    private fun getTextForSpan(span: Any): String? {
+        val start = (text as? Spanned)?.getSpanStart(span).takeIf { it != -1 } ?: return null
+        val end = (text as? Spanned)?.getSpanEnd(span).takeIf { it != -1 } ?: return null
+        return text?.subSequence(start, end)?.toString()
     }
 }
