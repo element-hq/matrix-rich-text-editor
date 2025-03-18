@@ -33,7 +33,7 @@ internal inline fun <reified VM : ViewModel> View.viewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     @Suppress("UNCHECKED_CAST")// Casting T as ViewModel
                     return viewModelInitializer?.let { it.invoke() as T }
-                        ?: modelClass.newInstance()
+                        ?: modelClass.getDeclaredConstructor().newInstance()
                 }
             }
         },
