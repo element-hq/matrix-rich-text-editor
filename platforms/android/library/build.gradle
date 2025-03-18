@@ -1,3 +1,4 @@
+import com.nishtahir.CargoBuildTask
 import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
@@ -115,11 +116,11 @@ dependencies {
     androidTestImplementation libs.test.androidx.uiautomator
 }
 
-android.libraryVariants.all { variant ->
+android.libraryVariants.configureEach { variant ->
     def generateBindingTasks = tasks.register("generate${variant.name.capitalize()}UniFFIBindings", Exec) {
         workingDir "${project.projectDir}"
         // Note: arbitrary using the first target directory, but any of the dylib could be used.
-        def targetDir = project.tasks.withType(com.nishtahir.CargoBuildTask).first().toolchain.folder
+        def targetDir = project.tasks.withType(CargoBuildTask).first().toolchain.folder
         commandLine 'cargo', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/${targetDir}/libuniffi_wysiwyg_composer.so", '--language', 'kotlin', '--out-dir', "${buildDir}/generated/source/uniffi/${variant.name}/java"
         dependsOn("cargoBuild")
     }
@@ -141,7 +142,7 @@ afterEvaluate {
     }
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     jacoco.includeNoLocationClasses = true
     jacoco.excludes = ['jdk.internal.*']
 }
