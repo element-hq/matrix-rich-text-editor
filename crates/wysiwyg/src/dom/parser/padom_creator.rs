@@ -4,15 +4,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-use std::cell::{Ref, RefCell};
-use html5ever::tendril::{StrTendril, TendrilSink};
-use html5ever::tree_builder::{ElementFlags, NodeOrText, QuirksMode, TreeSink};
-use html5ever::{parse_fragment, Attribute, QualName};
-use html5ever::interface::NextParserState;
 use super::{
     paqual_name, PaDom, PaDomCreationError, PaDomHandle, PaDomNode,
     PaNodeContainer, PaNodeText,
 };
+use html5ever::interface::NextParserState;
+use html5ever::tendril::{StrTendril, TendrilSink};
+use html5ever::tree_builder::{ElementFlags, NodeOrText, QuirksMode, TreeSink};
+use html5ever::{parse_fragment, Attribute, QualName};
+use std::cell::{Ref, RefCell};
 
 pub(crate) type DomCreationResult = Result<PaDom, PaDomCreationError>;
 
@@ -44,7 +44,7 @@ impl Default for PaDomCreator {
 impl TreeSink for PaDomCreator {
     type Handle = PaDomHandle;
     type Output = DomCreationResult;
-    type ElemName<'a>  = Ref<'a, QualName>;
+    type ElemName<'a> = Ref<'a, QualName>;
 
     fn finish(self) -> Self::Output {
         if self.state.borrow().parse_errors.is_empty() {
@@ -66,9 +66,7 @@ impl TreeSink for PaDomCreator {
     }
 
     fn elem_name<'a>(&'a self, target: &'a Self::Handle) -> Self::ElemName<'a> {
-        Ref::map(self.state.borrow(), |map| {
-            map.dom.get_node(target).name()
-        })
+        Ref::map(self.state.borrow(), |map| map.dom.get_node(target).name())
     }
 
     fn create_element(
@@ -77,7 +75,10 @@ impl TreeSink for PaDomCreator {
         attrs: Vec<Attribute>,
         flags: ElementFlags,
     ) -> Self::Handle {
-        self.state.borrow_mut().dom.create_element(name, attrs, flags)
+        self.state
+            .borrow_mut()
+            .dom
+            .create_element(name, attrs, flags)
     }
 
     fn create_comment(&self, _text: StrTendril) -> Self::Handle {
@@ -92,22 +93,16 @@ impl TreeSink for PaDomCreator {
         todo!("create_pi not yet supported")
     }
 
-    fn append(
-        &self,
-        parent: &Self::Handle,
-        child: NodeOrText<Self::Handle>,
-    ) {
+    fn append(&self, parent: &Self::Handle, child: NodeOrText<Self::Handle>) {
         let dom = &mut self.state.borrow_mut().dom;
         match child {
-            NodeOrText::AppendNode(child) => {
-                match dom.get_mut_node(parent) {
-                    PaDomNode::Container(p) => p.children.push(child),
-                    PaDomNode::Document(p) => p.children.push(child),
-                    PaDomNode::Text(_) => {
-                        panic!("Appending node to text! {:?}", parent)
-                    }
+            NodeOrText::AppendNode(child) => match dom.get_mut_node(parent) {
+                PaDomNode::Container(p) => p.children.push(child),
+                PaDomNode::Document(p) => p.children.push(child),
+                PaDomNode::Text(_) => {
+                    panic!("Appending node to text! {:?}", parent)
                 }
-            }
+            },
             NodeOrText::AppendText(tendril) => {
                 let text_handle = match dom.get_node(parent) {
                     PaDomNode::Document(_) => None,
@@ -126,9 +121,7 @@ impl TreeSink for PaDomCreator {
                 };
 
                 if let Some(text_handle) = text_handle {
-                    if let PaDomNode::Text(p) =
-                        dom.get_mut_node(&text_handle)
-                    {
+                    if let PaDomNode::Text(p) = dom.get_mut_node(&text_handle) {
                         p.content += tendril.as_ref();
                     } else {
                         unreachable!(
@@ -179,10 +172,7 @@ impl TreeSink for PaDomCreator {
         // Nothing to do here for now, but this is called in several tests
     }
 
-    fn get_template_contents(
-        &self,
-        _target: &Self::Handle,
-    ) -> Self::Handle {
+    fn get_template_contents(&self, _target: &Self::Handle) -> Self::Handle {
         todo!("get_template_contents not yet supported")
     }
 
@@ -230,7 +220,12 @@ impl TreeSink for PaDomCreator {
         }
     }
 
-    fn associate_with_form(&self, _target: &Self::Handle, _form: &Self::Handle, _nodes: (&Self::Handle, Option<&Self::Handle>)) {
+    fn associate_with_form(
+        &self,
+        _target: &Self::Handle,
+        _form: &Self::Handle,
+        _nodes: (&Self::Handle, Option<&Self::Handle>),
+    ) {
         todo!()
     }
 
@@ -246,7 +241,10 @@ impl TreeSink for PaDomCreator {
         todo!("reparent_children not yet supported")
     }
 
-    fn is_mathml_annotation_xml_integration_point(&self, _handle: &Self::Handle) -> bool {
+    fn is_mathml_annotation_xml_integration_point(
+        &self,
+        _handle: &Self::Handle,
+    ) -> bool {
         todo!("is_mathml_annotation_xml_integration_point not yet supported")
     }
 
@@ -258,11 +256,19 @@ impl TreeSink for PaDomCreator {
         todo!("complete_script not yet supported")
     }
 
-    fn allow_declarative_shadow_roots(&self, _intended_parent: &Self::Handle) -> bool {
+    fn allow_declarative_shadow_roots(
+        &self,
+        _intended_parent: &Self::Handle,
+    ) -> bool {
         todo!("allow_declarative_shadow_roots not yet supported")
     }
 
-    fn attach_declarative_shadow(&self, _location: &Self::Handle, _template: &Self::Handle, _attrs: Vec<Attribute>) -> Result<(), String> {
+    fn attach_declarative_shadow(
+        &self,
+        _location: &Self::Handle,
+        _template: &Self::Handle,
+        _attrs: Vec<Attribute>,
+    ) -> Result<(), String> {
         todo!("attach_declarative_shadow not yet supported")
     }
 }
