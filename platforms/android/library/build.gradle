@@ -152,7 +152,9 @@ tasks.withType(Test).configureEach {
 // and takes the last path component, which should be the version number
 def getNdkVersionAsWorkaround() {
     def ndkDirectory = new File(android.sdkDirectory, "ndk")
-    return ndkDirectory.list().sort().last().split(PATH_SEPARATOR).last()
+    def latestNdk = ndkDirectory.list().sort().last().split(PATH_SEPARATOR).last()
+    println("Using NDK version: $latestNdk")
+    return latestNdk
 }
 
 mavenPublishing {
