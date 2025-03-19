@@ -187,6 +187,16 @@ impl ComposerModel {
         )
     }
 
+    pub fn replace_html(&mut self, new_html: &str) -> ComposerUpdate {
+        // Conversion here to UTF-16, which has presumably just been
+        // converted to UTF-8 in the FFI bindings layer.
+        // If the performance is a problem, we could fix this.
+        // Internal task to track this: PSU-739
+        ComposerUpdate::from(
+            self.inner.replace_html(Utf16String::from_str(new_html)),
+        )
+    }
+
     pub fn replace_text_suggestion(
         &mut self,
         new_text: &str,

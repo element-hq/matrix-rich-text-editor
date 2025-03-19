@@ -17,6 +17,7 @@ pub mod menu_action;
 pub mod menu_state;
 pub mod new_lines;
 pub mod quotes;
+pub mod replace_html;
 pub mod replace_text;
 pub mod selection;
 pub mod undo_redo;
