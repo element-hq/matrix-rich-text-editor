@@ -2,37 +2,33 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml.dependencies.format
 
 [versions]
-activity-compose = "1.9.2"
+activity-compose = "1.10.1"
 androidx-junit = "1.2.1"
-core-ktx = "1.13.1"
-coroutines = "1.9.0"
-compose-bom = "2024.09.02"
-lifecycle-runtime-ktx = "2.8.6"
+coroutines = "1.10.1"
+compose-bom = "2025.03.00"
+lifecycle-runtime-ktx = "2.8.7"
 timber = "5.0.1"
-tagsoup = "1.2.1"
-androidx-core = "1.13.1"
+androidx-core = "1.15.0"
 appcompat = "1.7.0"
-lifecycle-viewmodel = "2.8.6"
+lifecycle-viewmodel = "2.8.7"
 material = "1.12.0"
-constraintlayout = "2.1.4"
+constraintlayout = "2.2.1"
 junit = "4.13.2"
-robolectric = "4.13"
-mockk = "1.13.12" # https://github.com/mockk/mockk/issues/1033
-hamcrest = "2.2"
-android-junit = "1.1.3"
+robolectric = "4.14.1"
+mockk = "1.13.17" # https://github.com/mockk/mockk/issues/1033
+hamcrest = "3.0"
 espresso = "3.6.1"
-agp = "8.6.1"
-kotlin = "2.0.20"
-jacoco = "0.8.8"
-maven-publish = "0.29.0"
+agp = "8.9.0"
+kotlin = "2.1.10"
+maven-publish = "0.31.0"
 molecule = "2.0.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version = "0.9.4" }
-sonarqube = { id = "org.sonarqube", version = "5.1.0.4882" }
+rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version = "0.9.6" }
+sonarqube = { id = "org.sonarqube", version = "6.0.1.5171" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 maven-publish-base = { id = "com.vanniktech.maven.publish.base", version.ref = "maven-publish" }
 jacoco-android = { id = "com.mxalbert.gradle.jacoco-android", version = "0.2.1" }
@@ -41,7 +37,6 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 [libraries]
 # Kotlin
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
-androidx-core-ktx-1_10_1 = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 kotlin-coroutines = { module="org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref="coroutines" }
 kotlin-coroutines-android = { module="org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref="coroutines" }
 kotlin-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version = "0.3.8" }
@@ -57,7 +52,7 @@ google-material = { module="com.google.android.material:material", version.ref="
 
 # Misc
 timber = { module="com.jakewharton.timber:timber", version.ref="timber" }
-jsoup = "org.jsoup:jsoup:1.18.1"
+jsoup = "org.jsoup:jsoup:1.19.1"
 molecule-runtime = { module = "app.cash.molecule:molecule-runtime", version.ref = "molecule" }
 
 # Test
@@ -66,7 +61,7 @@ test-robolectric = { module="org.robolectric:robolectric", version.ref="robolect
 test-mockk = { module="io.mockk:mockk", version.ref="mockk" }
 test-hamcrest = { module="org.hamcrest:hamcrest", version.ref="hamcrest" }
 test-kotlin-coroutines = { module="org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref="coroutines" }
-test-turbine = { module="app.cash.turbine:turbine", version="1.1.0" }
+test-turbine = { module="app.cash.turbine:turbine", version="1.2.0" }
 
 # Android Test
 test-androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }

@@ -1,3 +1,4 @@
+import com.nishtahir.CargoBuildTask
 import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
@@ -29,11 +30,11 @@ android {
     namespace = "io.element.android.wysiwyg"
     testNamespace = "io.element.android.wysiwyg.test"
 
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         minSdk 21
-        targetSdk 33
+        targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -49,8 +50,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 
     buildFeatures {
@@ -69,7 +70,7 @@ android {
     }
 
     testCoverage {
-        jacocoVersion = "0.8.8"
+        jacocoVersion = "0.8.12"
     }
 
     packagingOptions {
@@ -81,12 +82,12 @@ android {
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 dependencies {
 
-    implementation "net.java.dev.jna:jna:5.15.0@aar"
+    implementation "net.java.dev.jna:jna:5.17.0@aar"
 
     implementation libs.kotlin.coroutines.android
     implementation libs.kotlin.coroutines
@@ -115,11 +116,11 @@ dependencies {
     androidTestImplementation libs.test.androidx.uiautomator
 }
 
-android.libraryVariants.all { variant ->
+android.libraryVariants.configureEach { variant ->
     def generateBindingTasks = tasks.register("generate${variant.name.capitalize()}UniFFIBindings", Exec) {
         workingDir "${project.projectDir}"
         // Note: arbitrary using the first target directory, but any of the dylib could be used.
-        def targetDir = project.tasks.withType(com.nishtahir.CargoBuildTask).first().toolchain.folder
+        def targetDir = project.tasks.withType(CargoBuildTask).first().toolchain.folder
         commandLine 'cargo', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/${targetDir}/libuniffi_wysiwyg_composer.so", '--language', 'kotlin', '--out-dir', "${buildDir}/generated/source/uniffi/${variant.name}/java"
         dependsOn("cargoBuild")
     }
@@ -141,7 +142,7 @@ afterEvaluate {
     }
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     jacoco.includeNoLocationClasses = true
     jacoco.excludes = ['jdk.internal.*']
 }
@@ -151,7 +152,9 @@ tasks.withType(Test) {
 // and takes the last path component, which should be the version number
 def getNdkVersionAsWorkaround() {
     def ndkDirectory = new File(android.sdkDirectory, "ndk")
-    return ndkDirectory.list().sort().last().split(PATH_SEPARATOR).last()
+    def latestNdk = ndkDirectory.list().sort().last().split(PATH_SEPARATOR).last()
+    println("Using NDK version: $latestNdk")
+    return latestNdk
 }
 
 mavenPublishing {

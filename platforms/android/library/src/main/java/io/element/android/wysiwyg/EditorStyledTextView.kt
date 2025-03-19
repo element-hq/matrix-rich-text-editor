@@ -19,7 +19,6 @@ import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.withTranslation
 import androidx.core.text.getSpans
-import androidx.core.view.GestureDetectorCompat
 import com.sun.jna.internal.Cleaner
 import io.element.android.wysiwyg.display.MentionDisplayHandler
 import io.element.android.wysiwyg.internal.view.EditorEditTextAttributeReader
@@ -81,7 +80,7 @@ open class EditorStyledTextView : AppCompatTextView {
 
     // This gesture detector will be used to detect clicks on spans
     private val gestureDetector =
-        GestureDetectorCompat(context, object : GestureDetector.SimpleOnGestureListener() {
+        GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
 
             private fun hasAnyLinkListener() =
                 onLinkClickedListener != null || onLinkLongClickedListener != null

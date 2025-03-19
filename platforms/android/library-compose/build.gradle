@@ -29,10 +29,11 @@ android {
     namespace 'io.element.android.wysiwyg.compose'
     testNamespace 'io.element.android.wysiwyg.compose.test'
 
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         minSdk 23
+        targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -48,12 +49,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 
     testCoverage {
-        jacocoVersion = "0.8.8"
+        jacocoVersion = "0.8.12"
     }
     testOptions {
         unitTests.returnDefaultValues = true
@@ -71,7 +72,7 @@ android {
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -80,7 +81,7 @@ dependencies {
     implementation libs.timber
 
     implementation libs.androidx.core
-    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.0.20')
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.1.10')
     implementation libs.androidx.lifecycle.runtime
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)

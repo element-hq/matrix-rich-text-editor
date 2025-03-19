@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace 'io.element.wysiwyg.compose'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "io.element.wysiwyg.compose"
         minSdk 24
-        targetSdk 33
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
@@ -29,8 +29,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     buildFeatures {
         compose true
@@ -43,7 +43,7 @@ android {
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -53,7 +53,7 @@ dependencies {
     implementation libs.timber
 
     implementation libs.androidx.core
-    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.0.20')
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.1.10')
     implementation libs.androidx.lifecycle.runtime
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)
