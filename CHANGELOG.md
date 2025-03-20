@@ -1,5 +1,10 @@
 # Changelog
 
+# [2.38.3]
+- [Android] Update API to be able to check links. #53
+- [Android] Update dependencies. #13
+- [Rust] Update dependencies. #4
+
 # [2.38.2]
 - [Android] Add line break between text nodes and block element.
 - [Web] Update vite to v6.0.9 to fix CVE in the dependency.
