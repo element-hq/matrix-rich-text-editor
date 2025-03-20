@@ -8,17 +8,18 @@
 
 package io.element.android.wysiwyg.test.utils
 
+import io.element.android.wysiwyg.link.Link
 import org.junit.Assert
 
-class FakeLinkClickedListener: (String) -> Unit {
-    private val clickedLinks: MutableList<String> = mutableListOf()
+class FakeLinkClickedListener: (Link) -> Unit {
+    private val clickedLinks: MutableList<Link> = mutableListOf()
 
-    override fun invoke(link: String) {
+    override fun invoke(link: Link) {
         clickedLinks.add(link)
     }
 
-    fun assertLinkClicked(url: String) {
+    fun assertLinkClicked(link: Link) {
         Assert.assertTrue(clickedLinks.size == 1)
-        Assert.assertTrue(clickedLinks.contains(url))
+        Assert.assertTrue(clickedLinks.contains(link))
     }
 }

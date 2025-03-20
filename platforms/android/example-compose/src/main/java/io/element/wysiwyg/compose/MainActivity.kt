@@ -157,8 +157,8 @@ class MainActivity : ComponentActivity() {
                                 .padding(16.dp),
                             resolveMentionDisplay = { _,_ -> TextDisplay.Pill },
                             resolveRoomMentionDisplay = { TextDisplay.Pill },
-                            onLinkClickedListener = { url ->
-                                Toast.makeText(this@MainActivity, "Clicked: $url", Toast.LENGTH_SHORT).show()
+                            onLinkClickedListener = { link ->
+                                Toast.makeText(this@MainActivity, "Clicked: $link", Toast.LENGTH_SHORT).show()
                             }
                         )
 

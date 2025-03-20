@@ -20,6 +20,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
+import io.element.android.wysiwyg.link.Link
 import io.element.android.wysiwyg.test.R
 import io.element.android.wysiwyg.test.utils.FakeLinkClickedListener
 import io.element.android.wysiwyg.test.utils.TestActivity
@@ -46,6 +47,7 @@ internal class EditorStyledTextViewTest {
         const val MENTION_URI = "https://matrix.to/#/@alice:matrix.org"
         const val MENTION_HTML = "<p><a href='$MENTION_URI'>$MENTION_TEXT</a></p>"
         const val URL = "https://matrix.org"
+        const val EVIL_URL = "https://evil.org"
     }
 
     @Test
@@ -82,7 +84,60 @@ internal class EditorStyledTextViewTest {
             .check(matches(withText(HELLO_WORLD)))
             .perform(clickXY(0f, 0f))
 
-        fakeLinkClickedListener.assertLinkClicked(url = URL)
+        fakeLinkClickedListener.assertLinkClicked(Link(url = URL, text = HELLO_WORLD))
+    }
+
+    @Test
+    fun testUrlClicksEvil() {
+        val urlSpanText = buildSpannedString {
+            inSpans(URLSpan(EVIL_URL)) {
+                append(URL)
+            }
+        }
+        onView(ViewMatchers.withId(R.id.styledTextView))
+            .perform(TextViewActions.setText(urlSpanText, TextView.BufferType.SPANNABLE))
+            .perform(TextViewActions.setOnLinkClickedListener(fakeLinkClickedListener))
+            .check(matches(withText(URL)))
+            .perform(clickXY(0f, 0f))
+
+        fakeLinkClickedListener.assertLinkClicked(Link(url = EVIL_URL, text = URL))
+    }
+
+    private val helloOffset = 120f
+
+    @Test
+    fun testUrlClicksWord() {
+        val urlSpanText = buildSpannedString {
+            append("Hello, ")
+            inSpans(URLSpan(URL)) {
+                append("world")
+            }
+        }
+        onView(ViewMatchers.withId(R.id.styledTextView))
+            .perform(TextViewActions.setText(urlSpanText, TextView.BufferType.SPANNABLE))
+            .perform(TextViewActions.setOnLinkClickedListener(fakeLinkClickedListener))
+            .check(matches(withText(HELLO_WORLD)))
+            .perform(clickXY(helloOffset, 0f))
+
+        fakeLinkClickedListener.assertLinkClicked(Link(url = URL, text = "world"))
+    }
+
+    @Test
+    fun testUrlClicksWordEvil() {
+        val urlSpanText = buildSpannedString {
+            append("Hello, ")
+            inSpans(URLSpan(EVIL_URL)) {
+                append(URL)
+            }
+            append("!")
+        }
+        onView(ViewMatchers.withId(R.id.styledTextView))
+            .perform(TextViewActions.setText(urlSpanText, TextView.BufferType.SPANNABLE))
+            .perform(TextViewActions.setOnLinkClickedListener(fakeLinkClickedListener))
+            .check(matches(withText("Hello, $URL!")))
+            .perform(clickXY(helloOffset, 0f))
+
+        fakeLinkClickedListener.assertLinkClicked(Link(url = EVIL_URL, text = URL))
     }
 
     @Test
@@ -98,7 +153,7 @@ internal class EditorStyledTextViewTest {
             .check(matches(withText(HELLO_WORLD)))
             .perform(clickXY(0f, 0f))
 
-        fakeLinkClickedListener.assertLinkClicked(url = URL)
+        fakeLinkClickedListener.assertLinkClicked(Link(url = URL, text = HELLO_WORLD))
     }
 
     @Test
@@ -114,7 +169,7 @@ internal class EditorStyledTextViewTest {
             .check(matches(withText(HELLO_WORLD)))
             .perform(clickXY(0f, 0f))
 
-        fakeLinkClickedListener.assertLinkClicked(url = URL)
+        fakeLinkClickedListener.assertLinkClicked(Link(url = URL, text = HELLO_WORLD))
     }
 
     @Test
@@ -130,7 +185,7 @@ internal class EditorStyledTextViewTest {
             .check(matches(withText(HELLO_WORLD)))
             .perform(clickXY(0f, 0f))
 
-        fakeLinkClickedListener.assertLinkClicked(url = URL)
+        fakeLinkClickedListener.assertLinkClicked(Link(url = URL, text = HELLO_WORLD))
     }
 
     @Test
@@ -141,14 +196,30 @@ internal class EditorStyledTextViewTest {
             .check(matches(withText(MENTION_TEXT)))
             .perform(clickXY(0f, 0f))
 
-        fakeLinkClickedListener.assertLinkClicked(MENTION_URI)
+        fakeLinkClickedListener.assertLinkClicked(Link(url = MENTION_URI, text = MENTION_TEXT))
     }
 }
 
 object DummyReplacementSpan : ReplacementSpan() {
-    override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int = 100
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence?,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?,
+    ): Int = 100
 
-    override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint)  = Unit
+    override fun draw(
+        canvas: Canvas,
+        text: CharSequence?,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint,
+    ) = Unit
 
 }
 
