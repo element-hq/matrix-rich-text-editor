@@ -19,7 +19,7 @@ mockk = "1.13.17" # https://github.com/mockk/mockk/issues/1033
 hamcrest = "3.0"
 espresso = "3.6.1"
 agp = "8.9.0"
-kotlin = "2.1.10"
+kotlin = "2.1.20"
 maven-publish = "0.31.0"
 molecule = "2.0.0"
 
