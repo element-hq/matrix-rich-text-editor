@@ -1249,7 +1249,7 @@
   integrity sha512-fEzPV3hSkSMltkw152tJKNARhOupqbH96MZWyRjNaYZOMIzbrTeQDG+MTc6Mr2pgzFQzFxAfmhGDNP5QK++2ZA==
 
 "@vector-im/matrix-wysiwyg-wasm@link:../../bindings/wysiwyg-wasm":
-  version "2.38.1"
+  version "2.38.3"
 
 "@vitejs/plugin-react@^4.2.1":
   version "4.3.4"
@@ -5732,10 +5732,10 @@ vite-plugin-dts@^4.3.0:
     local-pkg "^0.5.1"
     magic-string "^0.30.17"
 
-vite@6.0.9:
-  version "6.0.9"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-6.0.9.tgz#0a830b767ef7aa762360b56bdef955c1395dc1ee"
-  integrity sha512-MSgUxHcaXLtnBPktkbUSoQUANApKYuxZ6DrbVENlIorbhL2dZydTLaZ01tjUoE3szeFzlFk9ANOKk0xurh4MKA==
+vite@6.0.12:
+  version "6.0.12"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-6.0.12.tgz#0e3de2441057011f7c20bf018ea16d3824bdbd6b"
+  integrity sha512-gzLogvGSgX2xyAt0J5qhJ7SmdO5aLdShABkU8Ev7dIl8AcrlFSLcj9GHReSq9pGJF/q5C4CZKdtDlkC6DyvQ3w==
   dependencies:
     esbuild "^0.24.2"
     postcss "^8.4.49"
