@@ -65,8 +65,20 @@ export function processInput(
     }
 
     if (isClipboardEvent(event)) {
-        const data = event.clipboardData?.getData('text/plain') ?? '';
-        return action(composerModel.replace_text(data), 'paste');
+        const htmlData = event.clipboardData?.getData('text/html');
+        const plainData = event.clipboardData?.getData('text/plain') ?? '';
+        if (htmlData && htmlData !== plainData) {
+            return action(
+                composerModel.replace_html(htmlData),
+                'replace_html_paste',
+                htmlData,
+            );
+        }
+        return action(
+            composerModel.replace_text(plainData),
+            'replace_text_paste',
+            plainData,
+        );
     }
 
     switch (event.inputType) {
