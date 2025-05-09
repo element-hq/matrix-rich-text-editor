@@ -11,6 +11,7 @@
     "license": "SEE LICENSE IN README.md",
     "exports": {
         ".": {
+            "types": "./dist/index.d.ts",
             "import": "./dist/matrix-wysiwyg.js",
             "require": "./dist/matrix-wysiwyg.umd.cjs"
         }
