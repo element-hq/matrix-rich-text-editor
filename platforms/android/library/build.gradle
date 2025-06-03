@@ -158,7 +158,7 @@ def getNdkVersionAsWorkaround() {
 }
 
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.S01)
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 
     coordinates(property("MAVEN_GROUP"), property("POM_ARTIFACT_ID"), property("MAVEN_VERSION_NAME"))
