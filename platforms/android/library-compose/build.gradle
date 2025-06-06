@@ -17,7 +17,7 @@ if (project.hasProperty("coverage")) {
 
 mavenPublishing {
     pomFromGradleProperties()
-    publishToMavenCentral(SonatypeHost.S01)
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 
     def publishJavaDoc = false // https://github.com/Kotlin/dokka/issues/2956
