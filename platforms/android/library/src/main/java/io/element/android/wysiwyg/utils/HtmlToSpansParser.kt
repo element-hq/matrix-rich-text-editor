@@ -131,7 +131,7 @@ internal class HtmlToSpansParser(
         if (text.isEmpty()) return
 
         val previousSibling = child.previousSibling() as? Element
-        if (previousSibling != null && previousSibling.isBlock) {
+        if (previousSibling != null && previousSibling.isBlock && !isLineBreak(previousSibling)) {
             append('\n')
         }
         append(text)
@@ -299,12 +299,13 @@ internal class HtmlToSpansParser(
         }
     }
 
+    private fun isLineBreak(node: Node?): Boolean {
+        return node is Element && node.tagName() == "br"
+    }
+
     private fun SpannableStringBuilder.addLeadingLineBreakForBlockNode(element: Element) {
         fun isBlankTextNode(node: Node?): Boolean {
             return node is TextNode && node.isBlank
-        }
-        fun isLineBreak(node: Node?): Boolean {
-            return node is Element && node.tagName() == "br"
         }
 
         // If current element is not a block there's no need to add line breaks
