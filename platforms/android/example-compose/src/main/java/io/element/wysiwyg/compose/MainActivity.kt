@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -35,7 +34,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.element.android.wysiwyg.compose.EditorStyledText
 import io.element.android.wysiwyg.compose.RichTextEditor
@@ -96,7 +94,8 @@ class MainActivity : ComponentActivity() {
                 val htmlText = htmlConverter.fromHtmlToSpans(state.messageHtml)
 
                 linkDialogAction?.let { linkAction ->
-                    LinkDialog(linkAction = linkAction,
+                    LinkDialog(
+                        linkAction = linkAction,
                         onRemoveLink = { coroutineScope.launch { state.removeLink() } },
                         onSetLink = { coroutineScope.launch { state.setLink(it) } },
                         onInsertLink = { url, text ->
@@ -136,7 +135,7 @@ class MainActivity : ComponentActivity() {
                                     .padding(10.dp),
                                 style = RichTextEditorDefaults.style(),
                                 onError = { Timber.e(it) },
-                                resolveMentionDisplay = { _,_ -> TextDisplay.Pill },
+                                resolveMentionDisplay = { _, _ -> TextDisplay.Pill },
                                 resolveRoomMentionDisplay = { TextDisplay.Pill },
                                 onTyping = { isTyping = it }
                             )
@@ -157,10 +156,14 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            resolveMentionDisplay = { _,_ -> TextDisplay.Pill },
+                            resolveMentionDisplay = { _, _ -> TextDisplay.Pill },
                             resolveRoomMentionDisplay = { TextDisplay.Pill },
                             onLinkClickedListener = { link ->
-                                Toast.makeText(this@MainActivity, "Clicked: $link", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "Clicked: $link",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         )
 
@@ -234,18 +237,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-@Preview
-@Composable
-fun EditorPreview() {
-    RichTextEditorTheme {
-        val state = rememberRichTextEditorState("Hello, world")
-        RichTextEditor(
-            state = state,
-            placeholder = "Type your message here...",
-            placeholderColor = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-

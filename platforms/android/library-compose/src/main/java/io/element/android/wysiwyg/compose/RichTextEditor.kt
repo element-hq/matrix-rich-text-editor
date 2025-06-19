@@ -12,6 +12,11 @@ import android.content.res.ColorStateList
 import android.net.Uri
 import android.view.View
 import androidx.appcompat.widget.AppCompatEditText
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -21,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.addTextChangedListener
 import io.element.android.wysiwyg.EditorEditText
@@ -142,9 +149,10 @@ private fun RealEditor(
                             state.actions = actionStates
                         }
 
-                    selectionChangeListener = EditorEditText.OnSelectionChangeListener { start, end ->
-                        state.selection = start to end
-                    }
+                    selectionChangeListener =
+                        EditorEditText.OnSelectionChangeListener { start, end ->
+                            state.selection = start to end
+                        }
                     menuActionListener = EditorEditText.OnMenuActionChangedListener { menuAction ->
                         state.menuAction = menuAction
                     }
@@ -172,9 +180,10 @@ private fun RealEditor(
                         state.onFocusChanged(view.hashCode(), hasFocus)
                     }
 
-                    mentionsStateChangedListener = EditorEditText.OnMentionsStateChangedListener { mentionsState ->
-                        state.mentionsState = mentionsState
-                    }
+                    mentionsStateChangedListener =
+                        EditorEditText.OnMentionsStateChangedListener { mentionsState ->
+                            state.mentionsState = mentionsState
+                        }
                 }
 
                 applyDefaultStyle()
@@ -207,7 +216,10 @@ private fun RealEditor(
                                     is ViewAction.RemoveLink -> removeLink()
                                     is ViewAction.InsertLink -> insertLink(it.url, it.text)
                                     is ViewAction.ReplaceSuggestionText -> replaceTextSuggestion(it.text)
-                                    is ViewAction.InsertMentionAtSuggestion -> insertMentionAtSuggestion(url = it.url, text = it.text)
+                                    is ViewAction.InsertMentionAtSuggestion -> insertMentionAtSuggestion(
+                                        url = it.url,
+                                        text = it.text
+                                    )
                                     is ViewAction.InsertAtRoomMentionAtSuggestion -> insertAtRoomMentionAtSuggestion()
                                     is ViewAction.SetSelection -> setSelection(it.start, it.end)
                                 }
@@ -219,7 +231,9 @@ private fun RealEditor(
         },
         update = { view ->
             Timber.i("RichTextEditor update() called")
-            if (inputType != view.inputType) { view.inputType = inputType }
+            if (inputType != view.inputType) {
+                view.inputType = inputType
+            }
             view.applyStyleInCompose(style)
             view.typeface = typeface
             view.updateStyle(style.toStyleConfig(view.context), mentionDisplayHandler)
@@ -264,4 +278,42 @@ private fun PreviewEditor(
     }, update = { view ->
         view.applyStyleInCompose(style)
     })
+}
+
+@Preview
+@Composable
+internal fun RichTextEditorPlaceholderPreview() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        RichTextEditor(
+            state = rememberRichTextEditorState(),
+            placeholder = "Type your message here...",
+            placeholderColor = Color.Gray,
+            style = RichTextEditorDefaults.style(),
+            registerStateUpdates = false,
+        )
+    }
+}
+
+@Preview
+@Composable
+internal fun RichTextEditorPreview() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        val state = rememberRichTextEditorState("Hello, world")
+        RichTextEditor(
+            state = state,
+            placeholder = "Type your message here...",
+            placeholderColor = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
