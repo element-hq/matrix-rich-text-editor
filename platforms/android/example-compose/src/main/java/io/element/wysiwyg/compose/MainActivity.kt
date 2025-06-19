@@ -129,7 +129,6 @@ class MainActivity : ComponentActivity() {
                             RichTextEditor(
                                 state = state,
                                 placeholder = "Type your message here...",
-                                placeholderColor = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(10.dp),

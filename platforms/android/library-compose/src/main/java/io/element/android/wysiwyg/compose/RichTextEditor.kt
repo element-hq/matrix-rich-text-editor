@@ -68,7 +68,6 @@ fun RichTextEditor(
     modifier: Modifier = Modifier,
     state: RichTextEditorState = rememberRichTextEditorState(),
     placeholder: String,
-    placeholderColor: Color,
     registerStateUpdates: Boolean = true,
     style: RichTextEditorStyle = RichTextEditorDefaults.style(),
     inputType: Int = RichTextEditorDefaults.inputType,
@@ -84,7 +83,6 @@ fun RichTextEditor(
         PreviewEditor(
             state = state,
             placeholder = placeholder,
-            placeholderColor = placeholderColor,
             modifier = modifier,
             style = style,
         )
@@ -92,7 +90,6 @@ fun RichTextEditor(
         RealEditor(
             state = state,
             placeholder = placeholder,
-            placeholderColor = placeholderColor,
             registerStateUpdates = registerStateUpdates,
             modifier = modifier,
             style = style,
@@ -110,7 +107,6 @@ fun RichTextEditor(
 private fun RealEditor(
     state: RichTextEditorState,
     placeholder: String,
-    placeholderColor: Color,
     registerStateUpdates: Boolean,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
@@ -192,7 +188,7 @@ private fun RealEditor(
                 setHtml(state.internalHtml)
                 setSelection(state.selection.first, state.selection.second)
                 setHint(placeholder)
-                setHintTextColor(ColorStateList.valueOf(placeholderColor.toArgb()))
+                setHintTextColor(ColorStateList.valueOf(style.text.placeholderColor.toArgb()))
                 setOnRichContentSelected(onRichContentSelected)
                 // Only start listening for text changes after the initial state has been restored
                 if (registerStateUpdates) {
@@ -255,7 +251,6 @@ private fun RealEditor(
 private fun PreviewEditor(
     state: RichTextEditorState,
     placeholder: String,
-    placeholderColor: Color,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
 ) {
@@ -271,7 +266,7 @@ private fun PreviewEditor(
 
             setText(state.messageHtml)
             setHint(placeholder)
-            setHintTextColor(placeholderColor.toArgb())
+            setHintTextColor(style.text.placeholderColor.toArgb())
         }
 
         view
@@ -292,7 +287,6 @@ internal fun RichTextEditorPlaceholderPreview() {
         RichTextEditor(
             state = rememberRichTextEditorState(),
             placeholder = "Type your message here...",
-            placeholderColor = Color.Gray,
             style = RichTextEditorDefaults.style(),
             registerStateUpdates = false,
         )
@@ -312,7 +306,6 @@ internal fun RichTextEditorPreview() {
         RichTextEditor(
             state = state,
             placeholder = "Type your message here...",
-            placeholderColor = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.fillMaxWidth(),
         )
     }
