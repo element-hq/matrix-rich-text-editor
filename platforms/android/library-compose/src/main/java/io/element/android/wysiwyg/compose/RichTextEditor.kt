@@ -8,16 +8,25 @@
 
 package io.element.android.wysiwyg.compose
 
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.view.View
 import androidx.appcompat.widget.AppCompatEditText
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.addTextChangedListener
 import io.element.android.wysiwyg.EditorEditText
@@ -57,6 +66,7 @@ import timber.log.Timber
 fun RichTextEditor(
     modifier: Modifier = Modifier,
     state: RichTextEditorState = rememberRichTextEditorState(),
+    placeholder: String,
     registerStateUpdates: Boolean = true,
     style: RichTextEditorStyle = RichTextEditorDefaults.style(),
     inputType: Int = RichTextEditorDefaults.inputType,
@@ -69,10 +79,16 @@ fun RichTextEditor(
     val isPreview = LocalInspectionMode.current
 
     if (isPreview) {
-        PreviewEditor(state, modifier, style)
+        PreviewEditor(
+            state = state,
+            placeholder = placeholder,
+            modifier = modifier,
+            style = style,
+        )
     } else {
         RealEditor(
             state = state,
+            placeholder = placeholder,
             registerStateUpdates = registerStateUpdates,
             modifier = modifier,
             style = style,
@@ -89,6 +105,7 @@ fun RichTextEditor(
 @Composable
 private fun RealEditor(
     state: RichTextEditorState,
+    placeholder: String,
     registerStateUpdates: Boolean,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
@@ -127,9 +144,10 @@ private fun RealEditor(
                             state.actions = actionStates
                         }
 
-                    selectionChangeListener = EditorEditText.OnSelectionChangeListener { start, end ->
-                        state.selection = start to end
-                    }
+                    selectionChangeListener =
+                        EditorEditText.OnSelectionChangeListener { start, end ->
+                            state.selection = start to end
+                        }
                     menuActionListener = EditorEditText.OnMenuActionChangedListener { menuAction ->
                         state.menuAction = menuAction
                     }
@@ -157,9 +175,10 @@ private fun RealEditor(
                         state.onFocusChanged(view.hashCode(), hasFocus)
                     }
 
-                    mentionsStateChangedListener = EditorEditText.OnMentionsStateChangedListener { mentionsState ->
-                        state.mentionsState = mentionsState
-                    }
+                    mentionsStateChangedListener =
+                        EditorEditText.OnMentionsStateChangedListener { mentionsState ->
+                            state.mentionsState = mentionsState
+                        }
                 }
 
                 applyDefaultStyle()
@@ -167,7 +186,8 @@ private fun RealEditor(
                 // Set initial HTML and selection based on the provided state
                 setHtml(state.internalHtml)
                 setSelection(state.selection.first, state.selection.second)
-
+                setHint(placeholder)
+                setHintTextColor(ColorStateList.valueOf(style.text.placeholderColor.toArgb()))
                 setOnRichContentSelected(onRichContentSelected)
                 // Only start listening for text changes after the initial state has been restored
                 if (registerStateUpdates) {
@@ -191,7 +211,10 @@ private fun RealEditor(
                                     is ViewAction.RemoveLink -> removeLink()
                                     is ViewAction.InsertLink -> insertLink(it.url, it.text)
                                     is ViewAction.ReplaceSuggestionText -> replaceTextSuggestion(it.text)
-                                    is ViewAction.InsertMentionAtSuggestion -> insertMentionAtSuggestion(url = it.url, text = it.text)
+                                    is ViewAction.InsertMentionAtSuggestion -> insertMentionAtSuggestion(
+                                        url = it.url,
+                                        text = it.text
+                                    )
                                     is ViewAction.InsertAtRoomMentionAtSuggestion -> insertAtRoomMentionAtSuggestion()
                                     is ViewAction.SetSelection -> setSelection(it.start, it.end)
                                 }
@@ -203,7 +226,9 @@ private fun RealEditor(
         },
         update = { view ->
             Timber.i("RichTextEditor update() called")
-            if (inputType != view.inputType) { view.inputType = inputType }
+            if (inputType != view.inputType) {
+                view.inputType = inputType
+            }
             view.applyStyleInCompose(style)
             view.typeface = typeface
             view.updateStyle(style.toStyleConfig(view.context), mentionDisplayHandler)
@@ -224,6 +249,7 @@ private fun RealEditor(
 @Composable
 private fun PreviewEditor(
     state: RichTextEditorState,
+    placeholder: String,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
 ) {
@@ -238,10 +264,48 @@ private fun PreviewEditor(
             applyDefaultStyle()
 
             setText(state.messageHtml)
+            setHint(placeholder)
+            setHintTextColor(style.text.placeholderColor.toArgb())
         }
 
         view
     }, update = { view ->
         view.applyStyleInCompose(style)
     })
+}
+
+@Preview
+@Composable
+internal fun RichTextEditorPlaceholderPreview() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        RichTextEditor(
+            state = rememberRichTextEditorState(),
+            placeholder = "Type your message here...",
+            style = RichTextEditorDefaults.style(),
+            registerStateUpdates = false,
+        )
+    }
+}
+
+@Preview
+@Composable
+internal fun RichTextEditorPreview() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        val state = rememberRichTextEditorState("Hello, world")
+        RichTextEditor(
+            state = state,
+            placeholder = "Type your message here...",
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }

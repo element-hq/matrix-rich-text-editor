@@ -58,6 +58,7 @@ data class PillStyle(
 
 data class TextStyle(
     val color: Color,
+    val placeholderColor: Color,
     val fontSize: TextUnit,
     val lineHeight: TextUnit,
     val fontFamily: FontFamily?,
