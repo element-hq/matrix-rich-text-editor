@@ -8,6 +8,7 @@
 
 package io.element.android.wysiwyg.compose
 
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.view.View
 import androidx.appcompat.widget.AppCompatEditText
@@ -16,6 +17,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
@@ -57,6 +60,8 @@ import timber.log.Timber
 fun RichTextEditor(
     modifier: Modifier = Modifier,
     state: RichTextEditorState = rememberRichTextEditorState(),
+    placeholder: String,
+    placeholderColor: Color,
     registerStateUpdates: Boolean = true,
     style: RichTextEditorStyle = RichTextEditorDefaults.style(),
     inputType: Int = RichTextEditorDefaults.inputType,
@@ -69,10 +74,18 @@ fun RichTextEditor(
     val isPreview = LocalInspectionMode.current
 
     if (isPreview) {
-        PreviewEditor(state, modifier, style)
+        PreviewEditor(
+            state = state,
+            placeholder = placeholder,
+            placeholderColor = placeholderColor,
+            modifier = modifier,
+            style = style,
+        )
     } else {
         RealEditor(
             state = state,
+            placeholder = placeholder,
+            placeholderColor = placeholderColor,
             registerStateUpdates = registerStateUpdates,
             modifier = modifier,
             style = style,
@@ -89,6 +102,8 @@ fun RichTextEditor(
 @Composable
 private fun RealEditor(
     state: RichTextEditorState,
+    placeholder: String,
+    placeholderColor: Color,
     registerStateUpdates: Boolean,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
@@ -167,7 +182,8 @@ private fun RealEditor(
                 // Set initial HTML and selection based on the provided state
                 setHtml(state.internalHtml)
                 setSelection(state.selection.first, state.selection.second)
-
+                setHint(placeholder)
+                setHintTextColor(ColorStateList.valueOf(placeholderColor.toArgb()))
                 setOnRichContentSelected(onRichContentSelected)
                 // Only start listening for text changes after the initial state has been restored
                 if (registerStateUpdates) {
@@ -224,6 +240,8 @@ private fun RealEditor(
 @Composable
 private fun PreviewEditor(
     state: RichTextEditorState,
+    placeholder: String,
+    placeholderColor: Color,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
 ) {
@@ -238,6 +256,8 @@ private fun PreviewEditor(
             applyDefaultStyle()
 
             setText(state.messageHtml)
+            setHint(placeholder)
+            setHintTextColor(placeholderColor.toArgb())
         }
 
         view
