@@ -1,5 +1,12 @@
 # Changelog
 
+# [2.38.4]
+- [Android] Add placeholder to RichTextEditor API #63
+- [Android] Migrate to maven central portal #62
+- [Android] Update dependencies #60 #56
+- [iOS] Update dependencies #8
+- [Rust] Update dependencies #4
+
 # [2.38.3]
 - [Android] Update API to be able to check links. #53
 - [Android] Update dependencies. #13
