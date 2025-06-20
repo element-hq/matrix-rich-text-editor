@@ -53,6 +53,7 @@ import timber.log.Timber
  *
  * @param modifier The modifier for the layout
  * @param state The state holder for this composable. See [rememberRichTextEditorState].
+ * @param placeholder The placeholder text to show when the editor is empty.
  * @param registerStateUpdates If true, register the state for updates.
  * @param style The styles to use for any customisable elements
  * @param inputType The input type for the editor. Defaults to [RichTextEditorDefaults.inputType].
@@ -66,7 +67,7 @@ import timber.log.Timber
 fun RichTextEditor(
     modifier: Modifier = Modifier,
     state: RichTextEditorState = rememberRichTextEditorState(),
-    placeholder: String,
+    placeholder: String? = null,
     registerStateUpdates: Boolean = true,
     style: RichTextEditorStyle = RichTextEditorDefaults.style(),
     inputType: Int = RichTextEditorDefaults.inputType,
@@ -105,7 +106,7 @@ fun RichTextEditor(
 @Composable
 private fun RealEditor(
     state: RichTextEditorState,
-    placeholder: String,
+    placeholder: String?,
     registerStateUpdates: Boolean,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
@@ -249,7 +250,7 @@ private fun RealEditor(
 @Composable
 private fun PreviewEditor(
     state: RichTextEditorState,
-    placeholder: String,
+    placeholder: String?,
     modifier: Modifier = Modifier,
     style: RichTextEditorStyle,
 ) {
