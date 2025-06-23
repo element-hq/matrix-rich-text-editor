@@ -124,7 +124,7 @@ where
     pub fn new_list(
         list_type: ListType,
         children: Vec<DomNode<S>>,
-        attrs: Option<Vec<(S, S)>>
+        attrs: Option<Vec<(S, S)>>,
     ) -> Self {
         Self {
             name: list_type.tag().into(),

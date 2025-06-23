@@ -163,7 +163,8 @@ mod sys {
                 "ol" | "ul" => {
                     self.current_path.push(DomNodeKind::List);
                     if tag == "ol" {
-                        let custom_start = child.get_attr("start")
+                        let custom_start = child
+                            .get_attr("start")
                             .and_then(|start| start.parse::<usize>().ok());
                         node.append_child(Self::new_ordered_list(custom_start));
                     } else {
@@ -358,7 +359,7 @@ mod sys {
                     Some(vec![("start".into(), start.to_string().into())])
                 } else {
                     None
-                }
+                },
             ))
         }
 
@@ -1323,7 +1324,8 @@ mod js {
                     }
 
                     "OL" => {
-                        let custom_start = node.unchecked_ref::<Element>()
+                        let custom_start = node
+                            .unchecked_ref::<Element>()
                             .get_attribute("start");
                         self.current_path.push(DomNodeKind::List);
                         dom.append_child(DomNode::Container(
@@ -1332,10 +1334,13 @@ mod js {
                                 self.convert(node.child_nodes())?
                                     .take_children(),
                                 if let Some(custom_start) = custom_start {
-                                    Some(vec![("start".into(), custom_start.into())])
+                                    Some(vec![(
+                                        "start".into(),
+                                        custom_start.into(),
+                                    )])
                                 } else {
                                     None
-                                }
+                                },
                             ),
                         ));
                         self.current_path.pop();
