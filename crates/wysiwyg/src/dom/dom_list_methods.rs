@@ -95,7 +95,7 @@ where
             }
         }
 
-        let list = ContainerNode::new_list(list_type, list_items);
+        let list = ContainerNode::new_list(list_type, list_items, None);
         self.insert_at(first_handle, DomNode::Container(list));
 
         if first_handle.has_parent() {
