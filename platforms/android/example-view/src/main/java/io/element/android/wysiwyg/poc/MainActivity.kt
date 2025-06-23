@@ -11,6 +11,7 @@ package io.element.android.wysiwyg.poc
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import io.element.android.wysiwyg.poc.databinding.DialogSetLinkBinding
@@ -19,8 +20,11 @@ import io.element.android.wysiwyg.poc.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
+
         super.onCreate(savedInstanceState)
         val binding = ActivityMainBinding.inflate(layoutInflater)
+
         setContentView(binding.root)
 
         binding.editor.requestFocus()

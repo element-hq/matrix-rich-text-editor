@@ -229,3 +229,10 @@ fn set_content_from_markdown_one_new_line() {
         .unwrap();
     assert_eq!(tx(&model), "<p>test</p><p>test|</p>");
 }
+
+#[test]
+fn set_content_from_markdown_ordered_list_with_start() {
+    let mut model = cm("|");
+    model.set_content_from_markdown(&utf16("3. First")).unwrap();
+    assert_eq!(tx(&model), "<ol start=\"3\"><li>First|</li></ol>");
+}

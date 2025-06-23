@@ -75,7 +75,7 @@ where
         list_type: ListType,
         children: Vec<DomNode<S>>,
     ) -> DomNode<S> {
-        DomNode::Container(ContainerNode::new_list(list_type, children))
+        DomNode::Container(ContainerNode::new_list(list_type, children, None))
     }
 
     pub fn new_list_item(children: Vec<DomNode<S>>) -> DomNode<S> {

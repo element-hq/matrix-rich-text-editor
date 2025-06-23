@@ -162,7 +162,14 @@ mod sys {
                 }
                 "ol" | "ul" => {
                     self.current_path.push(DomNodeKind::List);
-                    node.append_child(Self::new_list(tag));
+                    if tag == "ol" {
+                        let custom_start = child
+                            .get_attr("start")
+                            .and_then(|start| start.parse::<usize>().ok());
+                        node.append_child(Self::new_ordered_list(custom_start));
+                    } else {
+                        node.append_child(Self::new_unordered_list());
+                    }
                     self.convert_children(
                         padom,
                         child,
@@ -328,14 +335,29 @@ mod sys {
             }
         }
 
-        /// Create a list node
-        fn new_list<S>(tag: &str) -> DomNode<S>
+        /// Create an unordered list node
+        fn new_unordered_list<S>() -> DomNode<S>
         where
             S: UnicodeString,
         {
             DomNode::Container(ContainerNode::new_list(
-                ListType::from(S::from(tag)),
+                ListType::Unordered,
                 Vec::new(),
+                None,
+            ))
+        }
+
+        /// Create an ordered list node
+        fn new_ordered_list<S>(custom_start: Option<usize>) -> DomNode<S>
+        where
+            S: UnicodeString,
+        {
+            DomNode::Container(ContainerNode::new_list(
+                ListType::Ordered,
+                Vec::new(),
+                custom_start.map(|start| {
+                    vec![("start".into(), start.to_string().into())]
+                }),
             ))
         }
 
@@ -1300,12 +1322,23 @@ mod js {
                     }
 
                     "OL" => {
+                        let custom_start = node
+                            .unchecked_ref::<Element>()
+                            .get_attribute("start");
                         self.current_path.push(DomNodeKind::List);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Ordered,
                                 self.convert(node.child_nodes())?
                                     .take_children(),
+                                if let Some(custom_start) = custom_start {
+                                    Some(vec![(
+                                        "start".into(),
+                                        custom_start.into(),
+                                    )])
+                                } else {
+                                    None
+                                },
                             ),
                         ));
                         self.current_path.pop();
@@ -1318,6 +1351,7 @@ mod js {
                                 ListType::Unordered,
                                 self.convert(node.child_nodes())?
                                     .take_children(),
+                                None,
                             ),
                         ));
                         self.current_path.pop();

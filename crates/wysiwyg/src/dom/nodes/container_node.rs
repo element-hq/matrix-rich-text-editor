@@ -121,11 +121,15 @@ where
         }
     }
 
-    pub fn new_list(list_type: ListType, children: Vec<DomNode<S>>) -> Self {
+    pub fn new_list(
+        list_type: ListType,
+        children: Vec<DomNode<S>>,
+        attrs: Option<Vec<(S, S)>>,
+    ) -> Self {
         Self {
             name: list_type.tag().into(),
             kind: ContainerNodeKind::List(list_type),
-            attrs: None,
+            attrs,
             children,
             handle: DomHandle::new_unset(),
         }
