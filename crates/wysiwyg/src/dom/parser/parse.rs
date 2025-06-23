@@ -355,11 +355,9 @@ mod sys {
             DomNode::Container(ContainerNode::new_list(
                 ListType::Ordered,
                 Vec::new(),
-                if let Some(start) = custom_start {
-                    Some(vec![("start".into(), start.to_string().into())])
-                } else {
-                    None
-                },
+                custom_start.map(|start| {
+                    vec![("start".into(), start.to_string().into())]
+                }),
             ))
         }
 
