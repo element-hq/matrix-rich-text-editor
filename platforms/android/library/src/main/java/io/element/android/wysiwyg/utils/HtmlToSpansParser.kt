@@ -388,7 +388,7 @@ internal class HtmlToSpansParser(
                 } else if ((stripLeading && !reachedNonWhite) || lastWasWhite) {
                     i += Character.charCount(c)
                     continue
-                } else if (c == '\n'.code && i == text.length - 1) {
+                } else if (c == '\n'.code && !reachedNonWhite) {
                     // Do nothing, this is probably just an HTML formatting line break
                 } else {
                     result.append(' ')

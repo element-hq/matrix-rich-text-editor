@@ -9,8 +9,8 @@
 package io.element.android.wysiwyg.utils
 
 import android.text.Spanned
-import io.element.android.wysiwyg.display.TextDisplay
 import io.element.android.wysiwyg.display.MentionDisplayHandler
+import io.element.android.wysiwyg.display.TextDisplay
 import io.element.android.wysiwyg.test.fakes.createFakeStyleConfig
 import io.element.android.wysiwyg.test.utils.dumpSpans
 import io.element.android.wysiwyg.view.spans.OrderedListSpan
@@ -118,15 +118,15 @@ class HtmlToSpansParserTest {
         """.trimIndent()
         val spanned = convertHtml(html)
 
-        assertThat(spanned.toString(), equalTo("Hey\nordered1\nordered2\nbullet1\nbullet2"))
+        assertThat(spanned.toString(), equalTo("Hey \nordered1\nordered2\nbullet1\nbullet2"))
 
         assertThat(
             spanned.dumpSpans().joinToString(",\n"), equalTo(
                 """
-                    ordered1: io.element.android.wysiwyg.view.spans.OrderedListSpan (4-12) fl=#17,
-                    ordered2: io.element.android.wysiwyg.view.spans.OrderedListSpan (13-21) fl=#17,
-                    bullet1: io.element.android.wysiwyg.view.spans.UnorderedListSpan (22-29) fl=#17,
-                    bullet2: io.element.android.wysiwyg.view.spans.UnorderedListSpan (30-37) fl=#17
+                    ordered1: io.element.android.wysiwyg.view.spans.OrderedListSpan (5-13) fl=#17,
+                    ordered2: io.element.android.wysiwyg.view.spans.OrderedListSpan (14-22) fl=#17,
+                    bullet1: io.element.android.wysiwyg.view.spans.UnorderedListSpan (23-30) fl=#17,
+                    bullet2: io.element.android.wysiwyg.view.spans.UnorderedListSpan (31-38) fl=#17
                 """.trimIndent()
             )
         )
@@ -267,6 +267,45 @@ class HtmlToSpansParserTest {
         })
         assertThat(
             spanned.toString(), equalTo("Hello\n\nWorld!")
+        )
+    }
+
+    @Test
+    fun testLeadingLineBreakCharsInHtmlTextAreIgnored() {
+        val html = "<p>First Line</p>\n<p>Line after Empty Line<br />\nThird Line</p>\n"
+        val spanned = convertHtml(
+            html = html,
+            isEditor = false,
+            mentionDisplayHandler = object : MentionDisplayHandler {
+                override fun resolveAtRoomMentionDisplay(): TextDisplay =
+                    TextDisplay.Pill
+
+                override fun resolveMentionDisplay(text: String, url: String): TextDisplay =
+                    TextDisplay.Pill
+            }
+        )
+        assertThat(
+            spanned.toString(), equalTo("First Line\n\nLine after Empty Line\nThird Line")
+        )
+    }
+
+    @Test
+    fun testLineBreakCharsInMiddleOrendOfHtmlTextAreConvertedToWhitespace() {
+        val html = "<p>First Line\n</p><p>Line after Empty Line<br />Third\n\n\n\nWith more</p>"
+        val spanned = convertHtml(
+            html = html,
+            isEditor = false,
+            mentionDisplayHandler = object : MentionDisplayHandler {
+                override fun resolveAtRoomMentionDisplay(): TextDisplay =
+                    TextDisplay.Pill
+
+                override fun resolveMentionDisplay(text: String, url: String): TextDisplay =
+                    TextDisplay.Pill
+            }
+        )
+        assertThat(
+            spanned.toString(),
+            equalTo("First Line \n\nLine after Empty Line\nThird With more")
         )
     }
 
