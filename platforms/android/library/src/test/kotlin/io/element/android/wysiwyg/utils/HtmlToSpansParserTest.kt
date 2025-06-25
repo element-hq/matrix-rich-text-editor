@@ -9,8 +9,8 @@
 package io.element.android.wysiwyg.utils
 
 import android.text.Spanned
-import io.element.android.wysiwyg.display.TextDisplay
 import io.element.android.wysiwyg.display.MentionDisplayHandler
+import io.element.android.wysiwyg.display.TextDisplay
 import io.element.android.wysiwyg.test.fakes.createFakeStyleConfig
 import io.element.android.wysiwyg.test.utils.dumpSpans
 import io.element.android.wysiwyg.view.spans.OrderedListSpan
@@ -267,6 +267,31 @@ class HtmlToSpansParserTest {
         })
         assertThat(
             spanned.toString(), equalTo("Hello\n\nWorld!")
+        )
+    }
+
+    @Test
+    fun testLeadingLineBreakCharsInHtmlTextAreIgnored() {
+        val html = "<p>First Line</p>\n<p>Line after Empty Line<br />\nThird Line</p>\n"
+        val spanned = convertHtml(
+            html = html,
+            isEditor = false,
+        )
+        assertThat(
+            spanned.toString(), equalTo("First Line\n\nLine after Empty Line\nThird Line")
+        )
+    }
+
+    @Test
+    fun testLineBreakCharsInMiddleOrEndOfHtmlTextAreConvertedToWhitespace() {
+        val html = "<p>First Line\n</p><p>Line after Empty Line<br />Third\n\n\n\nWith more</p>"
+        val spanned = convertHtml(
+            html = html,
+            isEditor = false,
+        )
+        assertThat(
+            spanned.toString(),
+            equalTo("First Line\n\nLine after Empty Line\nThird With more")
         )
     }
 
