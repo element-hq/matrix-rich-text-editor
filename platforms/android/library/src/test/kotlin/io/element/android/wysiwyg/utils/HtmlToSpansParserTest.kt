@@ -291,7 +291,7 @@ class HtmlToSpansParserTest {
         )
         assertThat(
             spanned.toString(),
-            equalTo("First Line \n\nLine after Empty Line\nThird With more")
+            equalTo("First Line\n\nLine after Empty Line\nThird With more")
         )
     }
 
