@@ -283,7 +283,7 @@ class HtmlToSpansParserTest {
     }
 
     @Test
-    fun testLineBreakCharsInMiddleOrendOfHtmlTextAreConvertedToWhitespace() {
+    fun testLineBreakCharsInMiddleOrEndOfHtmlTextAreConvertedToWhitespace() {
         val html = "<p>First Line\n</p><p>Line after Empty Line<br />Third\n\n\n\nWith more</p>"
         val spanned = convertHtml(
             html = html,
