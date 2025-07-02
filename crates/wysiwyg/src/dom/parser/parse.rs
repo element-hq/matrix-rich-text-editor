@@ -1162,7 +1162,9 @@ mod js {
     use matrix_mentions::Mention;
     use std::fmt;
     use wasm_bindgen::JsCast;
-    use web_sys::{Document, DomParser, Element, NodeList, SupportedType};
+    use web_sys::{
+        Document, DomParser, Element, HtmlElement, NodeList, SupportedType,
+    };
 
     pub(super) struct HtmlParser {
         current_path: Vec<DomNodeKind>,
@@ -1181,6 +1183,27 @@ mod js {
         where
             S: UnicodeString,
         {
+            self.parse_internal(html, false)
+        }
+
+        pub(super) fn parse_from_external_html_source<S>(
+            &mut self,
+            html: &str,
+        ) -> Result<Dom<S>, HtmlParseError>
+        where
+            S: UnicodeString,
+        {
+            self.parse_internal(html, true)
+        }
+
+        fn parse_internal<S>(
+            &mut self,
+            html: &str,
+            external_html_source: bool,
+        ) -> Result<Dom<S>, HtmlParseError>
+        where
+            S: UnicodeString,
+        {
             let parser: DomParser = DomParser::new().map_err(|_| {
                 to_dom_creation_error(
                     "Failed to create the `DOMParser` from JavaScript",
@@ -1195,7 +1218,7 @@ mod js {
                     )
                 })?;
 
-            self.webdom_to_dom(document)
+            self.webdom_to_dom(document, external_html_source)
                 .map_err(to_dom_creation_error)
                 .map(post_process_blocks)
         }
@@ -1203,15 +1226,20 @@ mod js {
         fn webdom_to_dom<S>(
             &mut self,
             webdoc: Document,
+            external_html_source: bool,
         ) -> Result<Dom<S>, Error>
         where
             S: UnicodeString,
         {
             let body = webdoc.body().ok_or_else(|| Error::NoBody)?;
-            self.convert(body.child_nodes())
+            self.convert(body.child_nodes(), external_html_source)
         }
 
-        fn convert<S>(&mut self, nodes: NodeList) -> Result<Dom<S>, Error>
+        fn convert<S>(
+            &mut self,
+            nodes: NodeList,
+            external_html_source: bool,
+        ) -> Result<Dom<S>, Error>
         where
             S: UnicodeString,
         {
@@ -1219,7 +1247,7 @@ mod js {
             let mut dom = Dom::new(Vec::with_capacity(number_of_nodes));
             let dom_document = dom.document_mut();
 
-            self.convert_container(nodes, dom_document)?;
+            self.convert_container(nodes, dom_document, external_html_source)?;
 
             Ok(dom)
         }
@@ -1228,6 +1256,7 @@ mod js {
             &mut self,
             nodes: NodeList,
             dom: &mut ContainerNode<S>,
+            external_html_source: bool,
         ) -> Result<(), Error>
         where
             S: UnicodeString,
@@ -1309,7 +1338,10 @@ mod js {
                             );
                         } else {
                             let children = self
-                                .convert(node.child_nodes())?
+                                .convert(
+                                    node.child_nodes(),
+                                    external_html_source,
+                                )?
                                 .take_children();
                             dom.append_child(DomNode::new_link(
                                 url.into(),
@@ -1329,8 +1361,11 @@ mod js {
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Ordered,
-                                self.convert(node.child_nodes())?
-                                    .take_children(),
+                                self.convert(
+                                    node.child_nodes(),
+                                    external_html_source,
+                                )?
+                                .take_children(),
                                 if let Some(custom_start) = custom_start {
                                     Some(vec![(
                                         "start".into(),
@@ -1349,8 +1384,11 @@ mod js {
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Unordered,
-                                self.convert(node.child_nodes())?
-                                    .take_children(),
+                                self.convert(
+                                    node.child_nodes(),
+                                    external_html_source,
+                                )?
+                                .take_children(),
                                 None,
                             ),
                         ));
@@ -1361,8 +1399,11 @@ mod js {
                         self.current_path.push(DomNodeKind::ListItem);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list_item(
-                                self.convert(node.child_nodes())?
-                                    .take_children(),
+                                self.convert(
+                                    node.child_nodes(),
+                                    external_html_source,
+                                )?
+                                .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1382,7 +1423,8 @@ mod js {
                         };
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_code_block(
-                                self.convert(children)?.take_children(),
+                                self.convert(children, external_html_source)?
+                                    .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1392,8 +1434,11 @@ mod js {
                         self.current_path.push(DomNodeKind::Quote);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_quote(
-                                self.convert(node.child_nodes())?
-                                    .take_children(),
+                                self.convert(
+                                    node.child_nodes(),
+                                    external_html_source,
+                                )?
+                                .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1403,40 +1448,87 @@ mod js {
                         self.current_path.push(DomNodeKind::Paragraph);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_paragraph(
-                                self.convert(node.child_nodes())?
-                                    .take_children(),
+                                self.convert(
+                                    node.child_nodes(),
+                                    external_html_source,
+                                )?
+                                .take_children(),
                             ),
                         ));
                         self.current_path.pop();
                     }
-
                     node_name => {
-                        let children_nodes =
-                            self.convert(node.child_nodes())?.take_children();
-
+                        let children_nodes = self
+                            .convert(node.child_nodes(), external_html_source)?
+                            .take_children();
                         let formatting_kind = match node_name {
-                            "STRONG" | "B" => InlineFormatType::Bold,
-                            "EM" | "I" => InlineFormatType::Italic,
-                            "DEL" => InlineFormatType::StrikeThrough,
-                            "U" => InlineFormatType::Underline,
-                            "CODE" => InlineFormatType::InlineCode,
+                            "STRONG" | "B" => Some(InlineFormatType::Bold),
+                            "EM" | "I" => Some(InlineFormatType::Italic),
+                            "DEL" => Some(InlineFormatType::StrikeThrough),
+                            "U" => Some(InlineFormatType::Underline),
+                            "CODE" => Some(InlineFormatType::InlineCode),
+                            "SPAN" => {
+                                if !external_html_source {
+                                    return Err(Error::UnknownNode(
+                                        node_name.to_owned(),
+                                    ));
+                                }
+                                let style =
+                                    node.unchecked_ref::<HtmlElement>().style();
+                                if style
+                                    .get_property_value("font-weight")
+                                    .unwrap_or_default()
+                                    == "bold"
+                                {
+                                    Some(InlineFormatType::Bold)
+                                } else if style
+                                    .get_property_value("font-style")
+                                    .unwrap_or_default()
+                                    == "italic"
+                                {
+                                    Some(InlineFormatType::Italic)
+                                } else if style
+                                    .get_property_value("text-decoration")
+                                    .unwrap_or_default()
+                                    == "underline"
+                                {
+                                    Some(InlineFormatType::Underline)
+                                } else if style
+                                    .get_property_value("text-decoration")
+                                    .unwrap_or_default()
+                                    == "line-through"
+                                {
+                                    Some(InlineFormatType::StrikeThrough)
+                                } else {
+                                    None
+                                }
+                            }
                             _ => {
-                                return Err(Error::UnknownNode(
-                                    node_name.to_owned(),
-                                ))
+                                if !external_html_source {
+                                    return Err(Error::UnknownNode(
+                                        node_name.to_owned(),
+                                    ));
+                                }
+                                None
                             }
                         };
 
-                        self.current_path.push(DomNodeKind::Formatting(
-                            formatting_kind.clone(),
-                        ));
+                        if formatting_kind.is_none() {
+                            if !children_nodes.is_empty() {
+                                dom.append_children(children_nodes);
+                            }
+                        } else {
+                            self.current_path.push(DomNodeKind::Formatting(
+                                formatting_kind.clone().unwrap(),
+                            ));
 
-                        dom.append_child(DomNode::Container(
-                            ContainerNode::new_formatting(
-                                formatting_kind,
-                                children_nodes,
-                            ),
-                        ));
+                            dom.append_child(DomNode::Container(
+                                ContainerNode::new_formatting(
+                                    formatting_kind.unwrap(),
+                                    children_nodes,
+                                ),
+                            ));
+                        }
                         self.current_path.pop();
                     }
                 }
@@ -1510,6 +1602,37 @@ mod js {
             roundtrip("foo <del>bar</del> baz");
             roundtrip("foo <u>bar</u> baz");
             roundtrip("foo <code>bar</code> baz");
+        }
+
+        #[wasm_bindgen_test]
+        fn google_doc_rich_text() {
+            let html = r#"
+            <ul style="margin-top:0;margin-bottom:0;padding-inline-start:48px;"><li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;" aria-level="1"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">Italic</span></p></li><li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;" aria-level="1"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">Bold</span></p></li><li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;" aria-level="1"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">Unformatted</span></p></li><li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:line-through;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;vertical-align:baseline;white-space:pre;" aria-level="1"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:line-through;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">Strikethrough</span></p></li><li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;" aria-level="1"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">Underlined</span></p></li><li dir="ltr" style="list-style-type:disc;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;" aria-level="1"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><a href="http://matrix.org" style="text-decoration:none;"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">Linked</span></a></p></li><ul style="margin-top:0;margin-bottom:0;padding-inline-start:48px;"><li dir="ltr" style="list-style-type:circle;font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;" aria-level="2"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;" role="presentation"><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;-webkit-text-decoration-skip:none;text-decoration-skip-ink:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;">nested</span></p></li></ul></ul>
+        "#;
+            let dom = HtmlParser::default()
+                .parse_from_external_html_source::<Utf16String>(html)
+                .unwrap();
+            assert_eq!(dom.to_string(), "<ul><li><p><em>Italic</em></p></li><li><p>Bold</p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"text-decoration:none;\" href=\"http://matrix.org\"><u>Linked</u></a></p></li><ul><li><p><u>nested</u></p></li></ul></ul>");
+        }
+
+        #[wasm_bindgen_test]
+        fn ms_rich_text() {
+            let html = r#"
+            <div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle1 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; list-style-type: disc; cursor: text; font-family: verdana; overflow: visible;"><li data-leveltext="" data-font="Symbol" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:0,&quot;335559684&quot;:-2,&quot;335559685&quot;:720,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Symbol&quot;,&quot;469769242&quot;:[8226],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="1" data-aria-level="1" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 24px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="81782558" paraeid="{32d038eb-df64-4bfa-b648-2cee8cb090b6}{102}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; font-style: italic; text-decoration: none; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"><span class="NormalTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">Italic</span></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div><div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle1 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; list-style-type: disc; cursor: text; font-family: verdana; overflow: visible;"><li data-leveltext="" data-font="Symbol" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:0,&quot;335559684&quot;:-2,&quot;335559685&quot;:720,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Symbol&quot;,&quot;469769242&quot;:[8226],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="2" data-aria-level="1" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 24px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="1266616274" paraeid="{32d038eb-df64-4bfa-b648-2cee8cb090b6}{162}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun MacChromeBold SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; -webkit-font-smoothing: antialiased; font-variant-ligatures: none !important; font-size: 12pt; font-style: normal; text-decoration: none; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: bold;"><span class="NormalTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">Bold</span></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div><div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle1 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; list-style-type: disc; cursor: text; font-family: verdana; overflow: visible;"><li data-leveltext="" data-font="Symbol" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:0,&quot;335559684&quot;:-2,&quot;335559685&quot;:720,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Symbol&quot;,&quot;469769242&quot;:[8226],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 24px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="2141762432" paraeid="{32d038eb-df64-4bfa-b648-2cee8cb090b6}{196}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; font-style: normal; text-decoration: none; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"><span class="NormalTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">Unformatted</span></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div><div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle1 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; list-style-type: disc; cursor: text; font-family: verdana; overflow: visible;"><li data-leveltext="" data-font="Symbol" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:0,&quot;335559684&quot;:-2,&quot;335559685&quot;:720,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Symbol&quot;,&quot;469769242&quot;:[8226],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="4" data-aria-level="1" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 24px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="400977494" paraeid="{32d038eb-df64-4bfa-b648-2cee8cb090b6}{236}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun Strikethrough SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; font-style: normal; text-decoration: line-through; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"><span class="NormalTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">Strikethrough</span></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div><div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle1 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; list-style-type: disc; cursor: text; font-family: verdana; overflow: visible;"><li data-leveltext="" data-font="Symbol" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:0,&quot;335559684&quot;:-2,&quot;335559685&quot;:720,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Symbol&quot;,&quot;469769242&quot;:[8226],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="5" data-aria-level="1" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 24px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="1929898719" paraeid="{d69c248d-f745-4584-8fd6-0daf91e656ab}{45}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun Underlined SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; font-style: normal; text-decoration: underline; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"><span class="NormalTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">Underlined</span></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div><div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle1 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; list-style-type: disc; cursor: text; font-family: verdana; overflow: visible;"><li data-leveltext="" data-font="Symbol" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:0,&quot;335559684&quot;:-2,&quot;335559685&quot;:720,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Symbol&quot;,&quot;469769242&quot;:[8226],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="6" data-aria-level="1" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 24px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="1763241731" paraeid="{d69c248d-f745-4584-8fd6-0daf91e656ab}{85}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun EmptyTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"></span><a class="Hyperlink SCXW96078129 BCX0" href="https://matrix.org/" target="_blank" rel="noreferrer noopener" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; cursor: text; text-decoration: none; color: inherit;"><span data-contrast="none" xml:lang="EN-GB" lang="EN-GB" class="TextRun Underlined SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; color: rgb(70, 120, 134); font-size: 12pt; font-style: normal; text-decoration: underline; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"><span class="NormalTextRun SCXW96078129 BCX0" data-ccp-charstyle="Hyperlink" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">Linked</span></span></a><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun EmptyTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; font-style: normal; text-decoration: none; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div><div class="ListContainerWrapper SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; position: relative; color: rgb(0, 0, 0); font-family: Aptos, Aptos_MSFontService, sans-serif; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;"><ul class="BulletListStyle2 SCXW96078129 BCX0" role="list" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; cursor: text; font-family: verdana; overflow: visible; list-style-type: circle;"><li data-leveltext="o" data-font="Courier New" data-listid="3" data-list-defn-props="{&quot;335552541&quot;:1,&quot;335559683&quot;:1,&quot;335559684&quot;:-2,&quot;335559685&quot;:1440,&quot;335559991&quot;:360,&quot;469769226&quot;:&quot;Courier New&quot;,&quot;469769242&quot;:[9675],&quot;469777803&quot;:&quot;left&quot;,&quot;469777804&quot;:&quot;o&quot;,&quot;469777815&quot;:&quot;hybridMultilevel&quot;}" aria-setsize="-1" data-aria-posinset="1" data-aria-level="2" role="listitem" class="OutlineElement Ltr SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px 0px 0px 72px; padding: 0px; user-select: text; clear: both; cursor: text; overflow: visible; position: relative; direction: ltr; display: block; font-size: 12pt; font-family: Aptos, Aptos_MSFontService, sans-serif; vertical-align: baseline;"><p class="Paragraph SCXW96078129 BCX0" xml:lang="EN-GB" lang="EN-GB" paraid="274900590" paraeid="{d69c248d-f745-4584-8fd6-0daf91e656ab}{123}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; overflow-wrap: break-word; white-space: pre-wrap; font-weight: normal; font-style: normal; vertical-align: baseline; font-kerning: none; background-color: transparent; color: windowtext; text-align: left; text-indent: 0px;"><span data-contrast="auto" xml:lang="EN-GB" lang="EN-GB" class="TextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-variant-ligatures: none !important; font-size: 12pt; font-style: normal; text-decoration: none; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif; font-weight: normal;"><span class="NormalTextRun SCXW96078129 BCX0" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text;">nested</span></span><span class="EOP SCXW96078129 BCX0" data-ccp-props="{}" style="-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; font-size: 12pt; line-height: 22.0875px; font-family: Aptos, Aptos_EmbeddedFont, Aptos_MSFontService, sans-serif;"> </span></p></li></ul></div>
+        "#;
+            let dom = HtmlParser::default()
+                .parse_from_external_html_source::<Utf16String>(html)
+                .unwrap();
+            assert_eq!(dom.to_string(), "<ul><li><p><em>Italic</em></p></li></ul><ul><li><p><strong>Bold</strong></p></li></ul><ul><li><p>Unformatted</p></li></ul><ul><li><p><del>Strikethrough</del></p></li></ul><ul><li><p><u>Underlined</u></p></li></ul><ul><li><p><a style=\"-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; cursor: text; text-decoration: none; color: inherit;\" href=\"https://matrix.org/\"><u>Linked</u></a></p></li></ul><ul><li><p>nested</p></li></ul>");
+        }
+
+        #[wasm_bindgen_test]
+        fn unknown_tag_errors() {
+            let html = r#"
+            <span style="font-weight: bold;">Bold</span>
+        "#;
+            let result = HtmlParser::default().parse::<Utf16String>(html);
+            assert_eq!(result.is_err(), true);
         }
 
         #[wasm_bindgen_test]
