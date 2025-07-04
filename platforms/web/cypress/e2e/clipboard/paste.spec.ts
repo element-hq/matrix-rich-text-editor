@@ -57,7 +57,7 @@ describe('Paste', () => {
             cy.contains(editor, 'BEFORElink');
             
             cy.get(editor).type('AFTER');
-            cy.contains(editor, /^BEFORElink AFTER/);
+            cy.contains(editor, /^BEFORElinkAFTER/);
         },
     );
     
