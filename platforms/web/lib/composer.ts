@@ -17,6 +17,7 @@ limitations under the License.
 import {
     ComposerModel,
     ComposerUpdate,
+    HtmlSource,
     SuggestionPattern,
 } from '../generated/wysiwyg';
 import {
@@ -72,8 +73,25 @@ export function processInput(
     }
 
     if (isClipboardEvent(event)) {
-        const data = event.clipboardData?.getData('text/plain') ?? '';
-        return action(composerModel.replace_text(data), 'paste');
+        const clipboardData = event.clipboardData;
+        const htmlData = clipboardData?.getData('text/html');
+        const plainData = clipboardData?.getData('text/plain') ?? '';
+        
+        if (htmlData && htmlData !== plainData) {
+            const htmlSource = clipboardData?.types.includes(
+                'application/x-vnd.google-docs-document-slice-clip+wrapped',
+            ) ? HtmlSource.GoogleDoc : HtmlSource.UnknownExternal;
+            return action(
+                composerModel.replace_html(htmlData, htmlSource),
+                'replace_html_paste',
+                htmlData,
+            );
+        }
+        return action(
+            composerModel.replace_text(plainData),
+            'replace_text_paste',
+            plainData,
+        );
     }
 
     switch (event.inputType) {

@@ -15,6 +15,7 @@
 use regex::Regex;
 
 use crate::dom::dom_creation_error::HtmlParseError;
+use crate::dom::html_source::HtmlSource;
 use crate::dom::nodes::dom_node::DomNodeKind::{self};
 use crate::dom::nodes::{ContainerNode, ContainerNodeKind};
 use crate::dom::Dom;
@@ -35,17 +36,18 @@ where
     }
 }
 
-pub fn parse_from_external_html_source<S>(
+pub fn parse_from_source<S>(
     html: &str,
+    source: HtmlSource,
 ) -> Result<Dom<S>, HtmlParseError>
 where
     S: UnicodeString,
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "sys")] {
-            sys::HtmlParser::default().parse_from_external_html_source(html)
+            sys::HtmlParser::default().parse_from_source(html, source)
         } else if #[cfg(all(feature = "js", target_arch = "wasm32"))] {
-            js::HtmlParser::default().parse_from_external_html_source(html)
+            js::HtmlParser::default().parse_from_source(html, source)
         } else {
             unreachable!("The `sys` or `js` are mutually exclusive, and one of them must be enabled.")
         }
@@ -94,23 +96,24 @@ mod sys {
         where
             S: UnicodeString,
         {
-            return self.parse_internal(html, true);
+            return self.parse_internal(html, HtmlSource::Matrix);
         }
 
-        pub(super) fn parse_from_external_html_source<S>(
+        pub(super) fn parse_from_source<S>(
             &mut self,
             html: &str,
+            source: HtmlSource,
         ) -> Result<Dom<S>, HtmlParseError>
         where
             S: UnicodeString,
         {
-            self.parse_internal(html, true)
+            self.parse_internal(html, source)
         }
 
         pub(super) fn parse_internal<S>(
             &mut self,
             html: &str,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<Dom<S>, HtmlParseError>
         where
             S: UnicodeString,
@@ -119,11 +122,12 @@ mod sys {
                 self.padom_creation_error_to_html_parse_error(err)
             })?;
 
-            let dom = self.padom_to_dom(pa_dom, external_html_source).map_err(
-                |err| HtmlParseError {
-                    parse_errors: vec![err.to_string()],
-                },
-            )?;
+            let dom =
+                self.padom_to_dom(pa_dom, html_source).map_err(|err| {
+                    HtmlParseError {
+                        parse_errors: vec![err.to_string()],
+                    }
+                })?;
             Ok(post_process_blocks(dom))
         }
 
@@ -142,7 +146,7 @@ mod sys {
         fn padom_to_dom<S>(
             &mut self,
             padom: PaDom,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<Dom<S>, Error>
         where
             S: UnicodeString,
@@ -151,7 +155,7 @@ mod sys {
             let doc = ret.document_mut();
 
             if let PaDomNode::Document(padoc) = padom.get_document() {
-                self.convert(&padom, padoc, doc, external_html_source)?;
+                self.convert(&padom, padoc, doc, html_source)?;
             } else {
                 return Err(Error::NoBody);
             }
@@ -164,7 +168,7 @@ mod sys {
             padom: &PaDom,
             panode: &PaNodeContainer,
             node: &mut ContainerNode<S>,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<(), Error>
         where
             S: UnicodeString,
@@ -177,7 +181,7 @@ mod sys {
                             padom,
                             child,
                             node,
-                            external_html_source,
+                            html_source,
                         )?;
                     }
                     PaDomNode::Document(_) => {
@@ -207,7 +211,7 @@ mod sys {
             padom: &PaDom,
             child: &PaNodeContainer,
             node: &mut ContainerNode<S>,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<(), Error>
         where
             S: UnicodeString,
@@ -222,7 +226,7 @@ mod sys {
                             padom,
                             child,
                             Some(node),
-                            external_html_source,
+                            html_source,
                         )?;
                     } else {
                         self.current_path.push(formatting_node.kind());
@@ -231,7 +235,7 @@ mod sys {
                             padom,
                             child,
                             last_container_mut_in(node),
-                            external_html_source,
+                            html_source,
                         )?;
                         self.current_path.remove(cur_path_idx);
                     }
@@ -260,19 +264,14 @@ mod sys {
                             padom,
                             child,
                             last_container_mut_in(node),
-                            external_html_source,
+                            html_source,
                         )?;
                         self.current_path.remove(cur_path_idx);
                     } else {
-                        if external_html_source {
-                            self.convert(
-                                padom,
-                                child,
-                                node,
-                                external_html_source,
-                            )?;
-                        } else {
+                        if html_source == HtmlSource::Matrix {
                             return Err(Error::UnknownNode(tag.to_string()));
+                        } else {
+                            self.convert(padom, child, node, html_source)?;
                         }
                     }
                 }
@@ -286,7 +285,7 @@ mod sys {
                         padom,
                         child,
                         last_container_mut_in(node),
-                        external_html_source,
+                        html_source,
                     )?;
                     self.current_path.remove(cur_path_idx);
                 }
@@ -297,7 +296,7 @@ mod sys {
                         padom,
                         child,
                         last_container_mut_in(node),
-                        external_html_source,
+                        html_source,
                     )?;
                     self.current_path.remove(cur_path_idx);
                 }
@@ -326,7 +325,7 @@ mod sys {
                             padom,
                             child,
                             last_container_mut_in(node),
-                            external_html_source,
+                            html_source,
                         )?;
                     }
                     self.current_path.remove(cur_path_idx);
@@ -338,7 +337,7 @@ mod sys {
                         padom,
                         child,
                         last_container_mut_in(node),
-                        external_html_source,
+                        html_source,
                     )?;
                     self.current_path.remove(cur_path_idx);
                 }
@@ -349,7 +348,7 @@ mod sys {
                         padom,
                         child,
                         last_container_mut_in(node),
-                        external_html_source,
+                        html_source,
                     )?;
 
                     self.current_path.remove(cur_path_idx);
@@ -357,7 +356,7 @@ mod sys {
                 "html" => {
                     // Skip the html tag - add its children to the
                     // current node directly.
-                    self.convert(padom, child, node, external_html_source)?;
+                    self.convert(padom, child, node, html_source)?;
                 }
                 "p" => {
                     self.current_path.push(DomNodeKind::Paragraph);
@@ -366,15 +365,15 @@ mod sys {
                         padom,
                         child,
                         last_container_mut_in(node),
-                        external_html_source,
+                        html_source,
                     )?;
                     self.current_path.remove(cur_path_idx);
                 }
                 _ => {
-                    if external_html_source {
-                        self.convert(padom, child, node, external_html_source)?;
-                    } else {
+                    if html_source == HtmlSource::Matrix {
                         return Err(Error::UnknownNode(tag.to_string()));
+                    } else {
+                        self.convert(padom, child, node, html_source)?;
                     }
                 }
             };
@@ -387,13 +386,13 @@ mod sys {
             padom: &PaDom,
             child: &PaNodeContainer,
             new_node: Option<&mut ContainerNode<S>>,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<(), Error>
         where
             S: UnicodeString,
         {
             if let Some(new_node) = new_node {
-                self.convert(padom, child, new_node, external_html_source)?;
+                self.convert(padom, child, new_node, html_source)?;
             } else {
                 panic!("Container became non-container!");
             }
@@ -922,8 +921,10 @@ mod sys {
             let mut parser = HtmlParser::default();
             let html = "<pre><code><b>Test\nCode</b></code></pre>";
             let pa_dom = PaDomCreator::parse(html).unwrap();
-            let dom: Dom<Utf16String> =
-                parser.padom_to_dom(pa_dom, false).ok().unwrap();
+            let dom: Dom<Utf16String> = parser
+                .padom_to_dom(pa_dom, HtmlSource::Matrix)
+                .ok()
+                .unwrap();
             // First, line breaks are added as placeholders for paragraphs
             assert_eq!(
                 dom.to_html().to_string(),
@@ -1070,41 +1071,44 @@ mod sys {
         #[test]
         fn parse_google_doc_rich_text() {
             let dom: Dom<Utf16String> = HtmlParser::default()
-                .parse(GOOGLE_DOC_HTML_PASTEBOARD)
+                .parse_from_source(
+                    GOOGLE_DOC_HTML_PASTEBOARD,
+                    HtmlSource::GoogleDoc,
+                )
                 .unwrap();
             let tree = dom.to_tree().to_string();
             assert_eq!(
                 tree,
                 indoc! {
                 r#"
-    
+
                 └>ul
-                ├>li
-                │ └>p
-                │   └>i
-                │     └>"Italic"
-                ├>li
-                │ └>p
-                │   └>"Bold"
-                ├>li
-                │ └>p
-                │   └>"Unformatted"
-                ├>li
-                │ └>p
-                │   └>del
-                │     └>"Strikethrough"
-                ├>li
-                │ └>p
-                │   └>u
-                │     └>"Underlined"
-                ├>li
-                │ └>p
-                │   └>a "http://matrix.org"
-                │     └>u
-                │       └>"Linked"
-                └>ul
+                  ├>li
+                  │ └>p
+                  │   └>i
+                  │     └>"Italic"
+                  ├>li
+                  │ └>p
+                  │   └>"Bold"
+                  ├>li
+                  │ └>p
+                  │   └>"Unformatted"
+                  ├>li
+                  │ └>p
+                  │   └>del
+                  │     └>"Strikethrough"
+                  ├>li
+                  │ └>p
+                  │   └>u
+                  │     └>"Underlined"
+                  ├>li
+                  │ └>p
+                  │   └>a "http://matrix.org"
+                  │     └>u
+                  │       └>"Linked"
+                  └>ul
                     └>li
-                    └>p
+                      └>p
                         └>"nested"
                 "#
                 }
@@ -1113,8 +1117,12 @@ mod sys {
 
         #[test]
         fn parse_ms_doc_rich_text() {
-            let dom: Dom<Utf16String> =
-                HtmlParser::default().parse(MS_DOC_HTML_PASTEBOARD).unwrap();
+            let dom: Dom<Utf16String> = HtmlParser::default()
+                .parse_from_source(
+                    MS_DOC_HTML_PASTEBOARD,
+                    HtmlSource::UnknownExternal,
+                )
+                .unwrap();
             let tree = dom.to_tree().to_string();
             assert_eq!(
                 tree,
@@ -1406,23 +1414,24 @@ mod js {
         where
             S: UnicodeString,
         {
-            self.parse_internal(html, false)
+            self.parse_internal(html, HtmlSource::Matrix)
         }
 
-        pub(super) fn parse_from_external_html_source<S>(
+        pub(super) fn parse_from_source<S>(
             &mut self,
             html: &str,
+            html_source: HtmlSource,
         ) -> Result<Dom<S>, HtmlParseError>
         where
             S: UnicodeString,
         {
-            self.parse_internal(html, true)
+            self.parse_internal(html, html_source)
         }
 
         fn parse_internal<S>(
             &mut self,
             html: &str,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<Dom<S>, HtmlParseError>
         where
             S: UnicodeString,
@@ -1441,7 +1450,7 @@ mod js {
                     )
                 })?;
 
-            self.webdom_to_dom(document, external_html_source)
+            self.webdom_to_dom(document, html_source)
                 .map_err(to_dom_creation_error)
                 .map(post_process_blocks)
         }
@@ -1449,19 +1458,19 @@ mod js {
         fn webdom_to_dom<S>(
             &mut self,
             webdoc: Document,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<Dom<S>, Error>
         where
             S: UnicodeString,
         {
             let body = webdoc.body().ok_or_else(|| Error::NoBody)?;
-            self.convert(body.child_nodes(), external_html_source)
+            self.convert(body.child_nodes(), html_source)
         }
 
         fn convert<S>(
             &mut self,
             nodes: NodeList,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<Dom<S>, Error>
         where
             S: UnicodeString,
@@ -1470,7 +1479,7 @@ mod js {
             let mut dom = Dom::new(Vec::with_capacity(number_of_nodes));
             let dom_document = dom.document_mut();
 
-            self.convert_container(nodes, dom_document, external_html_source)?;
+            self.convert_container(nodes, dom_document, html_source)?;
 
             Ok(dom)
         }
@@ -1479,7 +1488,7 @@ mod js {
             &mut self,
             nodes: NodeList,
             dom: &mut ContainerNode<S>,
-            external_html_source: bool,
+            html_source: HtmlSource,
         ) -> Result<(), Error>
         where
             S: UnicodeString,
@@ -1561,10 +1570,7 @@ mod js {
                             );
                         } else {
                             let children = self
-                                .convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
+                                .convert(node.child_nodes(), html_source)?
                                 .take_children();
                             dom.append_child(DomNode::new_link(
                                 url.into(),
@@ -1581,11 +1587,8 @@ mod js {
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Ordered,
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1596,11 +1599,8 @@ mod js {
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Unordered,
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1610,11 +1610,8 @@ mod js {
                         self.current_path.push(DomNodeKind::ListItem);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list_item(
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1634,7 +1631,7 @@ mod js {
                         };
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_code_block(
-                                self.convert(children, external_html_source)?
+                                self.convert(children, html_source)?
                                     .take_children(),
                             ),
                         ));
@@ -1645,11 +1642,8 @@ mod js {
                         self.current_path.push(DomNodeKind::Quote);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_quote(
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                             ),
                         ));
                         self.current_path.pop();
@@ -1659,18 +1653,15 @@ mod js {
                         self.current_path.push(DomNodeKind::Paragraph);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_paragraph(
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                             ),
                         ));
                         self.current_path.pop();
                     }
                     node_name => {
                         let children_nodes = self
-                            .convert(node.child_nodes(), external_html_source)?
+                            .convert(node.child_nodes(), html_source)?
                             .take_children();
                         let formatting_kind = match node_name {
                             "STRONG" | "B" => Some(InlineFormatType::Bold),
@@ -1679,7 +1670,7 @@ mod js {
                             "U" => Some(InlineFormatType::Underline),
                             "CODE" => Some(InlineFormatType::InlineCode),
                             "SPAN" => {
-                                if !external_html_source {
+                                if html_source == HtmlSource::Matrix {
                                     return Err(Error::UnknownNode(
                                         node_name.to_owned(),
                                     ));
@@ -1715,7 +1706,7 @@ mod js {
                                 }
                             }
                             _ => {
-                                if !external_html_source {
+                                if html_source == HtmlSource::Matrix {
                                     return Err(Error::UnknownNode(
                                         node_name.to_owned(),
                                     ));
@@ -1819,8 +1810,9 @@ mod js {
         #[wasm_bindgen_test]
         fn google_doc_rich_text() {
             let dom = HtmlParser::default()
-                .parse_from_external_html_source::<Utf16String>(
+                .parse_from_source::<Utf16String>(
                     GOOGLE_DOC_HTML_PASTEBOARD,
+                    HtmlSource::GoogleDoc,
                 )
                 .unwrap();
             assert_eq!(dom.to_string(), "<ul><li><p><em>Italic</em></p></li><li><p>Bold</p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"text-decoration:none;\" href=\"http://matrix.org\"><u>Linked</u></a></p></li><ul><li><p>nested</p></li></ul></ul>");
@@ -1829,8 +1821,9 @@ mod js {
         #[wasm_bindgen_test]
         fn ms_rich_text() {
             let dom = HtmlParser::default()
-                .parse_from_external_html_source::<Utf16String>(
+                .parse_from_source::<Utf16String>(
                     MS_DOC_HTML_PASTEBOARD,
+                    HtmlSource::UnknownExternal,
                 )
                 .unwrap();
             assert_eq!(dom.to_string(), "<ul><li><p><em>Italic</em></p></li></ul><ul><li><p><strong>Bold</strong></p></li></ul><ul><li><p>Unformatted</p></li></ul><ul><li><p><del>Strikethrough</del></p></li></ul><ul><li><p><u>Underlined</u></p></li></ul><ul><li><p><a style=\"-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; cursor: text; text-decoration: none; color: inherit;\" href=\"https://matrix.org/\"><u>Linked</u></a></p></li></ul><ul><li><p>nested</p></li></ul>");
