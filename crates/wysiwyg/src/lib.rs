@@ -33,6 +33,7 @@ pub use crate::dom::parser::parse;
 pub use crate::dom::DomCreationError;
 pub use crate::dom::DomHandle;
 pub use crate::dom::HtmlParseError;
+pub use crate::dom::HtmlSource;
 pub use crate::dom::MarkdownParseError;
 pub use crate::dom::ToHtml;
 pub use crate::dom::ToRawText;
