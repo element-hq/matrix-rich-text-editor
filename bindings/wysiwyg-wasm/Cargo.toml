@@ -5,9 +5,9 @@ homepage = "https://gitlab.com/andybalaam/wysiwyg-rust"
 repository = "https://gitlab.com/andybalaam/wysiwyg-rust"
 description = "WASM bindings for wysiwyg-rust"
 keywords = ["matrix", "chat", "messaging", "composer", "wysiwyg"]
-license = "Apache-2.0"
+license-file = { workspace = true }
 name = "wysiwyg-wasm"
-version = "2.37.9"
+version = "2.38.4"
 rust-version = { workspace = true }
 
 [package.metadata.wasm-pack.profile.profiling]

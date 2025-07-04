@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.utils
 
 import android.app.Application
@@ -15,6 +23,7 @@ interface HtmlConverter {
             context: Context,
             styleConfig: StyleConfig,
             mentionDisplayHandler: MentionDisplayHandler?,
+            isEditor: Boolean,
             isMention: ((text: String, url: String) -> Boolean)? = null,
         ): HtmlConverter {
             val resourcesProvider = AndroidResourcesHelper(context)
@@ -24,6 +33,7 @@ interface HtmlConverter {
                     html = html,
                     styleConfig = styleConfig,
                     mentionDisplayHandler = mentionDisplayHandler,
+                    isEditor = isEditor,
                     isMention = isMention,
                 )
             })

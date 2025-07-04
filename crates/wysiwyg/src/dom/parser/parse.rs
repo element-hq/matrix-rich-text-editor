@@ -1,16 +1,8 @@
+// Copyright 2024 New Vector Ltd.
 // Copyright 2022 The Matrix.org Foundation C.I.C.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+// Please see LICENSE in the repository root for full details.
 
 use regex::Regex;
 
@@ -280,7 +272,14 @@ mod sys {
                 }
                 "ol" | "ul" => {
                     self.current_path.push(DomNodeKind::List);
-                    node.append_child(Self::new_list(tag));
+                    if tag == "ol" {
+                        let custom_start = child
+                            .get_attr("start")
+                            .and_then(|start| start.parse::<usize>().ok());
+                        node.append_child(Self::new_ordered_list(custom_start));
+                    } else {
+                        node.append_child(Self::new_unordered_list());
+                    }
                     self.convert_children(
                         padom,
                         child,
@@ -459,14 +458,29 @@ mod sys {
             }
         }
 
-        /// Create a list node
-        fn new_list<S>(tag: &str) -> DomNode<S>
+        /// Create an unordered list node
+        fn new_unordered_list<S>() -> DomNode<S>
         where
             S: UnicodeString,
         {
             DomNode::Container(ContainerNode::new_list(
-                ListType::from(S::from(tag)),
+                ListType::Unordered,
                 Vec::new(),
+                None,
+            ))
+        }
+
+        /// Create an ordered list node
+        fn new_ordered_list<S>(custom_start: Option<usize>) -> DomNode<S>
+        where
+            S: UnicodeString,
+        {
+            DomNode::Container(ContainerNode::new_list(
+                ListType::Ordered,
+                Vec::new(),
+                custom_start.map(|start| {
+                    vec![("start".into(), start.to_string().into())]
+                }),
             ))
         }
 
@@ -1583,12 +1597,23 @@ mod js {
                     }
 
                     "OL" => {
+                        let custom_start = node
+                            .unchecked_ref::<Element>()
+                            .get_attribute("start");
                         self.current_path.push(DomNodeKind::List);
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Ordered,
                                 self.convert(node.child_nodes(), html_source)?
                                     .take_children(),
+                                if let Some(custom_start) = custom_start {
+                                    Some(vec![(
+                                        "start".into(),
+                                        custom_start.into(),
+                                    )])
+                                } else {
+                                    None
+                                },
                             ),
                         ));
                         self.current_path.pop();
@@ -1601,6 +1626,7 @@ mod js {
                                 ListType::Unordered,
                                 self.convert(node.child_nodes(), html_source)?
                                     .take_children(),
+                                None,
                             ),
                         ));
                         self.current_path.pop();

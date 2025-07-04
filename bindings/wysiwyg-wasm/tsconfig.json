@@ -1,0 +1,14 @@
+{
+  "extends": "../../platforms/web/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "types": ["node"],
+    "noImplicitAny": false,
+    "strictPropertyInitialization": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "noImplicitThis": false,
+  },
+  "include": ["index.*", "node.*", "pkg/wysiwyg.d.ts", "pkg/wysiwyg_bg.wasm.d.ts"]
+}

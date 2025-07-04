@@ -31,6 +31,14 @@ jobs:
       matrix:
         api-level: [29]
     steps:
+      - name: Set env vars
+        run: |
+          echo "ANDROID_NDK_TOOLCHAIN_DIR=$ANDROID_NDK_HOME/toolchains" >> $GITHUB_ENV
+          export ANDROID_NDK_TOOLCHAIN_DIR=$ANDROID_NDK_HOME/toolchains
+          echo "Toolchain dir: $ANDROID_NDK_TOOLCHAIN_DIR."
+          echo "Contents:"
+          find $ANDROID_NDK_TOOLCHAIN_DIR -maxdepth 1
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -38,7 +46,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Rust & Cargo cache
         uses: Swatinem/rust-cache@v2
@@ -50,8 +58,6 @@ jobs:
 
       - name: Setup Gradle & Build test cases
         uses: gradle/gradle-build-action@v3
-        env:
-          ANDROID_NDK_TOOLCHAIN_DIR: ${{ env.ANDROID_NDK_HOME }}/toolchains
         with:
           build-root-directory: platforms/android
           cache-read-only: false
@@ -88,7 +94,7 @@ jobs:
             ./**/build/reports/screenshots/**
 
       - name: Upload unit test coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: build/reports/jacoco/generateUnitTestCoverageReport/generateUnitTestCoverageReport.xml
           fail_ci_if_error: false
@@ -97,7 +103,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload instrumentation test coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: build/reports/jacoco/generateInstrumentationTestCoverageReport/generateInstrumentationTestCoverageReport.xml
           fail_ci_if_error: false

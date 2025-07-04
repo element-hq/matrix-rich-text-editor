@@ -1,10 +1,10 @@
 [package]
 authors = ["Jonny Andrew <jonnya@element.io>"]
-homepage = "https://github.com/matrix-org/matrix-rich-text-editor"
-repository = "https://github.com/matrix-org/matrix-rich-text-editor"
+homepage = "https://github.com/element-hq/matrix-rich-text-editor"
+repository = "https://github.com/element-hq/matrix-rich-text-editor"
 description = "Utilities for Matrix mentions"
 keywords = ["matrix", "chat", "messaging"]
-license = "Apache-2.0"
+license-file = { workspace = true }
 name = "matrix_mentions"
 version = "0.1.0"
 edition = "2021"
@@ -16,4 +16,4 @@ custom-matrix-urls = []
 
 [dependencies]
 cfg-if = "1.0.0"
-ruma-common = "0.13.0"
+ruma-common = "0.15.0"

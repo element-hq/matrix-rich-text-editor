@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg
 
 import android.content.ClipData
@@ -14,6 +22,7 @@ import android.text.TextWatcher
 import android.util.AttributeSet
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -86,6 +95,7 @@ class EditorEditText : AppCompatEditText {
             context = context.applicationContext,
             styleConfig = styleConfig,
             mentionDisplayHandler = mentionDisplayHandler,
+            isEditor = true,
         )
     }
 
@@ -605,6 +615,19 @@ class EditorEditText : AppCompatEditText {
 
     override fun removeTextChangedListener(watcher: TextWatcher) {
         textWatcher.removeChild(watcher)
+    }
+
+    // This workaround is needed around compose to prevent the EditText focus from causing ANRs
+    override fun focusSearch(direction: Int): View? {
+        return null
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        // The size changed, so the cached positions for the code renderers won't match anymore
+        inlineCodeBgHelper.clearCachedPositions()
+        codeBlockBgHelper.clearCachedPositions()
+
+        super.onSizeChanged(w, h, oldw, oldh)
     }
 
     /**

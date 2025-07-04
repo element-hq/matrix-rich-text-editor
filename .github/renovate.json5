@@ -1,0 +1,60 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+  ],
+  "ignoreDeps": [
+    "Cocoanetics/DTCoreText",
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "github-actions",
+      ],
+      "groupName": "GitHub Actions",
+      "labels": [
+        "Android",
+        "iOS",
+        "Web",
+        "Rust",
+      ],
+    },
+    {
+      "matchManagers": [
+        "swift",
+        "cocoapods",
+      ],
+      "groupName": "Swift",
+      "labels": [
+        "iOS",
+      ]
+    },
+    {
+      "matchManagers": [
+        "gradle",
+      ],
+      "groupName": "Android",
+      "labels": [
+        "Android",
+      ],
+    },
+    {
+      "matchManagers": [
+        "npm",
+      ],
+      "groupName": "Web",
+      "labels": [
+        "Web"
+      ],
+    },
+    {
+      "matchManagers": [
+        "cargo",
+      ],
+      "groupName": "Rust",
+      "labels": [
+        "Rust",
+      ],
+    },
+  ],
+}

@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.compose
 
 import android.text.Layout
@@ -15,6 +23,7 @@ import io.element.android.wysiwyg.compose.internal.rememberTypeface
 import io.element.android.wysiwyg.compose.internal.toStyleConfig
 import io.element.android.wysiwyg.display.MentionDisplayHandler
 import io.element.android.wysiwyg.display.TextDisplay
+import io.element.android.wysiwyg.link.Link
 
 /**
  * A composable EditorStyledText.
@@ -36,8 +45,8 @@ fun EditorStyledText(
     modifier: Modifier = Modifier,
     resolveMentionDisplay: (text: String, url: String) -> TextDisplay = RichTextEditorDefaults.MentionDisplay,
     resolveRoomMentionDisplay: () -> TextDisplay = RichTextEditorDefaults.RoomMentionDisplay,
-    onLinkClickedListener: ((String) -> Unit)? = null,
-    onLinkLongClickedListener: ((String) -> Unit)? = null,
+    onLinkClickedListener: ((Link) -> Unit)? = null,
+    onLinkLongClickedListener: ((Link) -> Unit)? = null,
     onTextLayout: (Layout) -> Unit = {},
     style: RichTextEditorStyle = RichTextEditorDefaults.style(),
     releaseOnDetach: Boolean = true,

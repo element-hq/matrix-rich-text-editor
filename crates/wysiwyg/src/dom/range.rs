@@ -1,16 +1,8 @@
+// Copyright 2024 New Vector Ltd.
 // Copyright 2022 The Matrix.org Foundation C.I.C.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+// Please see LICENSE in the repository root for full details.
 
 use crate::dom::dom_handle::DomHandle;
 use crate::dom::nodes::dom_node::DomNodeKind;
@@ -376,7 +368,7 @@ impl Range {
     /// range.
     ///
     /// * `allow_covered_nodes` - if true, the node may be covered by the  
-    /// selection (i.e. matches the selection).
+    ///   selection (i.e. matches the selection).
     ///     
     fn find_shared_parent(&self, allow_covered_nodes: bool) -> DomHandle {
         let mut shared_path = vec![];
@@ -627,7 +619,7 @@ mod test {
     #[test]
     fn node_on_border_is_before_or_after_cursor() {
         let range = range_of("<strong>abc</strong>|def");
-        let strong_loc = range.locations.get(0).unwrap();
+        let strong_loc = range.locations.first().unwrap();
         assert!(strong_loc.relative_position() == DomLocationPosition::Before);
         let def_loc = range.locations.get(2).unwrap();
         assert!(def_loc.relative_position() == DomLocationPosition::After);

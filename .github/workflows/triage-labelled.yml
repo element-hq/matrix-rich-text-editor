@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     # Skip in forks
     if: >
-      github.repository == 'matrix-org/matrix-rich-text-editor'
+      github.repository == 'element-hq/matrix-rich-text-editor'
     steps:
       - uses: actions/github-script@v7
         with:

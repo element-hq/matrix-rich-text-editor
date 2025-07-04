@@ -26,16 +26,9 @@ ios: targets-ios
 
 web:
 	cd bindings/wysiwyg-wasm && \
-	npm install && \
-	npm run build && \
-	mkdir -p ../../platforms/web/generated && \
-	cp \
-		pkg/wysiwyg_bg.wasm \
-		pkg/wysiwyg_bg.wasm.d.ts \
-		pkg/wysiwyg.d.ts \
-		pkg/wysiwyg.js \
-		../../platforms/web/generated/
-	cd platforms/web && yarn install && yarn build
+	yarn && \
+	yarn build
+	cd platforms/web && yarn && yarn build
 
 web-format:
 	cd platforms/web && \

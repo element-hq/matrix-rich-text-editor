@@ -24,13 +24,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-        
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.76
-          profile: minimal
-          override: true
+
+      - name: Install rust
+        run: |
+          rustup set profile minimal
+          rustup show # installs from rust-toolchain.toml
           
       - name: Install targets
         run: make targets-ios
@@ -66,7 +64,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: 🔧 Rust & Cargo cache
         uses: Swatinem/rust-cache@v2
@@ -80,12 +78,7 @@ jobs:
         uses: gradle/gradle-build-action@v3
         with:
           build-root-directory: platforms/android
-          arguments: publishAllPublicationsToMavenCentral
-      - name: 🚀 Close staging repo and release version
-        uses: gradle/gradle-build-action@v3
-        with:
-          build-root-directory: platforms/android
-          arguments: closeAndReleaseRepository
+          arguments: publishAndReleaseToMavenCentral
 
   npm:
     name: Publish to npm

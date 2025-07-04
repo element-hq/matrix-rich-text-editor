@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg
 
 import android.content.Context
@@ -11,10 +19,10 @@ import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.withTranslation
 import androidx.core.text.getSpans
-import androidx.core.view.GestureDetectorCompat
 import com.sun.jna.internal.Cleaner
 import io.element.android.wysiwyg.display.MentionDisplayHandler
 import io.element.android.wysiwyg.internal.view.EditorEditTextAttributeReader
+import io.element.android.wysiwyg.link.Link
 import io.element.android.wysiwyg.utils.HtmlConverter
 import io.element.android.wysiwyg.utils.RustCleanerTask
 import io.element.android.wysiwyg.view.StyleConfig
@@ -60,8 +68,8 @@ open class EditorStyledTextView : AppCompatTextView {
     var mentionDisplayHandler: MentionDisplayHandler? = null
     private var htmlConverter: HtmlConverter? = null
 
-    var onLinkClickedListener: ((String) -> Unit)? = null
-    var onLinkLongClickedListener: ((String) -> Unit)? = null
+    var onLinkClickedListener: ((Link) -> Unit)? = null
+    var onLinkLongClickedListener: ((Link) -> Unit)? = null
 
     var onTextLayout: ((Layout) -> Unit)? = null
 
@@ -73,29 +81,51 @@ open class EditorStyledTextView : AppCompatTextView {
 
     // This gesture detector will be used to detect clicks on spans
     private val gestureDetector =
-        GestureDetectorCompat(context, object : GestureDetector.SimpleOnGestureListener() {
+        GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
 
             private fun hasAnyLinkListener() =
                 onLinkClickedListener != null || onLinkLongClickedListener != null
 
             private fun handleLinkClicks(
-                motionEvent: MotionEvent, listener: (String) -> Unit
+                motionEvent: MotionEvent, listener: (Link) -> Unit,
             ): Boolean {
                 val spans = findSpansForTouchEvent(motionEvent)
                 for (span in spans) {
                     when (span) {
                         is URLSpan -> {
-                            listener(span.url)
+                            val text = getTextForSpan(span) ?: span.url
+                            listener(
+                                Link(
+                                    url = span.url,
+                                    text = text,
+                                )
+                            )
                             return true
                         }
 
                         is PillSpan -> {
-                            span.url?.let(listener)
+                            span.url?.let { url ->
+                                val text = getTextForSpan(span) ?: url
+                                listener(
+                                    Link(
+                                        url = url,
+                                        text = text,
+                                    )
+                                )
+                            }
                             return true
                         }
 
                         is CustomMentionSpan -> {
-                            span.url?.let(listener)
+                            span.url?.let { url ->
+                                val text = getTextForSpan(span) ?: url
+                                listener(
+                                    Link(
+                                        url = url,
+                                        text = text,
+                                    )
+                                )
+                            }
                             return true
                         }
 
@@ -152,6 +182,16 @@ open class EditorStyledTextView : AppCompatTextView {
         codeBlockBgHelper.clearCachedPositions()
     }
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        if (isInit) {
+            // The size changed, so the cached positions for the code renderers won't match anymore
+            inlineCodeBgHelper.clearCachedPositions()
+            codeBlockBgHelper.clearCachedPositions()
+        }
+
+        super.onSizeChanged(w, h, oldw, oldh)
+    }
+
     /**
      * Sets up the styling used to translate HTML to Spanned text.
      * @param styleConfig The styles to use for the generated spans.
@@ -203,11 +243,12 @@ open class EditorStyledTextView : AppCompatTextView {
     }
 
     private fun createHtmlConverter(
-        styleConfig: StyleConfig, mentionDisplayHandler: MentionDisplayHandler?
+        styleConfig: StyleConfig, mentionDisplayHandler: MentionDisplayHandler?,
     ): HtmlConverter {
         return HtmlConverter.Factory.create(context = context,
             styleConfig = styleConfig,
             mentionDisplayHandler = mentionDisplayHandler,
+            isEditor = false,
             isMention = mentionDetector?.let { detector ->
                 { _, url ->
                     detector.isMention(url)
@@ -239,5 +280,11 @@ open class EditorStyledTextView : AppCompatTextView {
         } else {
             emptyArray()
         }
+    }
+
+    private fun getTextForSpan(span: Any): String? {
+        val start = (text as? Spanned)?.getSpanStart(span).takeIf { it != -1 } ?: return null
+        val end = (text as? Spanned)?.getSpanEnd(span).takeIf { it != -1 } ?: return null
+        return text?.subSequence(start, end)?.toString()
     }
 }

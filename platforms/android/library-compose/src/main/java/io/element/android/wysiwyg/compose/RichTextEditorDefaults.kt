@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.compose
 
 import android.text.InputType
@@ -142,6 +150,7 @@ object RichTextEditorDefaults {
      * Creates the default text style for [RichTextEditor].
      *
      * @param color The text color to apply
+     * @param placeholderColor The color to apply to the placeholder
      * @param fontSize The font size to apply
      * @param lineHeight The line height to apply
      * @param fontFamily The font family to apply
@@ -153,6 +162,7 @@ object RichTextEditorDefaults {
     @Composable
     fun textStyle(
         color: Color = LocalContentColor.current,
+        placeholderColor: Color = MaterialTheme.colorScheme.secondary,
         fontSize: TextUnit = LocalTextStyle.current.fontSize,
         lineHeight: TextUnit = LocalTextStyle.current.lineHeight,
         fontFamily: FontFamily? = LocalTextStyle.current.fontFamily,
@@ -162,6 +172,7 @@ object RichTextEditorDefaults {
         includeFontPadding: Boolean = true,
     ) = TextStyle(
         color = color,
+        placeholderColor = placeholderColor,
         fontSize = fontSize,
         lineHeight = lineHeight,
         fontFamily = fontFamily,
@@ -223,7 +234,7 @@ object RichTextEditorDefaults {
         color: Color = MaterialTheme.colorScheme.secondaryContainer,
         borderColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
         cornerRadius: Dp = defaultCodeCornerRadius,
-        borderWidth: Dp = defaultCodeBorderWidth
+        borderWidth: Dp = defaultCodeBorderWidth,
     ): InlineCodeBackgroundStyle {
         val density = LocalDensity.current
         return InlineCodeBackgroundStyle(

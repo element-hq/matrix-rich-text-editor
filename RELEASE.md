@@ -41,7 +41,7 @@ A workflow will automatically add the tag on main with the version provided in t
 ### Web
 
 This should be done automatically when a tag is uploaded, but you can also manually launch the
-[github action](https://github.com/matrix-org/matrix-wysiwyg/actions/workflows/publish.yml)
+[github action](https://github.com/element-hq/matrix-rich-text-editor/actions/workflows/publish.yml)
 which will package the code and upload it to NPM. It uses the version number
 it finds in package.json, which you updated above.
 

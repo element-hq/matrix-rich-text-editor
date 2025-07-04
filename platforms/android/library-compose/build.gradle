@@ -17,7 +17,7 @@ if (project.hasProperty("coverage")) {
 
 mavenPublishing {
     pomFromGradleProperties()
-    publishToMavenCentral(SonatypeHost.S01)
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 
     def publishJavaDoc = false // https://github.com/Kotlin/dokka/issues/2956
@@ -29,10 +29,11 @@ android {
     namespace 'io.element.android.wysiwyg.compose'
     testNamespace 'io.element.android.wysiwyg.compose.test'
 
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         minSdk 23
+        targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -48,12 +49,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 
     testCoverage {
-        jacocoVersion = "0.8.8"
+        jacocoVersion = "0.8.12"
     }
     testOptions {
         unitTests.returnDefaultValues = true
@@ -62,7 +63,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.14'
+        kotlinCompilerExtensionVersion '1.5.15'
     }
     packagingOptions {
         resources.excludes += 'META-INF/LICENSE.md'
@@ -71,7 +72,7 @@ android {
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -80,7 +81,7 @@ dependencies {
     implementation libs.timber
 
     implementation libs.androidx.core
-    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.0.0')
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.1.21')
     implementation libs.androidx.lifecycle.runtime
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)
@@ -107,4 +108,42 @@ dependencies {
 tasks.withType(Test) {
     jacoco.includeNoLocationClasses = true
     jacoco.excludes = ['jdk.internal.*']
+}
+
+mavenPublishing {
+    coordinates(property("MAVEN_GROUP"), property("POM_ARTIFACT_ID"), property("MAVEN_VERSION_NAME"))
+    if (!providers.gradleProperty("mavenCentralUsername")) {
+        println("No maven central provider")
+    }
+    pom {
+        name = "Matrix Rich Text Editor - Compose"
+        description.set("Cross-platform rich text editor that generates HTML output.")
+        inceptionYear.set("2022")
+        url.set("https://github.com/element-hq/matrix-rich-text-editor")
+        licenses {
+            license {
+                name.set("GNU Affero General Public License (AGPL) version 3.0")
+                url.set("https://www.gnu.org/licenses/agpl-3.0.txt")
+                distribution.set("https://www.gnu.org/licenses/agpl-3.0.txt")
+            }
+            license {
+                name.set("Element Commercial License")
+                url.set("https://raw.githubusercontent.com/element-hq/matrix-rich-text-editor/refs/heads/main/LICENSE-COMMERCIAL")
+                distribution.set("https://raw.githubusercontent.com/element-hq/matrix-rich-text-editor/refs/heads/main/LICENSE-COMMERCIAL")
+            }
+        }
+        developers {
+            developer {
+                id.set("matrixdev")
+                name.set("matrixdev")
+                url.set("https://github.com/element-hq/")
+                email.set("android@element.io")
+            }
+        }
+        scm {
+            url.set("https://github.com/element-hq/matrix-rich-text-editor/")
+            connection.set("scm:git:git://github.com/element-hq/matrix-rich-text-editor.git")
+            developerConnection.set("scm:git:ssh://git@github.com/element-hq/matrix-rich-text-editor.git")
+        }
+    }
 }

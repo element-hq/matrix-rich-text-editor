@@ -1,16 +1,8 @@
+// Copyright 2024 New Vector Ltd.
 // Copyright 2022 The Matrix.org Foundation C.I.C.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+// Please see LICENSE in the repository root for full details.
 
 //! Methods on Dom that modify its contents and are guaranteed to conform to
 //! our invariants:
@@ -56,6 +48,7 @@ where
 
     /// Return an iterator over all nodes of the DOM from the passed node,
     /// depth-first order (including self).
+    #[allow(elided_named_lifetimes)]
     pub fn iter_from<'a>(&'a self, node: &'a DomNode<S>) -> DomNodeIterator<S> {
         DomNodeIterator::over(self, node)
     }
@@ -68,6 +61,7 @@ where
 
     /// Return an iterator over all handles of the DOM from the passed handle,
     /// depth-first order (including self).
+    #[allow(elided_named_lifetimes)]
     pub fn handle_iter_from<'a>(
         &'a self,
         handle: &'a DomHandle,
@@ -77,6 +71,7 @@ where
 
     /// Return an iterator over all text nodes of the DOM from the passed node,
     /// depth-first order (including self).
+    #[allow(elided_named_lifetimes)]
     pub fn iter_text_from<'a>(
         &'a self,
         node: &'a DomNode<S>,
@@ -107,9 +102,7 @@ where
     pub fn prev_handle(&mut self, handle: &DomHandle) -> Option<DomHandle> {
         let mut iter = self.iter_from_handle(handle);
         iter.next_back(); // Current node
-        let Some(prev) = iter.next_back() else {
-            return None;
-        };
+        let prev = iter.next_back()?;
         Some(prev.handle())
     }
 
@@ -131,9 +124,7 @@ where
     pub fn next_handle(&mut self, handle: &DomHandle) -> Option<DomHandle> {
         let mut iter = self.iter_from_handle(handle);
         iter.next(); // Current node
-        let Some(next) = iter.next() else {
-            return None;
-        };
+        let next = iter.next()?;
         Some(next.handle())
     }
 }
@@ -221,6 +212,7 @@ where
     }
 }
 
+#[allow(clippy::needless_lifetimes)]
 impl<'a, S> DoubleEndedIterator for DomNodeIterator<'a, S>
 where
     S: UnicodeString,
@@ -308,6 +300,7 @@ where
     }
 }
 
+#[allow(clippy::needless_lifetimes)]
 impl<'a, S> Iterator for DomHandleIterator<'a, S>
 where
     S: UnicodeString,
@@ -315,9 +308,7 @@ where
     type Item = DomHandle;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some(current) = self.current.clone() else {
-            return None;
-        };
+        let current = self.current.clone()?;
         if self.started {
             if let DomNode::Container(c) = self.dom.lookup_node(&current) {
                 let first_child_handle = current.child_handle(0);
@@ -339,14 +330,13 @@ where
     }
 }
 
+#[allow(clippy::needless_lifetimes)]
 impl<'a, S> DoubleEndedIterator for DomHandleIterator<'a, S>
 where
     S: UnicodeString,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let Some(current) = self.current.clone() else {
-            return None;
-        };
+        let current = self.current.clone()?;
         if self.started {
             if let DomNode::Container(c) = self.dom.lookup_node(&current) {
                 // Don't go deeper if the current container node has been visited

@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.utils
 
 import android.graphics.Typeface
@@ -46,6 +54,7 @@ internal class HtmlToSpansParser(
     private val html: String,
     private val styleConfig: StyleConfig,
     private val mentionDisplayHandler: MentionDisplayHandler?,
+    private val isEditor: Boolean,
     private val isMention: ((text: String, url: String) -> Boolean)? = null,
 ) {
     private val safeList = Safelist()
@@ -54,6 +63,7 @@ internal class HtmlToSpansParser(
             "blockquote", "p", "br"
         )
         .addAttributes("a", "href", "data-mention-type", "contenteditable")
+        .addAttributes("ol", "start")
 
     /**
      * Convert the HTML string into a [Spanned] text.
@@ -122,7 +132,7 @@ internal class HtmlToSpansParser(
         if (text.isEmpty()) return
 
         val previousSibling = child.previousSibling() as? Element
-        if (previousSibling != null && previousSibling.isBlock) {
+        if (previousSibling != null && previousSibling.isBlock && !isLineBreak(previousSibling)) {
             append('\n')
         }
         append(text)
@@ -207,7 +217,13 @@ internal class HtmlToSpansParser(
             "ol" -> {
                 val typeface = Typeface.defaultFromStyle(Typeface.NORMAL)
                 val textSize = 16.dpToPx()
-                val order = (element.parent()?.select("li")?.indexOf(element) ?: 0) + 1
+                val indexInList = listParent.select("li").indexOf(element)
+                val customOrder = listParent.attr("start").toIntOrNull()
+                val order = if (customOrder != null) {
+                    customOrder + indexInList
+                } else {
+                    indexInList + 1 // Default to 1-based index
+                }
                 OrderedListSpan(typeface, textSize, order, gapWidth)
             }
             else -> return
@@ -290,9 +306,34 @@ internal class HtmlToSpansParser(
         }
     }
 
+    private fun isLineBreak(node: Node?): Boolean {
+        return node is Element && node.tagName() == "br"
+    }
+
     private fun SpannableStringBuilder.addLeadingLineBreakForBlockNode(element: Element) {
-        if (element.isBlock && element.previousElementSibling()?.takeIf { it.tagName() != "br" } != null) {
+        fun isBlankTextNode(node: Node?): Boolean {
+            return node is TextNode && node.isBlank
+        }
+
+        // If current element is not a block there's no need to add line breaks
+        if (!element.isBlock) return
+
+        // Pick the previous sibling node in the DOM
+        var previousSibling = element.previousSibling()
+
+        // If the previous sibling was a text node with only whitespace we're not interested in it, keep going back
+        if (previousSibling != null && isBlankTextNode(previousSibling)) {
+            previousSibling = previousSibling.previousSibling()
+        }
+
+        // If the previous sibling was a line break or an empty text node, there is no need to add a line break
+        if (previousSibling != null && !isLineBreak(previousSibling) && !isBlankTextNode(previousSibling)) {
             append('\n')
+
+            // If we're not in editor mode, add another line break to separate blocks
+            if (!isEditor) {
+                append('\n')
+            }
         }
     }
 
@@ -336,10 +377,10 @@ internal class HtmlToSpansParser(
         var reachedNonWhite = false
         val text = wholeText
         // Special case for when there's a single space
-        if (stripLeading && wholeText == " ") return wholeText
+        if (stripLeading && text == " ") return text
         val result = StringUtil.borrowBuilder()
         var i = 0
-        while (i < wholeText.length) {
+        while (i < text.length) {
             val c = text.codePointAt(i)
             if (StringUtil.isActuallyWhitespace(c)) {
                 if (c == NBSP.code) {
@@ -347,6 +388,8 @@ internal class HtmlToSpansParser(
                 } else if ((stripLeading && !reachedNonWhite) || lastWasWhite) {
                     i += Character.charCount(c)
                     continue
+                } else if (c == '\n'.code && (i == text.length - 1 || !reachedNonWhite)) {
+                    // Do nothing, this is probably just an HTML formatting line break
                 } else {
                     result.append(' ')
                 }

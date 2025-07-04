@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.test.utils
 
 import android.view.View
@@ -7,6 +15,7 @@ import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import io.element.android.wysiwyg.EditorStyledTextView
+import io.element.android.wysiwyg.link.Link
 import org.hamcrest.Matcher
 
 object TextViewAction {
@@ -38,7 +47,7 @@ object TextViewAction {
     }
 
     class SetOnLinkClickedListener(
-        private val listener: (String) -> Unit,
+        private val listener: (Link) -> Unit,
     ) : ViewAction {
         override fun getConstraints(): Matcher<View> = isDisplayed()
 
@@ -54,5 +63,5 @@ object TextViewAction {
 object TextViewActions {
     fun setText(text: CharSequence, type: BufferType = BufferType.NORMAL) = TextViewAction.SetText(text, type)
     fun setHtml(html: String) = TextViewAction.SetHtml(html)
-    fun setOnLinkClickedListener(listener: (String) -> Unit) = TextViewAction.SetOnLinkClickedListener(listener)
+    fun setOnLinkClickedListener(listener: (Link) -> Unit) = TextViewAction.SetOnLinkClickedListener(listener)
 }

@@ -1,35 +1,24 @@
 /*
+Copyright 2024 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE in the repository root for full details.
 */
 
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import dts from 'vite-plugin-dts';
 
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         react(),
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         dts({
             include: [
                 'lib/useWysiwyg.ts',
+                'lib/useComposerModel.ts',
                 'lib/conversion.ts',
                 'lib/types.ts',
                 'lib/constants.ts',
@@ -37,14 +26,27 @@ export default defineConfig({
                 'lib/useTestCases/types.ts',
             ],
             rollupTypes: true,
+            copyDtsFiles: true,
+            beforeWriteFile: async (filePath, content) => {
+                // Hack generated types to make all exported
+                content = content.replace(/^declare/gm, 'export declare');
+                return { filePath, content };
+            },
         }),
     ],
+    server: {
+        fs: {
+            // Allow serving files from the git root to access the wasm in bindings dir
+            allow: ['../..'],
+        },
+    },
     test: {
         globals: true,
         environment: 'jsdom',
         setupFiles: 'test.setup.ts',
         includeSource: ['lib/**/*.{ts,tsx}'],
         coverage: {
+            provider: 'v8',
             all: true,
             include: ['lib/**/*.{ts,tsx}'],
             exclude: [
@@ -71,7 +73,7 @@ export default defineConfig({
         rollupOptions: {
             // make sure to externalize deps that shouldn't be bundled
             // into your library
-            external: ['react', 'react-dom'],
+            external: ['react', 'react-dom', '@vector-im/matrix-wysiwyg-wasm'],
             output: {
                 // Provide global variables to use in the UMD build
                 // for externalized deps

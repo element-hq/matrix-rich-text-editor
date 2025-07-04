@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.compose
 
 import android.graphics.drawable.GradientDrawable
@@ -15,7 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import kotlin.math.roundToInt
 
-data class RichTextEditorStyle internal constructor(
+data class RichTextEditorStyle(
     val bulletList: BulletListStyle,
     val codeBlock: CodeBlockStyle,
     val inlineCode: InlineCodeStyle,
@@ -25,19 +33,19 @@ data class RichTextEditorStyle internal constructor(
     val link: LinkStyle,
 )
 
-data class BulletListStyle internal constructor(
+data class BulletListStyle(
     val bulletGapWidth: Dp,
     val bulletRadius: Dp,
 )
 
-data class CodeBlockStyle internal constructor(
+data class CodeBlockStyle(
     val leadingMargin: Dp,
     val verticalPadding: Dp,
     val relativeTextSize: Float,
     val background: CodeBackgroundStyle,
 )
 
-data class InlineCodeStyle internal constructor(
+data class InlineCodeStyle(
     val horizontalPadding: Dp,
     val verticalPadding: Dp,
     val relativeTextSize: Float,
@@ -50,6 +58,7 @@ data class PillStyle(
 
 data class TextStyle(
     val color: Color,
+    val placeholderColor: Color,
     val fontSize: TextUnit,
     val lineHeight: TextUnit,
     val fontFamily: FontFamily?,

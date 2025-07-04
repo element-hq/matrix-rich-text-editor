@@ -32,12 +32,10 @@ jobs:
       with:
         cache-on-failure: true
 
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.76
-        profile: minimal
-        override: true
+    - name: Install rust
+      run: |
+        rustup set profile minimal
+        rustup show # installs from rust-toolchain.toml
 
     - name: Install targets
       run: make targets-ios
@@ -62,7 +60,7 @@ jobs:
       run: xcresultparser -q -o cobertura -t Wysiwyg -p $(pwd) tests.xcresult > tests.xml 
 
     - name: Upload unit test coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: ./platforms/ios/example/tests.xml
         fail_ci_if_error: true
@@ -79,7 +77,7 @@ jobs:
       run: xcresultparser -q -o cobertura -t Wysiwyg -p $(pwd) ui-tests.xcresult > ui-tests.xml 
 
     - name: Upload ui test coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: ./platforms/ios/example/ui-tests.xml
         fail_ci_if_error: true

@@ -1,5 +1,56 @@
 # Changelog
 
+# [2.38.4]
+- [Android] Add placeholder to RichTextEditor API #63
+- [Android] Migrate to maven central portal #62
+- [Android] Update dependencies #60 #56
+- [iOS] Update dependencies #8
+- [Rust] Update dependencies #4
+
+# [2.38.3]
+- [Android] Update API to be able to check links. #53
+- [Android] Update dependencies. #13
+- [Rust] Update dependencies. #4
+
+# [2.38.2]
+- [Android] Add line break between text nodes and block element.
+- [Web] Update vite to v6.0.9 to fix CVE in the dependency.
+
+# [2.38.1]
+- [Android] Workaround bug that caused the next focus view search loop when the editor is used in a Compose context, causing ANRs.
+- [Android] Fix crashes when either the editor or the rendering views contain a code block and their size changes, making the previously calculated and cached coordinates for rendering the code block invalid.
+- [Common] Change licensing to AGPLv3 + Element Commercial license. 
+
+# [2.38.0]
+- [Rust] Bump Rust version to `1.76`.
+- [Web] Bump wasm-pack version to `0.13.1`.
+- [Web] Switch bindings/wysiwyg-wasm from npm to yarn.
+- [Web] Add typescript checking to bindings/wysiwyg-wasm.
+- [Web] Update vite and related packages.
+- [Web] Simplify build scripts.
+- [Web] Publish a dual CJS/ESM package with platform-specific loaders.
+
+# [2.37.14]
+- [Android] Have separate modes for parsing HTML for 'editor mode' and 'message mode' using `isEditor: Boolean` parameter.
+- [Android] Try auto-selecting the latest NDK version available instead of using a hardcoded one.
+- [Web] Update example app to use the new npm package.
+
+# [2.37.13] - 2024-10-04
+- [Android] Make `RichTextEditorStyle` and other data classes' constructors public to match their `copy` methods in Kotlin 2.0. This would cause build errors on Kotlin 2.1.
+
+# [2.37.12] - 2024-10-02
+
+- [Common] Dependencies update
+- [iOS] fixed a release bug that prevented the XCFramework to be downloaded from SwiftPM.
+
+# [2.37.11] - 2024-10-01
+
+- [Common] matrix-rich-text-editor is being forked by Element at https://github.com/element-hq/matrix-rich-text-editor. Contributions are licensed to Element under a CLA and made available under an AGPLv3.0 license.
+  You can read more about this here:
+  - https://matrix.org/blog/2024/08/heart-of-matrix/
+  - https://element.io/blog/sustainable-licensing-at-element-with-agpl/
+- [Web] The matrix-wysiwyg npm package will now be published at https://www.npmjs.com/package/@vector-im/matrix-wysiwyg
+
 # [2.37.9] - 2024-08-28
 - [Rust] Escape text passed to `ComposerModel::set_link_with_text` and `insert_mention*` methods of the WASM bindings.
 

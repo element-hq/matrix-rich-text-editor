@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 New Vector Ltd.
+ * Copyright 2024 The Matrix.org Foundation C.I.C.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE in the repository root for full details.
+ */
+
 package io.element.android.wysiwyg.internal.view
 
 import android.content.Context
@@ -25,7 +33,7 @@ internal inline fun <reified VM : ViewModel> View.viewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     @Suppress("UNCHECKED_CAST")// Casting T as ViewModel
                     return viewModelInitializer?.let { it.invoke() as T }
-                        ?: modelClass.newInstance()
+                        ?: modelClass.getDeclaredConstructor().newInstance()
                 }
             }
         },

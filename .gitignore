@@ -20,3 +20,6 @@
 # Swift release
 WysiwygComposerFFI.xcframework.zip
 matrix-rich-text-editor-swift
+
+# tmp folder
+/tmp
