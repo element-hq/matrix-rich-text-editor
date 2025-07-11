@@ -1,5 +1,10 @@
 # Changelog
 
+# [2.38.5]
+- [Rust] Add support for `<ol start='N'>` attribute.
+- [Android] Add support for `<ol start='N'>` attribute when rendering HTML.
+- [Android] Improve how new line characters are handled inside HTML tags when rendered.
+
 # [2.38.4]
 - [Android] Add placeholder to RichTextEditor API #63
 - [Android] Migrate to maven central portal #62
