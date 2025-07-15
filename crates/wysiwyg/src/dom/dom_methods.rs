@@ -696,9 +696,11 @@ where
                 self.merge_text_nodes_around(&first_location.node_handle);
             }
         }
+        #[cfg(any(test, feature = "assert-invariants"))]
+        self.assert_invariants();
     }
 
-    fn merge_text_nodes_around(&mut self, handle: &DomHandle) {
+    pub fn merge_text_nodes_around(&mut self, handle: &DomHandle) {
         // TODO: make this method not public because it is used to make
         // the invariants true, instead of assuming they are true at the
         // beginning!
@@ -710,9 +712,6 @@ where
             merge_if_adjacent_text_nodes(parent, idx - 1);
         }
         merge_if_adjacent_text_nodes(parent, idx);
-
-        #[cfg(any(test, feature = "assert-invariants"))]
-        self.assert_invariants();
     }
 
     /// Recursively visit container nodes, looking for block nodes and, if they contain a
