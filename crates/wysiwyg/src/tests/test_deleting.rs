@@ -173,10 +173,12 @@ fn deleting_across_lists_joins_them() {
 fn deleting_across_lists_joins_them_nested() {
     let mut model = cm("<ol>\
             <li>1{1</li>\
-            <li>22</li>\
-            <ol>\
-                <li>55</li>\
-            </ol>\
+            <li>
+                <p>22</p>
+                <ol>\
+                    <li>55</li>\
+                </ol>\
+            </li>\
         </ol>\
         <ol>\
             <li>33</li>\
