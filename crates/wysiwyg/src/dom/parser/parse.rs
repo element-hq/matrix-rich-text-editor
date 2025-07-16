@@ -1604,11 +1604,8 @@ mod js {
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Ordered,
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                                 if let Some(custom_start) = custom_start {
                                     Some(vec![(
                                         "start".into(),
@@ -1627,11 +1624,8 @@ mod js {
                         dom.append_child(DomNode::Container(
                             ContainerNode::new_list(
                                 ListType::Unordered,
-                                self.convert(
-                                    node.child_nodes(),
-                                    external_html_source,
-                                )?
-                                .take_children(),
+                                self.convert(node.child_nodes(), html_source)?
+                                    .take_children(),
                                 None,
                             ),
                         ));
