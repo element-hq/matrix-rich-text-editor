@@ -924,12 +924,15 @@ mod test {
     #[test]
     fn find_parent_list_item_or_self_finds_our_grandparent() {
         let d = cm("|<ul><li>b<strong>c</strong></li></ul>d").state.dom;
+        // The "|" at the start infers that when the dom is created, it be within a paragraph
+        // (as inline nodes and blocks are not allowed to be siblings).
+        // So the handle is [1, 0, 1, 0].
         let res =
             d.find_ancestor_list_item_or_self(&DomHandle::from_raw(vec![
-                0, 0, 1, 0,
+                1, 0, 1, 0,
             ]));
         let res = res.expect("Should have found a list parent!");
-        assert_eq!(res.into_raw(), vec![0, 0]);
+        assert_eq!(res.into_raw(), vec![1, 0]);
     }
 
     #[test]

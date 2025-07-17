@@ -9,7 +9,7 @@ use regex::Regex;
 use crate::dom::dom_creation_error::HtmlParseError;
 use crate::dom::html_source::HtmlSource;
 use crate::dom::nodes::dom_node::DomNodeKind::{self};
-use crate::dom::nodes::{ContainerNode, ContainerNodeKind};
+use crate::dom::nodes::{container_node, ContainerNode, ContainerNodeKind};
 use crate::dom::Dom;
 use crate::{DomHandle, DomNode, UnicodeString};
 
@@ -121,8 +121,10 @@ mod sys {
                     }
                 })?;
             let dom_blocks_done = post_process_blocks(dom);
+            let dom_inline_blocks_done =
+                post_process_for_block_and_inline_siblings(dom_blocks_done);
             let dom_adjacted_text_done =
-                post_process_for_adjacent_text(dom_blocks_done);
+                post_process_for_adjacent_text(dom_inline_blocks_done);
             Ok(dom_adjacted_text_done)
         }
 
@@ -1237,10 +1239,7 @@ fn post_process_for_adjacent_text<S: UnicodeString>(mut dom: Dom<S>) -> Dom<S> {
 }
 
 fn find_text_nodes<S: UnicodeString>(dom: &Dom<S>) -> Vec<DomHandle> {
-    dom.iter()
-        .filter(|n| n.is_text_node())
-        .map(|n| n.handle())
-        .collect::<Vec<_>>()
+    dom.iter_text().map(|n| n.handle()).collect::<Vec<_>>()
 }
 
 fn post_process_adjacent_text<S: UnicodeString>(
@@ -1250,6 +1249,49 @@ fn post_process_adjacent_text<S: UnicodeString>(
     dom.merge_text_nodes_around(handle);
     dom
 }
+
+fn post_process_for_block_and_inline_siblings<S: UnicodeString>(
+    mut dom: Dom<S>,
+) -> Dom<S> {
+    let continer_handles = find_containers_with_inline_and_block_children(&dom);
+    for handle in continer_handles.iter().rev() {
+        dom = post_process_container_for_block_and_inline_siblings(dom, handle);
+    }
+    dom
+}
+
+fn find_containers_with_inline_and_block_children<S: UnicodeString>(
+    dom: &Dom<S>,
+) -> Vec<DomHandle> {
+    dom.iter_containers()
+        .filter(|n| {
+            if n.children().is_empty() {
+                return false; // Skip empty containers
+            }
+            let all_nodes_are_inline =
+                n.children().iter().all(|n| !n.is_block_node());
+            let all_nodes_are_block =
+                n.children().iter().all(|n| n.is_block_node());
+            !all_nodes_are_inline && !all_nodes_are_block
+        })
+        .map(|n| n.handle())
+        .collect::<Vec<_>>()
+}
+
+fn post_process_container_for_block_and_inline_siblings<S: UnicodeString>(
+    mut dom: Dom<S>,
+    handle: &DomHandle,
+) -> Dom<S> {
+    // upate the container node by grouping inline nodes, to avoid
+    // having inline nodes as siblings of block nodes.
+    let container_node =
+        dom.lookup_node_mut(handle).as_container_mut().unwrap();
+    let new_children =
+        group_inline_nodes(container_node.remove_children().to_vec());
+    container_node.insert_children(0, new_children.clone());
+    dom
+}
+
 fn post_process_blocks<S: UnicodeString>(mut dom: Dom<S>) -> Dom<S> {
     let block_handles = find_blocks(&dom);
     for handle in block_handles.iter().rev() {
