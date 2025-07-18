@@ -698,7 +698,7 @@ where
         }
     }
 
-    fn merge_text_nodes_around(&mut self, handle: &DomHandle) {
+    pub fn merge_text_nodes_around(&mut self, handle: &DomHandle) {
         // TODO: make this method not public because it is used to make
         // the invariants true, instead of assuming they are true at the
         // beginning!

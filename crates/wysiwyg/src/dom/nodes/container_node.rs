@@ -1578,19 +1578,21 @@ mod test {
 
     #[test]
     fn paragraph_to_message_html() {
-        let model = cm("<p>&nbsp;</p><p>&nbsp;</p><p>Hello!</p><p>&nbsp;</p>|");
+        let model =
+            cm("<p>&nbsp;</p><p>&nbsp;</p><p>Hello!</p><p>&nbsp;</p><p>|</p>");
         assert_eq!(
             &model.state.dom.to_message_html(),
-            "<br /><br />Hello!<br />"
+            "<br /><br />Hello!<br /><br />"
         );
     }
 
     #[test]
     fn paragraph_to_html() {
-        let model = cm("<p>&nbsp;</p><p>&nbsp;</p><p>Hello!</p><p>&nbsp;</p>|");
+        let model =
+            cm("<p>&nbsp;</p><p>&nbsp;</p><p>Hello!</p><p>&nbsp;</p><p>|</p>");
         assert_eq!(
             &model.state.dom.to_html(),
-            "<p>\u{a0}</p><p>\u{a0}</p><p>Hello!</p><p>\u{a0}</p>"
+            "<p>\u{a0}</p><p>\u{a0}</p><p>Hello!</p><p>\u{a0}</p><p>\u{a0}</p>"
         );
     }
 

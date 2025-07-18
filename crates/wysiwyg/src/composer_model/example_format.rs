@@ -903,7 +903,7 @@ mod test {
     #[test]
     fn selection_across_lists_roundtrips() {
         assert_that!(
-            "<ol><li>1{1</li><li>22</li></ol><ol><li>33</li><li>4}|4</li></ol>"
+            "<ol><li>1{1</li><li>22</li></ol><p>a</p><ol><li>33</li><li>4}|4</li></ol>"
         )
         .roundtrips();
     }
@@ -915,6 +915,7 @@ mod test {
                 <li>1{1</li>\
                 <li>22</li>\
             </ol>\
+            <p>a</p>\
             <ol>\
                 <li>33</li>\
                 <li>4}|4</li>\

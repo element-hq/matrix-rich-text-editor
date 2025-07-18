@@ -173,10 +173,12 @@ fn deleting_across_lists_joins_them() {
 fn deleting_across_lists_joins_them_nested() {
     let mut model = cm("<ol>\
             <li>1{1</li>\
-            <li>22</li>\
-            <ol>\
-                <li>55</li>\
-            </ol>\
+            <li>
+                <p>22</p>
+                <ol>\
+                    <li>55</li>\
+                </ol>\
+            </li>\
         </ol>\
         <ol>\
             <li>33</li>\
@@ -876,7 +878,7 @@ fn backspace_immutable_link_from_inside_link() {
 #[test]
 fn backspace_immutable_link_multiple() {
     let mut model = cm(
-        "<a contenteditable=\"false\" href=\"https://matrix.org\">first</a><a contenteditable=\"false\" href=\"https://matrix.org\">second|</a>",
+        "<a contenteditable=\"false\" href=\"https://matrix.org\">first</a><a contenteditable=\"false\" href=\"https://element.io.org\">second|</a>",
     );
     model.backspace();
     assert_eq!(
@@ -954,12 +956,12 @@ fn delete_mention_from_start() {
 #[test]
 fn delete_first_immutable_link_of_multiple() {
     let mut model = cm(
-        "<a contenteditable=\"false\" href=\"https://matrix.org\">|first</a><a contenteditable=\"false\" href=\"https://matrix.org\">second</a>",
+        "<a contenteditable=\"false\" href=\"https://matrix.org\">|first</a><a contenteditable=\"false\" href=\"https://element.io\">second</a>",
     );
     model.delete();
     assert_eq!(
         restore_whitespace(&tx(&model)),
-        "<a contenteditable=\"false\" href=\"https://matrix.org\">|second</a>"
+        "<a contenteditable=\"false\" href=\"https://element.io\">|second</a>"
     );
     model.delete();
     assert_eq!(restore_whitespace(&tx(&model)), "|");
@@ -982,7 +984,7 @@ fn delete_first_mention_of_multiple() {
 #[test]
 fn delete_second_immutable_link_of_multiple() {
     let mut model = cm(
-        "<a contenteditable=\"false\" href=\"https://matrix.org\">first</a><a contenteditable=\"false\" href=\"https://matrix.org\">second|</a>",
+        "<a contenteditable=\"false\" href=\"https://matrix.org\">first</a><a contenteditable=\"false\" href=\"https://element.io\">second|</a>",
     );
     model.backspace();
     assert_eq!(

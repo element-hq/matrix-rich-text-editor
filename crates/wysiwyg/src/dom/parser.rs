@@ -49,3 +49,4 @@ mod sys {
 use sys::*;
 
 pub use parse::parse;
+pub use parse::parse_from_source;

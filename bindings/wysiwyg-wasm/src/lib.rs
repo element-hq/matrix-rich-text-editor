@@ -187,6 +187,17 @@ impl ComposerModel {
         )
     }
 
+    pub fn replace_html(
+        &mut self,
+        new_html: &str,
+        external_source: HtmlSource,
+    ) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.replace_html(
+            Utf16String::from_str(new_html),
+            external_source.into(),
+        ))
+    }
+
     pub fn replace_text_suggestion(
         &mut self,
         new_text: &str,
@@ -910,6 +921,24 @@ impl From<wysiwyg::LinkAction<Utf16String>> for LinkAction {
                 edit_link: None,
                 disabled: Some(Disabled),
             },
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Clone)]
+pub enum HtmlSource {
+    Matrix,
+    GoogleDoc,
+    UnknownExternal,
+}
+
+impl From<HtmlSource> for wysiwyg::HtmlSource {
+    fn from(source: HtmlSource) -> Self {
+        match source {
+            HtmlSource::Matrix => Self::Matrix,
+            HtmlSource::GoogleDoc => Self::GoogleDoc,
+            HtmlSource::UnknownExternal => Self::UnknownExternal,
         }
     }
 }
