@@ -9,7 +9,7 @@ use regex::Regex;
 use crate::dom::dom_creation_error::HtmlParseError;
 use crate::dom::html_source::HtmlSource;
 use crate::dom::nodes::dom_node::DomNodeKind::{self};
-use crate::dom::nodes::{container_node, ContainerNode, ContainerNodeKind};
+use crate::dom::nodes::{ContainerNode, ContainerNodeKind};
 use crate::dom::Dom;
 use crate::{DomHandle, DomNode, UnicodeString};
 
@@ -1190,30 +1190,25 @@ mod sys {
                 r#"
                 
                 ├>ol
-                │ └>li
-                │   └>p
-                │     └>i
-                │       └>"Italic"
-                ├>ol
-                │ └>li
-                │   └>p
-                │     └>b
-                │       └>"Bold"
-                ├>ol
-                │ └>li
-                │   └>p
-                │     └>"Unformatted"
-                ├>ol
-                │ └>li
-                │   └>p
-                │     └>del
-                │       └>"Strikethrough"
-                ├>ol
-                │ └>li
-                │   └>p
-                │     └>u
-                │       └>"Underlined"
-                ├>ol
+                │ ├>li
+                │ │ └>p
+                │ │   └>i
+                │ │     └>"Italic"
+                │ ├>li
+                │ │ └>p
+                │ │   └>b
+                │ │     └>"Bold"
+                │ ├>li
+                │ │ └>p
+                │ │   └>"Unformatted"
+                │ ├>li
+                │ │ └>p
+                │ │   └>del
+                │ │     └>"Strikethrough"
+                │ ├>li
+                │ │ └>p
+                │ │   └>u
+                │ │     └>"Underlined"
                 │ └>li
                 │   └>p
                 │     └>a "https://matrix.org/"
@@ -1253,42 +1248,7 @@ fn post_process_adjacent_text<S: UnicodeString>(
 fn post_process_for_block_and_inline_siblings<S: UnicodeString>(
     mut dom: Dom<S>,
 ) -> Dom<S> {
-    let continer_handles = find_containers_with_inline_and_block_children(&dom);
-    for handle in continer_handles.iter().rev() {
-        dom = post_process_container_for_block_and_inline_siblings(dom, handle);
-    }
-    dom
-}
-
-fn find_containers_with_inline_and_block_children<S: UnicodeString>(
-    dom: &Dom<S>,
-) -> Vec<DomHandle> {
-    dom.iter_containers()
-        .filter(|n| {
-            if n.children().is_empty() {
-                return false; // Skip empty containers
-            }
-            let all_nodes_are_inline =
-                n.children().iter().all(|n| !n.is_block_node());
-            let all_nodes_are_block =
-                n.children().iter().all(|n| n.is_block_node());
-            !all_nodes_are_inline && !all_nodes_are_block
-        })
-        .map(|n| n.handle())
-        .collect::<Vec<_>>()
-}
-
-fn post_process_container_for_block_and_inline_siblings<S: UnicodeString>(
-    mut dom: Dom<S>,
-    handle: &DomHandle,
-) -> Dom<S> {
-    // upate the container node by grouping inline nodes, to avoid
-    // having inline nodes as siblings of block nodes.
-    let container_node =
-        dom.lookup_node_mut(handle).as_container_mut().unwrap();
-    let new_children =
-        group_inline_nodes(container_node.remove_children().to_vec());
-    container_node.insert_children(0, new_children.clone());
+    dom.wrap_inline_nodes_into_paragraphs_if_needed(&DomHandle::root());
     dom
 }
 
@@ -1296,6 +1256,7 @@ fn post_process_blocks<S: UnicodeString>(mut dom: Dom<S>) -> Dom<S> {
     let block_handles = find_blocks(&dom);
     for handle in block_handles.iter().rev() {
         dom = post_process_block_lines(dom, handle);
+        dom.join_nodes_in_container(&handle);
     }
     dom
 }
@@ -1575,6 +1536,7 @@ mod js {
             self.webdom_to_dom(document, html_source)
                 .map_err(to_dom_creation_error)
                 .map(post_process_blocks)
+                .map(post_process_for_block_and_inline_siblings)
                 .map(post_process_for_adjacent_text)
         }
 

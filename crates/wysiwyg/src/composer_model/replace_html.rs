@@ -9,8 +9,7 @@ use regex::Regex;
 use crate::dom::html_source::HtmlSource;
 use crate::dom::nodes::ContainerNode;
 use crate::dom::parser::parse_from_source;
-
-use crate::{ComposerModel, ComposerUpdate, DomNode, Location, UnicodeString};
+use crate::{ComposerModel, ComposerUpdate, DomNode, Location, UnicodeString}; // Import the trait for to_tree
 
 impl<S> ComposerModel<S>
 where
@@ -49,16 +48,25 @@ where
 
         // We should only have 1 dom node, so add the children under a paragraph to take advantage of the exisitng
         // insert_node_at_cursor api and then delete the paragraph node promoting it's the children up a level.
-        let p = DomNode::Container(ContainerNode::new_paragraph(
-            doc_node.into_container().unwrap().take_children(),
-        ));
-        let new_cursor_index = start + p.text_len();
+        let new_children = doc_node.into_container().unwrap().take_children();
+        let child_count = new_children.len();
+        let p = DomNode::Container(ContainerNode::new_paragraph(new_children));
+
         let handle = self.state.dom.insert_node_at_cursor(&range, p);
         self.state.dom.replace_node_with_its_children(&handle);
+        self.state.dom.wrap_inline_nodes_into_paragraphs_if_needed(
+            &self.state.dom.parent(&handle).handle(),
+        );
 
-        // manually move the cursor to the end of the html
-        self.state.start = Location::from(new_cursor_index);
+        // Track the index of the last inserted node for placing the cursor
+        let last_index = handle.index_in_parent() + child_count - 1;
+        let last_handle = handle.parent_handle().child_handle(last_index);
+        let location = self.state.dom.location_for_node(&last_handle);
+
+        self.state.start =
+            Location::from(location.position + location.length - 1);
         self.state.end = self.state.start;
+        // add a trailing space in cases when we do not have a next sibling
         self.create_update_replace_all()
     }
 }
@@ -120,5 +128,69 @@ mod test {
         let html = model.get_content_as_html();
         let html_str = html.to_string();
         assert_eq!(html_str, "<p><strong>test</strong></p>");
+    }
+
+    #[test]
+    fn test_replace_html_with_existing_selection() {
+        let mut model = cm("Hello{world}|test");
+        let new_html = "<p><em>replacement</em></p>";
+
+        let _ =
+            model.replace_html(new_html.into(), HtmlSource::UnknownExternal);
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(
+            html_str,
+            "<p>Hello</p><p><em>replacement</em></p><p>test</p>"
+        );
+    }
+
+    #[test]
+    fn test_replace_html_cursor_position_after_insert() {
+        let mut model = cm("Start|");
+        let new_html = "<strong>Bold text</strong>";
+        let _ = model.replace_html(new_html.into(), HtmlSource::Matrix);
+        // Cursor should be positioned after the inserted content
+        let (start, end) = model.safe_selection();
+        assert_eq!(start, end); // No selection, just cursor
+        model.bold();
+        model.enter();
+        // Insert more text to verify cursor position
+        let _ = model.replace_text("End".into());
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(
+            html_str,
+            "<p>Start</p><p><strong>Bold text</strong></p><p>End</p>"
+        );
+    }
+
+    #[test]
+    fn test_replace_html_multiple_meta_tags() {
+        let mut model = cm("|");
+        let html_with_multiple_metas = r#"<meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="X-UA-Compatible" content="IE=edge"><p>Content after metas</p>"#;
+
+        let _ = model.replace_html(
+            html_with_multiple_metas.into(),
+            HtmlSource::UnknownExternal,
+        );
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert!(!html_str.contains("<meta"));
+        assert_eq!(html_str, "<p>Content after metas</p>");
+    }
+
+    #[test]
+    fn test_replace_html_empty_content() {
+        let mut model = cm("Existing content|");
+        let empty_html = "";
+
+        let _ = model.replace_html(empty_html.into(), HtmlSource::Matrix);
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(html_str, "<p>Existing content</p>");
     }
 }
