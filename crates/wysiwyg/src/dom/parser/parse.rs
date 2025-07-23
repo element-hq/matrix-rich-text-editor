@@ -207,7 +207,7 @@ mod sys {
             &mut self,
             padom: &PaDom,
             child: &PaNodeContainer,
-            node: &mut ContainerNode<S>,
+            node_in: &mut ContainerNode<S>,
             html_source: HtmlSource,
         ) -> Result<(), Error>
         where
@@ -215,194 +215,230 @@ mod sys {
         {
             let cur_path_idx = self.current_path.len();
             let tag = child.name.local.as_ref();
-            match tag {
-                "b" | "code" | "del" | "em" | "i" | "strong" | "u" => {
-                    let formatting_node = Self::new_formatting(tag);
-                    if tag == "code" && self.current_path.contains(&CodeBlock) {
-                        self.convert_children(
-                            padom,
-                            child,
-                            Some(node),
-                            html_source,
-                        )?;
-                    } else {
-                        self.current_path.push(formatting_node.kind());
-                        node.append_child(formatting_node);
-                        self.convert_children(
-                            padom,
-                            child,
-                            last_container_mut_in(node),
-                            html_source,
-                        )?;
-                        self.current_path.remove(cur_path_idx);
-                    }
-                }
-                "span" => {
-                    if html_source == HtmlSource::Matrix {
-                        return Err(Error::UnknownNode(tag.to_string()));
-                    }
+            let mut invalid_node_error: Option<Error> = None;
+            let mut skip_children: bool = false;
+            let mut node = node_in.clone();
+            if node.is_list()
+                && tag != "li"
+                && html_source != HtmlSource::GoogleDoc
+            {
+                // If we are inside a list, we can only have list items.
+                invalid_node_error = Some(Error::InvalidListItemNode);
+                skip_children = true;
+            }
 
-                    // For external sources, we check for common formatting styles for spans
-                    // and convert them to appropriate formatting nodes.
-                    let mut formatting_tag = None;
-                    if child.contains_style("font-weight", "bold") {
-                        formatting_tag = Some("b");
-                    } else if child.contains_style("font-style", "italic") {
-                        formatting_tag = Some("i");
-                    } else if child
-                        .contains_style("text-decoration", "underline")
-                    {
-                        formatting_tag = Some("u");
-                    } else if child
-                        .contains_style("text-decoration", "line-through")
-                    {
-                        formatting_tag = Some("del");
-                    }
-
-                    if let Some(tag) = formatting_tag {
+            if invalid_node_error.is_none() {
+                match tag {
+                    "b" | "code" | "del" | "em" | "i" | "strong" | "u" => {
                         let formatting_node = Self::new_formatting(tag);
-                        self.current_path.push(formatting_node.kind());
-                        node.append_child(formatting_node);
+                        if tag == "code"
+                            && self.current_path.contains(&CodeBlock)
+                        {
+                            self.convert_children(
+                                padom,
+                                child,
+                                Some(&mut node),
+                                html_source,
+                            )?;
+                        } else {
+                            self.current_path.push(formatting_node.kind());
+                            node.append_child(formatting_node);
+                            self.convert_children(
+                                padom,
+                                child,
+                                last_container_mut_in(&mut node),
+                                html_source,
+                            )?;
+                            self.current_path.remove(cur_path_idx);
+                        }
+                    }
+                    "span" => 'span: {
+                        if html_source == HtmlSource::Matrix {
+                            invalid_node_error =
+                                Some(Error::UnknownNode(tag.to_string()));
+                            break 'span;
+                        }
+
+                        // For external sources, we check for common formatting styles for spans
+                        // and convert them to appropriate formatting nodes.
+                        let mut formatting_tag = None;
+                        if child.contains_style("font-weight", "bold") {
+                            formatting_tag = Some("b");
+                        } else if child.contains_style("font-style", "italic") {
+                            formatting_tag = Some("i");
+                        } else if child
+                            .contains_style("text-decoration", "underline")
+                        {
+                            formatting_tag = Some("u");
+                        } else if child
+                            .contains_style("text-decoration", "line-through")
+                        {
+                            formatting_tag = Some("del");
+                        }
+
+                        if let Some(tag) = formatting_tag {
+                            let formatting_node = Self::new_formatting(tag);
+                            self.current_path.push(formatting_node.kind());
+                            node.append_child(formatting_node);
+                            self.convert_children(
+                                padom,
+                                child,
+                                last_container_mut_in(&mut node),
+                                html_source,
+                            )?;
+                            self.current_path.remove(cur_path_idx);
+                        } else {
+                            // If no formatting tag was found, just skip and convert the children
+                            invalid_node_error =
+                                Some(Error::UnknownNode(tag.to_string()));
+                        }
+                    }
+                    "br" => {
+                        node.append_child(Self::new_line_break());
+                    }
+                    "ol" | "ul" => 'list: {
+                        let target_node = if node.is_list() {
+                            // Google docs adds nested lists as children of the list node, this breaks our invariants.
+                            // For the google docs case, we can add the nested list to the last list item instead.
+                            if html_source != HtmlSource::GoogleDoc
+                                || node.last_child_mut().is_none()
+                                || node.last_child_mut().unwrap().is_list_item()
+                                    == false
+                            {
+                                // If source is not Google Docs or the last child is not a list item, we return an error.
+                                invalid_node_error =
+                                    Some(Error::InvalidListItemNode);
+                                break 'list;
+                            }
+                            node.last_child_mut()
+                                .unwrap()
+                                .as_container_mut()
+                                .unwrap()
+                        } else {
+                            &mut node
+                        };
+                        self.current_path.push(DomNodeKind::List);
+                        if tag == "ol" {
+                            let custom_start = child
+                                .get_attr("start")
+                                .and_then(|start| start.parse::<usize>().ok());
+                            target_node.append_child(Self::new_ordered_list(
+                                custom_start,
+                            ));
+                        } else {
+                            target_node
+                                .append_child(Self::new_unordered_list());
+                        }
                         self.convert_children(
                             padom,
                             child,
-                            last_container_mut_in(node),
+                            last_container_mut_in(target_node),
                             html_source,
                         )?;
                         self.current_path.remove(cur_path_idx);
-                    } else {
-                        // If no formatting tag was found, just skip and convert the children
-                        self.convert(padom, child, node, html_source)?;
                     }
-                }
-                "br" => {
-                    node.append_child(Self::new_line_break());
-                }
-                "ol" | "ul" => {
-                    let target_node = if node.is_list() {
-                        // Google docs adds nested lists as children of the list node, this breaks our invariants.
-                        // For the google docs case, we can add the nested list to the last list item instead.
-                        if html_source != HtmlSource::GoogleDoc
-                            || node.last_child_mut().is_none()
-                            || node.last_child_mut().unwrap().is_list_item()
-                                == false
-                        {
-                            // If source is not Google Docs or the last child is not a list item, we return an error.
-                            return Err(Error::InvalidListItemNode);
+                    "li" => 'li: {
+                        if !node.is_list() {
+                            invalid_node_error = Some(Error::ParentNotAList);
+                            break 'li;
                         }
-                        node.last_child_mut()
-                            .unwrap()
-                            .as_container_mut()
-                            .unwrap()
-                    } else {
-                        node
-                    };
-                    self.current_path.push(DomNodeKind::List);
-                    if tag == "ol" {
-                        let custom_start = child
-                            .get_attr("start")
-                            .and_then(|start| start.parse::<usize>().ok());
-                        target_node
-                            .append_child(Self::new_ordered_list(custom_start));
-                    } else {
-                        target_node.append_child(Self::new_unordered_list());
-                    }
-                    self.convert_children(
-                        padom,
-                        child,
-                        last_container_mut_in(target_node),
-                        html_source,
-                    )?;
-                    self.current_path.remove(cur_path_idx);
-                }
-                "li" => {
-                    self.current_path.push(DomNodeKind::ListItem);
-                    node.append_child(Self::new_list_item());
-                    self.convert_children(
-                        padom,
-                        child,
-                        last_container_mut_in(node),
-                        html_source,
-                    )?;
-                    self.current_path.remove(cur_path_idx);
-                }
-                "a" => {
-                    let is_mention = child.attrs.iter().any(|(k, v)| {
-                        k == &String::from("href") && Mention::is_valid_uri(v)
-                    });
-
-                    let text =
-                        child.children.first().map(|gc| padom.get_node(gc));
-                    let text = match text {
-                        Some(PaDomNode::Text(text)) => Some(text),
-                        _ => None,
-                    };
-
-                    if is_mention && text.is_some() {
-                        self.current_path.push(DomNodeKind::Mention);
-                        let mention = Self::new_mention(child, text.unwrap());
-                        node.append_child(mention);
-                    } else {
-                        self.current_path.push(DomNodeKind::Link);
-
-                        let link = Self::new_link(child);
-                        node.append_child(link);
+                        self.current_path.push(DomNodeKind::ListItem);
+                        node.append_child(Self::new_list_item());
                         self.convert_children(
                             padom,
                             child,
-                            last_container_mut_in(node),
+                            last_container_mut_in(&mut node),
                             html_source,
                         )?;
+                        self.current_path.remove(cur_path_idx);
                     }
-                    self.current_path.remove(cur_path_idx);
-                }
-                "pre" => {
-                    self.current_path.push(DomNodeKind::CodeBlock);
-                    node.append_child(Self::new_code_block());
-                    self.convert_children(
-                        padom,
-                        child,
-                        last_container_mut_in(node),
-                        html_source,
-                    )?;
-                    self.current_path.remove(cur_path_idx);
-                }
-                "blockquote" => {
-                    self.current_path.push(DomNodeKind::Quote);
-                    node.append_child(Self::new_quote());
-                    self.convert_children(
-                        padom,
-                        child,
-                        last_container_mut_in(node),
-                        html_source,
-                    )?;
+                    "a" => {
+                        let is_mention = child.attrs.iter().any(|(k, v)| {
+                            k == &String::from("href")
+                                && Mention::is_valid_uri(v)
+                        });
 
-                    self.current_path.remove(cur_path_idx);
-                }
-                "html" => {
-                    // Skip the html tag - add its children to the
-                    // current node directly.
-                    self.convert(padom, child, node, html_source)?;
-                }
-                "p" => {
-                    self.current_path.push(DomNodeKind::Paragraph);
-                    node.append_child(Self::new_paragraph());
-                    self.convert_children(
-                        padom,
-                        child,
-                        last_container_mut_in(node),
-                        html_source,
-                    )?;
-                    self.current_path.remove(cur_path_idx);
-                }
-                _ => {
-                    if html_source == HtmlSource::Matrix {
-                        return Err(Error::UnknownNode(tag.to_string()));
-                    } else {
-                        self.convert(padom, child, node, html_source)?;
+                        let text =
+                            child.children.first().map(|gc| padom.get_node(gc));
+                        let text = match text {
+                            Some(PaDomNode::Text(text)) => Some(text),
+                            _ => None,
+                        };
+
+                        if is_mention && text.is_some() {
+                            self.current_path.push(DomNodeKind::Mention);
+                            let mention =
+                                Self::new_mention(child, text.unwrap());
+                            node.append_child(mention);
+                        } else {
+                            self.current_path.push(DomNodeKind::Link);
+
+                            let link = Self::new_link(child);
+                            node.append_child(link);
+                            self.convert_children(
+                                padom,
+                                child,
+                                last_container_mut_in(&mut node),
+                                html_source,
+                            )?;
+                        }
+                        self.current_path.remove(cur_path_idx);
                     }
+                    "pre" => {
+                        self.current_path.push(DomNodeKind::CodeBlock);
+                        node.append_child(Self::new_code_block());
+                        self.convert_children(
+                            padom,
+                            child,
+                            last_container_mut_in(&mut node),
+                            html_source,
+                        )?;
+                        self.current_path.remove(cur_path_idx);
+                    }
+                    "blockquote" => {
+                        self.current_path.push(DomNodeKind::Quote);
+                        node.append_child(Self::new_quote());
+                        self.convert_children(
+                            padom,
+                            child,
+                            last_container_mut_in(&mut node),
+                            html_source,
+                        )?;
+
+                        self.current_path.remove(cur_path_idx);
+                    }
+                    "html" => {
+                        // Skip the html tag - add its children to the
+                        // current node directly.
+                        self.convert(padom, child, &mut node, html_source)?;
+                    }
+                    "p" => {
+                        self.current_path.push(DomNodeKind::Paragraph);
+                        node.append_child(Self::new_paragraph());
+                        self.convert_children(
+                            padom,
+                            child,
+                            last_container_mut_in(&mut node),
+                            html_source,
+                        )?;
+                        self.current_path.remove(cur_path_idx);
+                    }
+                    _ => {
+                        invalid_node_error =
+                            Some(Error::UnknownNode(tag.to_string()));
+                    }
+                };
+            }
+
+            if let Some(err) = invalid_node_error {
+                if html_source == HtmlSource::Matrix {
+                    return Err(err);
+                } else if !skip_children {
+                    // If the source is not Matrix and we haven't explicitly flagged to skip the children continue to parse them.
+                    self.convert(padom, child, &mut node, html_source)?;
                 }
-            };
+            }
+            *node_in = node;
             Ok(())
         }
 
@@ -557,6 +593,7 @@ mod sys {
         NoBody,
         UnknownNode(String),
         InvalidListItemNode,
+        ParentNotAList,
     }
 
     impl fmt::Display for Error {
@@ -576,6 +613,9 @@ mod sys {
                         formatter,
                         "Invalid list item node: a list must only contain list items"
                     )
+                }
+                Self::ParentNotAList => {
+                    write!(formatter, "Parent node is not a list")
                 }
             }
         }
@@ -1117,6 +1157,15 @@ mod sys {
         }
 
         #[test]
+        fn parse_insert_text_directly_into_a_list() {
+            let html = r#"<ul><li>hello</li><b>list item</b></ul>"#;
+            let dom: Dom<Utf16String> = HtmlParser::default()
+                .parse_from_source(html, HtmlSource::UnknownExternal)
+                .unwrap();
+            assert_eq!(dom.to_html(), r#"<ul><li>hello</li></ul>"#);
+        }
+
+        #[test]
         fn parse_google_doc_rich_text() {
             let dom: Dom<Utf16String> = HtmlParser::default()
                 .parse_from_source(
@@ -1591,314 +1640,385 @@ mod js {
                 let node = nodes.get(nth as _).unwrap();
                 let node_name = node.node_name();
                 let tag = node_name.as_str();
-                match tag {
-                    "BR" => {
-                        dom.append_child(DomNode::new_line_break());
-                    }
 
-                    "#text" => match node.node_value() {
-                        Some(value) => {
-                            let is_inside_code_block =
-                                self.current_path.contains(&CodeBlock);
-                            let is_only_child_in_parent = number_of_nodes == 1;
-                            convert_text(
-                                value.as_str(),
-                                dom,
-                                is_inside_code_block,
-                                is_only_child_in_parent,
-                            );
-                        }
-                        _ => {}
-                    },
+                let mut invalid_node_error: Option<Error> = None;
+                let mut skip_children: bool = false;
 
-                    "A" => {
-                        self.current_path.push(DomNodeKind::Link);
+                // Check if we're inside a list and this node is not a list item
+                if parent_kind == DomNodeKind::List
+                    && tag != "LI"
+                    && html_source != HtmlSource::GoogleDoc
+                {
+                    // If we are inside a list, we can only have list items.
+                    invalid_node_error = Some(Error::InvalidListItemNode);
+                    skip_children = true;
+                }
 
-                        let mut attributes = vec![];
-                        // we only need to pass in a style attribute from web to allow CSS variable insertion
-                        let valid_attributes = ["style"];
-
-                        for attr in valid_attributes.into_iter() {
-                            if node
-                                .unchecked_ref::<Element>()
-                                .has_attribute(attr)
-                            {
-                                attributes.push((
-                                    attr.into(),
-                                    node.unchecked_ref::<Element>()
-                                        .get_attribute(attr)
-                                        .unwrap_or_default()
-                                        .into(),
-                                ))
-                            }
+                if invalid_node_error.is_none() {
+                    match tag {
+                        "BR" => {
+                            dom.append_child(DomNode::new_line_break());
                         }
 
-                        let url = node
-                            .unchecked_ref::<Element>()
-                            .get_attribute("href")
-                            .unwrap_or_default();
-
-                        let is_mention =
-                            Mention::is_valid_uri(&url.to_string());
-                        let text = node.child_nodes().get(0);
-                        let has_text = match text.clone() {
-                            Some(node) => {
-                                node.node_type() == web_sys::Node::TEXT_NODE
+                        "#text" => match node.node_value() {
+                            Some(value) => {
+                                let is_inside_code_block =
+                                    self.current_path.contains(&CodeBlock);
+                                let is_only_child_in_parent =
+                                    number_of_nodes == 1;
+                                convert_text(
+                                    value.as_str(),
+                                    dom,
+                                    is_inside_code_block,
+                                    is_only_child_in_parent,
+                                );
                             }
-                            None => false,
-                        };
-                        if has_text && is_mention {
-                            dom.append_child(
-                                DomNode::Mention(
-                                    DomNode::new_mention(
-                                        url.into(),
-                                        text.unwrap()
-                                            .node_value()
+                            _ => {}
+                        },
+
+                        "A" => {
+                            self.current_path.push(DomNodeKind::Link);
+
+                            let mut attributes = vec![];
+                            // we only need to pass in a style attribute from web to allow CSS variable insertion
+                            let valid_attributes = ["style"];
+
+                            for attr in valid_attributes.into_iter() {
+                                if node
+                                    .unchecked_ref::<Element>()
+                                    .has_attribute(attr)
+                                {
+                                    attributes.push((
+                                        attr.into(),
+                                        node.unchecked_ref::<Element>()
+                                            .get_attribute(attr)
                                             .unwrap_or_default()
                                             .into(),
-                                        attributes,
-                                    )
-                                    .unwrap(),
-                                ), // we unwrap because we have already confirmed the uri is valid
-                            );
-                        } else {
-                            let children = self
-                                .convert(
-                                    node.child_nodes(),
-                                    DomNodeKind::Link,
-                                    html_source,
-                                )?
-                                .take_children();
-                            dom.append_child(DomNode::new_link(
-                                url.into(),
-                                children,
-                                attributes,
-                            ));
-                        }
-
-                        self.current_path.pop();
-                    }
-                    "UL" | "OL" => {
-                        let custom_start = node
-                            .unchecked_ref::<Element>()
-                            .get_attribute("start");
-
-                        let attributes: Option<Vec<(S, S)>> =
-                            if tag == "ol" && custom_start.is_some() {
-                                Some(vec![(
-                                    "start".into(),
-                                    custom_start.unwrap().into(),
-                                )])
-                            } else {
-                                None
-                            };
-
-                        let list_type = if tag == "OL" {
-                            ListType::Ordered
-                        } else {
-                            ListType::Unordered
-                        };
-
-                        if parent_kind == DomNodeKind::List {
-                            if html_source != HtmlSource::GoogleDoc {
-                                return Err(Error::InvalidListItemNode);
-                            }
-                            self.current_path.push(DomNodeKind::List);
-                            let target = dom
-                                .last_child_mut()
-                                .unwrap()
-                                .as_container_mut()
-                                .unwrap();
-                            target.append_child(DomNode::Container(
-                                ContainerNode::new_list(
-                                    list_type,
-                                    self.convert(
-                                        node.child_nodes(),
-                                        DomNodeKind::List,
-                                        html_source,
-                                    )?
-                                    .take_children(),
-                                    attributes,
-                                ),
-                            ));
-                        } else {
-                            dom.append_child(DomNode::Container(
-                                ContainerNode::new_list(
-                                    list_type,
-                                    self.convert(
-                                        node.child_nodes(),
-                                        DomNodeKind::List,
-                                        html_source,
-                                    )?
-                                    .take_children(),
-                                    attributes,
-                                ),
-                            ));
-                        }
-
-                        self.current_path.pop();
-                    }
-
-                    "LI" => {
-                        self.current_path.push(DomNodeKind::ListItem);
-                        dom.append_child(DomNode::Container(
-                            ContainerNode::new_list_item(
-                                self.convert(
-                                    node.child_nodes(),
-                                    DomNodeKind::ListItem,
-                                    html_source,
-                                )?
-                                .take_children(),
-                            ),
-                        ));
-                        self.current_path.pop();
-                    }
-
-                    "PRE" => {
-                        self.current_path.push(DomNodeKind::CodeBlock);
-                        let children = node.child_nodes();
-                        let children = if children.length() == 1
-                            && children.get(0).unwrap().node_name().as_str()
-                                == "CODE"
-                        {
-                            let code_node = children.get(0).unwrap();
-                            code_node.child_nodes()
-                        } else {
-                            children
-                        };
-                        dom.append_child(DomNode::Container(
-                            ContainerNode::new_code_block(
-                                self.convert(
-                                    children,
-                                    DomNodeKind::CodeBlock,
-                                    html_source,
-                                )?
-                                .take_children(),
-                            ),
-                        ));
-                        self.current_path.pop();
-                    }
-
-                    "BLOCKQUOTE" => {
-                        self.current_path.push(DomNodeKind::Quote);
-                        dom.append_child(DomNode::Container(
-                            ContainerNode::new_quote(
-                                self.convert(
-                                    node.child_nodes(),
-                                    DomNodeKind::Quote,
-                                    html_source,
-                                )?
-                                .take_children(),
-                            ),
-                        ));
-                        self.current_path.pop();
-                    }
-
-                    "P" => {
-                        self.current_path.push(DomNodeKind::Paragraph);
-                        dom.append_child(DomNode::Container(
-                            ContainerNode::new_paragraph(
-                                self.convert(
-                                    node.child_nodes(),
-                                    DomNodeKind::Paragraph,
-                                    html_source,
-                                )?
-                                .take_children(),
-                            ),
-                        ));
-                        self.current_path.pop();
-                    }
-                    node_name => {
-                        let formatting_kind = match node_name {
-                            "STRONG" | "B" => Some(InlineFormatType::Bold),
-                            "EM" | "I" => Some(InlineFormatType::Italic),
-                            "DEL" => Some(InlineFormatType::StrikeThrough),
-                            "U" => Some(InlineFormatType::Underline),
-                            "CODE" => Some(InlineFormatType::InlineCode),
-                            "SPAN" => {
-                                if html_source == HtmlSource::Matrix {
-                                    return Err(Error::UnknownNode(
-                                        node_name.to_owned(),
-                                    ));
+                                    ))
                                 }
-                                // For external sources, we check for common formatting styles for spans
-                                // and convert them to appropriate formatting nodes.
-                                let style =
-                                    node.unchecked_ref::<HtmlElement>().style();
-                                if style
-                                    .get_property_value("font-weight")
-                                    .unwrap_or_default()
-                                    == "bold"
-                                {
-                                    Some(InlineFormatType::Bold)
-                                } else if style
-                                    .get_property_value("font-style")
-                                    .unwrap_or_default()
-                                    == "italic"
-                                {
-                                    Some(InlineFormatType::Italic)
-                                } else if style
-                                    .get_property_value("text-decoration")
-                                    .unwrap_or_default()
-                                    == "underline"
-                                {
-                                    Some(InlineFormatType::Underline)
-                                } else if style
-                                    .get_property_value("text-decoration")
-                                    .unwrap_or_default()
-                                    == "line-through"
-                                {
-                                    Some(InlineFormatType::StrikeThrough)
+                            }
+
+                            let url = node
+                                .unchecked_ref::<Element>()
+                                .get_attribute("href")
+                                .unwrap_or_default();
+
+                            let is_mention =
+                                Mention::is_valid_uri(&url.to_string());
+                            let text = node.child_nodes().get(0);
+                            let has_text = match text.clone() {
+                                Some(node) => {
+                                    node.node_type() == web_sys::Node::TEXT_NODE
+                                }
+                                None => false,
+                            };
+                            if has_text && is_mention {
+                                dom.append_child(
+                                    DomNode::Mention(
+                                        DomNode::new_mention(
+                                            url.into(),
+                                            text.unwrap()
+                                                .node_value()
+                                                .unwrap_or_default()
+                                                .into(),
+                                            attributes,
+                                        )
+                                        .unwrap(),
+                                    ), // we unwrap because we have already confirmed the uri is valid
+                                );
+                            } else {
+                                let children = self
+                                    .convert(
+                                        node.child_nodes(),
+                                        DomNodeKind::Link,
+                                        html_source,
+                                    )?
+                                    .take_children();
+                                dom.append_child(DomNode::new_link(
+                                    url.into(),
+                                    children,
+                                    attributes,
+                                ));
+                            }
+
+                            self.current_path.pop();
+                        }
+                        "UL" | "OL" => {
+                            let custom_start = node
+                                .unchecked_ref::<Element>()
+                                .get_attribute("start");
+
+                            let attributes: Option<Vec<(S, S)>> =
+                                if tag == "OL" && custom_start.is_some() {
+                                    Some(vec![(
+                                        "start".into(),
+                                        custom_start.unwrap().into(),
+                                    )])
                                 } else {
                                     None
-                                }
-                            }
-                            _ => {
-                                if html_source == HtmlSource::Matrix {
-                                    return Err(Error::UnknownNode(
-                                        node_name.to_owned(),
+                                };
+
+                            let list_type = if tag == "OL" {
+                                ListType::Ordered
+                            } else {
+                                ListType::Unordered
+                            };
+
+                            if parent_kind == DomNodeKind::List {
+                                // Google docs adds nested lists as children of the list node, this breaks our invariants.
+                                // For the google docs case, we can add the nested list to the last list item instead.
+                                if html_source != HtmlSource::GoogleDoc
+                                    || dom.last_child_mut().is_none()
+                                    || dom
+                                        .last_child_mut()
+                                        .unwrap()
+                                        .is_list_item()
+                                        == false
+                                {
+                                    // If source is not Google Docs or the last child is not a list item, we return an error.
+                                    invalid_node_error =
+                                        Some(Error::InvalidListItemNode);
+                                } else {
+                                    self.current_path.push(DomNodeKind::List);
+                                    let target = dom
+                                        .last_child_mut()
+                                        .unwrap()
+                                        .as_container_mut()
+                                        .unwrap();
+                                    target.append_child(DomNode::Container(
+                                        ContainerNode::new_list(
+                                            list_type,
+                                            self.convert(
+                                                node.child_nodes(),
+                                                DomNodeKind::List,
+                                                html_source,
+                                            )?
+                                            .take_children(),
+                                            attributes,
+                                        ),
                                     ));
+                                    self.current_path.pop();
                                 }
-                                None
-                            }
-                        };
-
-                        if let Some(formatting_kind) = formatting_kind {
-                            self.current_path.push(DomNodeKind::Formatting(
-                                formatting_kind.clone(),
-                            ));
-                            let children_nodes = self
-                                .convert(
-                                    node.child_nodes(),
-                                    DomNodeKind::Formatting(
-                                        formatting_kind.clone(),
+                            } else {
+                                self.current_path.push(DomNodeKind::List);
+                                dom.append_child(DomNode::Container(
+                                    ContainerNode::new_list(
+                                        list_type,
+                                        self.convert(
+                                            node.child_nodes(),
+                                            DomNodeKind::List,
+                                            html_source,
+                                        )?
+                                        .take_children(),
+                                        attributes,
                                     ),
-                                    html_source,
-                                )?
-                                .take_children();
-                            self.current_path.push(DomNodeKind::Formatting(
-                                formatting_kind.clone(),
-                            ));
+                                ));
+                                self.current_path.pop();
+                            }
+                        }
 
+                        "LI" => {
+                            if parent_kind != DomNodeKind::List {
+                                invalid_node_error =
+                                    Some(Error::ParentNotAList);
+                            } else {
+                                self.current_path.push(DomNodeKind::ListItem);
+                                dom.append_child(DomNode::Container(
+                                    ContainerNode::new_list_item(
+                                        self.convert(
+                                            node.child_nodes(),
+                                            DomNodeKind::ListItem,
+                                            html_source,
+                                        )?
+                                        .take_children(),
+                                    ),
+                                ));
+                                self.current_path.pop();
+                            }
+                        }
+
+                        "PRE" => {
+                            self.current_path.push(DomNodeKind::CodeBlock);
+                            let children = node.child_nodes();
+                            let children = if children.length() == 1
+                                && children.get(0).unwrap().node_name().as_str()
+                                    == "CODE"
+                            {
+                                let code_node = children.get(0).unwrap();
+                                code_node.child_nodes()
+                            } else {
+                                children
+                            };
                             dom.append_child(DomNode::Container(
-                                ContainerNode::new_formatting(
-                                    formatting_kind.clone(),
-                                    children_nodes,
+                                ContainerNode::new_code_block(
+                                    self.convert(
+                                        children,
+                                        DomNodeKind::CodeBlock,
+                                        html_source,
+                                    )?
+                                    .take_children(),
                                 ),
                             ));
                             self.current_path.pop();
-                        } else {
-                            // If it's an external source we skip the node and process it's children.
-                            let children_nodes = self
-                                .convert(
-                                    node.child_nodes(),
-                                    parent_kind.clone(),
-                                    html_source,
-                                )?
-                                .take_children();
-                            if !children_nodes.is_empty() {
-                                dom.append_children(children_nodes);
+                        }
+
+                        "BLOCKQUOTE" => {
+                            self.current_path.push(DomNodeKind::Quote);
+                            dom.append_child(DomNode::Container(
+                                ContainerNode::new_quote(
+                                    self.convert(
+                                        node.child_nodes(),
+                                        DomNodeKind::Quote,
+                                        html_source,
+                                    )?
+                                    .take_children(),
+                                ),
+                            ));
+                            self.current_path.pop();
+                        }
+
+                        "P" => {
+                            self.current_path.push(DomNodeKind::Paragraph);
+                            dom.append_child(DomNode::Container(
+                                ContainerNode::new_paragraph(
+                                    self.convert(
+                                        node.child_nodes(),
+                                        DomNodeKind::Paragraph,
+                                        html_source,
+                                    )?
+                                    .take_children(),
+                                ),
+                            ));
+                            self.current_path.pop();
+                        }
+                        node_name => {
+                            let formatting_kind = match node_name {
+                                "STRONG" | "B" => Some(InlineFormatType::Bold),
+                                "EM" | "I" => Some(InlineFormatType::Italic),
+                                "DEL" => Some(InlineFormatType::StrikeThrough),
+                                "U" => Some(InlineFormatType::Underline),
+                                "CODE" => Some(InlineFormatType::InlineCode),
+                                "SPAN" => {
+                                    if html_source == HtmlSource::Matrix {
+                                        invalid_node_error =
+                                            Some(Error::UnknownNode(
+                                                node_name.to_owned(),
+                                            ));
+                                        None
+                                    } else {
+                                        // For external sources, we check for common formatting styles for spans
+                                        // and convert them to appropriate formatting nodes.
+                                        let style = node
+                                            .unchecked_ref::<HtmlElement>()
+                                            .style();
+                                        if style
+                                            .get_property_value("font-weight")
+                                            .unwrap_or_default()
+                                            == "bold"
+                                        {
+                                            Some(InlineFormatType::Bold)
+                                        } else if style
+                                            .get_property_value("font-style")
+                                            .unwrap_or_default()
+                                            == "italic"
+                                        {
+                                            Some(InlineFormatType::Italic)
+                                        } else if style
+                                            .get_property_value(
+                                                "text-decoration",
+                                            )
+                                            .unwrap_or_default()
+                                            == "underline"
+                                        {
+                                            Some(InlineFormatType::Underline)
+                                        } else if style
+                                            .get_property_value(
+                                                "text-decoration",
+                                            )
+                                            .unwrap_or_default()
+                                            == "line-through"
+                                        {
+                                            Some(
+                                                InlineFormatType::StrikeThrough,
+                                            )
+                                        } else {
+                                            invalid_node_error =
+                                                Some(Error::UnknownNode(
+                                                    node_name.to_owned(),
+                                                ));
+                                            None
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    invalid_node_error =
+                                        Some(Error::UnknownNode(
+                                            node_name.to_owned(),
+                                        ));
+                                    None
+                                }
+                            };
+
+                            if let Some(formatting_kind) = formatting_kind {
+                                // Special case for code inside code blocks - skip the inline code formatting
+                                if formatting_kind
+                                    == InlineFormatType::InlineCode
+                                    && self.current_path.contains(&CodeBlock)
+                                {
+                                    let children_nodes = self
+                                        .convert(
+                                            node.child_nodes(),
+                                            parent_kind.clone(),
+                                            html_source,
+                                        )?
+                                        .take_children();
+                                    if !children_nodes.is_empty() {
+                                        dom.append_children(children_nodes);
+                                    }
+                                } else {
+                                    self.current_path.push(
+                                        DomNodeKind::Formatting(
+                                            formatting_kind.clone(),
+                                        ),
+                                    );
+                                    let children_nodes = self
+                                        .convert(
+                                            node.child_nodes(),
+                                            DomNodeKind::Formatting(
+                                                formatting_kind.clone(),
+                                            ),
+                                            html_source,
+                                        )?
+                                        .take_children();
+
+                                    dom.append_child(DomNode::Container(
+                                        ContainerNode::new_formatting(
+                                            formatting_kind.clone(),
+                                            children_nodes,
+                                        ),
+                                    ));
+                                    self.current_path.pop();
+                                }
                             }
+                        }
+                    }
+                }
+
+                // Handle invalid node errors
+                if let Some(err) = invalid_node_error {
+                    if html_source == HtmlSource::Matrix {
+                        return Err(err);
+                    } else if !skip_children {
+                        // If the source is not Matrix and we haven't explicitly flagged to skip the children continue to parse them.
+                        let children_nodes = self
+                            .convert(
+                                node.child_nodes(),
+                                parent_kind.clone(),
+                                html_source,
+                            )?
+                            .take_children();
+                        if !children_nodes.is_empty() {
+                            dom.append_children(children_nodes);
                         }
                     }
                 }
@@ -1921,6 +2041,7 @@ mod js {
         NoBody,
         UnknownNode(String),
         InvalidListItemNode,
+        ParentNotAList,
     }
 
     impl fmt::Display for Error {
@@ -1941,6 +2062,9 @@ mod js {
                         formatter,
                         "Invalid list item node: a list must only contain list items"
                     )
+                }
+                Self::ParentNotAList => {
+                    write!(formatter, "Parent node is not a list")
                 }
             }
         }
@@ -1983,6 +2107,15 @@ mod js {
         }
 
         #[wasm_bindgen_test]
+        fn parse_insert_text_directly_into_a_list() {
+            let html = r#"<ul><li>hello</li><b>list item</b></ul>"#;
+            let dom: Dom<Utf16String> = HtmlParser::default()
+                .parse_from_source(html, HtmlSource::UnknownExternal)
+                .unwrap();
+            assert_eq!(dom.to_html(), r#"<ul><li>hello</li></ul>"#);
+        }
+
+        #[wasm_bindgen_test]
         fn google_doc_rich_text() {
             let dom = HtmlParser::default()
                 .parse_from_source::<Utf16String>(
@@ -2013,7 +2146,7 @@ mod js {
                     HtmlSource::UnknownExternal,
                 )
                 .unwrap();
-            assert_eq!(dom.to_string(), "<ol><li><p><em>Italic</em></p></li></ol><ol><li><p><strong>Bold</strong></p></li></ol><ol><li><p>Unformatted</p></li></ol><ol><li><p><del>Strikethrough</del></p></li></ol><ol><li><p><u>Underlined</u></p></li></ol><ol><li><p><a style=\"-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; cursor: text; text-decoration: none; color: inherit;\" href=\"https://matrix.org/\"><u>Linked</u></a></p></li></ol><ul><li><p>Nested</p></li></ul>");
+            assert_eq!(dom.to_string(), "<ol start=\"1\"><li><p><em>Italic</em></p></li><li><p><strong>Bold</strong></p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"-webkit-user-drag: none; -webkit-tap-highlight-color: transparent; margin: 0px; padding: 0px; user-select: text; cursor: text; text-decoration: none; color: inherit;\" href=\"https://matrix.org/\"><u>Linked</u></a></p></li></ol><ul><li><p>Nested</p></li></ul>");
         }
 
         #[wasm_bindgen_test]
@@ -2057,17 +2190,23 @@ mod js {
 
         #[wasm_bindgen_test]
         fn ul() {
-            roundtrip("foo <ul><li>item1</li><li>item2</li></ul> bar");
+            roundtrip(
+                "<p>foo </p><ul><li>item1</li><li>item2</li></ul><p> bar</p>",
+            );
         }
 
         #[wasm_bindgen_test]
         fn ol() {
-            roundtrip("foo <ol><li>item1</li><li>item2</li></ol> bar");
+            roundtrip(
+                "<p>foo </p><ol><li>item1</li><li>item2</li></ol><p> bar</p>",
+            );
         }
 
         #[wasm_bindgen_test]
         fn pre() {
-            roundtrip("foo <pre><code>~Some code</code></pre> bar");
+            roundtrip(
+                "<p>foo </p><pre><code>~Some code</code></pre><p> bar</p>",
+            );
         }
 
         #[wasm_bindgen_test]
@@ -2098,7 +2237,9 @@ mod js {
 
         #[wasm_bindgen_test]
         fn blockquote() {
-            roundtrip("foo <blockquote>~Some code</blockquote> bar");
+            roundtrip(
+                "<p>foo </p><blockquote>~Some code</blockquote><p> bar</p>",
+            );
         }
 
         #[wasm_bindgen_test]
@@ -2129,7 +2270,8 @@ mod js {
                 <p>&nbsp;</p>\
                 <pre><code>&nbsp;\n&nbsp;</code></pre>\
                 <p>&nbsp;</p>";
-            let dom = HtmlParser::default().parse::<Utf16String>(html).unwrap();
+            let dom: Dom<Utf16String> =
+                HtmlParser::default().parse::<Utf16String>(html).unwrap();
             let tree = dom.to_tree().to_string();
             assert_eq!(
                 tree,

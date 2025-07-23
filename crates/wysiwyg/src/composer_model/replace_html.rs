@@ -193,4 +193,101 @@ mod test {
         let html_str = html.to_string();
         assert_eq!(html_str, "<p>Existing content</p>");
     }
+
+    #[test]
+    fn test_insert_list_item_without_list_parent() {
+        let mut model = cm("hello|");
+        let html = "<li>list item</li>";
+
+        let _ = model.replace_html(html.into(), HtmlSource::UnknownExternal);
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(html_str, "<p>hello</p><p>list item</p>");
+    }
+}
+
+#[cfg(all(test, target_arch = "wasm32"))]
+mod wasm_tests {
+    use crate::dom::html_source::HtmlSource;
+    use crate::tests::testutils_composer_model::cm;
+    use wasm_bindgen_test::*;
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn test_replace_html_with_existing_selection() {
+        let mut model = cm("Hello{world}|test");
+        let new_html = "<p><em>replacement</em></p>";
+
+        let _ =
+            model.replace_html(new_html.into(), HtmlSource::UnknownExternal);
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(
+            html_str,
+            "<p>Hello</p><p><em>replacement</em></p><p>test</p>"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_replace_html_cursor_position_after_insert() {
+        let mut model = cm("Start|");
+        let new_html = "<strong>Bold text</strong>";
+        let _ = model.replace_html(new_html.into(), HtmlSource::Matrix);
+        // Cursor should be positioned after the inserted content
+        let (start, end) = model.safe_selection();
+        assert_eq!(start, end); // No selection, just cursor
+        model.bold();
+        model.enter();
+        // Insert more text to verify cursor position
+        let _ = model.replace_text("End".into());
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(
+            html_str,
+            "<p>Start</p><p><strong>Bold text</strong></p><p>End</p>"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_replace_html_multiple_meta_tags() {
+        let mut model = cm("|");
+        let html_with_multiple_metas = r#"<meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="X-UA-Compatible" content="IE=edge"><p>Content after metas</p>"#;
+
+        let _ = model.replace_html(
+            html_with_multiple_metas.into(),
+            HtmlSource::UnknownExternal,
+        );
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert!(!html_str.contains("<meta"));
+        assert_eq!(html_str, "<p>Content after metas</p>");
+    }
+
+    #[wasm_bindgen_test]
+    fn test_replace_html_empty_content() {
+        let mut model = cm("Existing content|");
+        let empty_html = "";
+
+        let _ = model.replace_html(empty_html.into(), HtmlSource::Matrix);
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(html_str, "<p>Existing content</p>");
+    }
+
+    #[wasm_bindgen_test]
+    fn test_insert_list_item_without_list_parent() {
+        let mut model = cm("hello|");
+        let html = "<li>list item</li>";
+
+        let _ = model.replace_html(html.into(), HtmlSource::UnknownExternal);
+
+        let html = model.get_content_as_html();
+        let html_str = html.to_string();
+        assert_eq!(html_str, "<p>hello</p><p>list item</p>");
+    }
 }
