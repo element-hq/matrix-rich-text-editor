@@ -69,11 +69,13 @@ export function processInput(
         const clipboardData = event.clipboardData;
         const htmlData = clipboardData?.getData('text/html');
         const plainData = clipboardData?.getData('text/plain') ?? '';
-        
+
         if (htmlData && htmlData !== plainData) {
             const htmlSource = clipboardData?.types.includes(
                 'application/x-vnd.google-docs-document-slice-clip+wrapped',
-            ) ? HtmlSource.GoogleDoc : HtmlSource.UnknownExternal;
+            )
+                ? HtmlSource.GoogleDoc
+                : HtmlSource.UnknownExternal;
             return action(
                 composerModel.replace_html(htmlData, htmlSource),
                 'replace_html_paste',
