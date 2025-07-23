@@ -26,7 +26,7 @@ strum = "0.27"
 strum_macros = "0.27"
 unicode-segmentation = "1.7.1"
 wasm-bindgen = { version = "0.2.83", default-features = false, optional = true }
-web-sys = { version = "0.3.60", default-features = false, features = ["Document", "DomParser", "HtmlElement", "Node", "NodeList", "SupportedType"], optional = true }
+web-sys = { version = "0.3.60", default-features = false, features = ["Document", "DomParser", "HtmlElement", "Node", "NodeList", "SupportedType", "CssStyleDeclaration"], optional = true }
 widestring = "1.0.2"
 indoc = "2.0"
 url="2.3.1"

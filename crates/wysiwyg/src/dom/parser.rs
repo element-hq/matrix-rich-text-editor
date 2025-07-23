@@ -49,3 +49,9 @@ mod sys {
 use sys::*;
 
 pub use parse::parse;
+pub use parse::parse_from_source;
+
+#[cfg(test)]
+pub use parse::GOOGLE_DOC_HTML_PASTEBOARD;
+#[cfg(test)]
+pub use parse::MS_DOC_HTML_PASTEBOARD;
