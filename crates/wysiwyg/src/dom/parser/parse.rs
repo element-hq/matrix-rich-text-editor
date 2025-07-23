@@ -262,7 +262,9 @@ mod sys {
                         // For external sources, we check for common formatting styles for spans
                         // and convert them to appropriate formatting nodes.
                         let mut formatting_tag = None;
-                        if child.contains_style("font-weight", "bold") {
+                        if child.contains_style("font-weight", "bold")
+                            || child.contains_style("font-weight", "700")
+                        {
                             formatting_tag = Some("b");
                         } else if child.contains_style("font-style", "italic") {
                             formatting_tag = Some("i");
@@ -1174,6 +1176,7 @@ mod sys {
                 )
                 .unwrap();
             let tree = dom.to_tree().to_string();
+            println!("{}", tree);
             assert_eq!(
                 tree,
                 indoc! {
@@ -1186,7 +1189,8 @@ mod sys {
                   │     └>"Italic"
                   ├>li
                   │ └>p
-                  │   └>"Bold"
+                  │   └>b
+                  │     └>"Bold"
                   ├>li
                   │ └>p
                   │   └>"Unformatted"
@@ -1214,7 +1218,7 @@ mod sys {
                 dom.to_markdown().unwrap().to_string(),
                 indoc! {r#"
                 1. *Italic*
-                2. Bold
+                2. __Bold__
                 3. Unformatted
                 4. ~~Strikethrough~~
                 5. <u>Underlined</u>
@@ -1915,6 +1919,12 @@ mod js {
                                             .get_property_value("font-weight")
                                             .unwrap_or_default()
                                             == "bold"
+                                            || style
+                                                .get_property_value(
+                                                    "font-weight",
+                                                )
+                                                .unwrap_or_default()
+                                                == "700"
                                         {
                                             Some(InlineFormatType::Bold)
                                         } else if style
@@ -2123,12 +2133,12 @@ mod js {
                     HtmlSource::GoogleDoc,
                 )
                 .unwrap();
-            assert_eq!(dom.to_string(), "<ol><li><p><em>Italic</em></p></li><li><p>Bold</p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"text-decoration:none;\" href=\"http://matrix.org\"><u>Linked</u></a></p><ul><li><p>Nested</p></li></ul></li></ol>");
+            assert_eq!(dom.to_string(), "<ol><li><p><em>Italic</em></p></li><li><p><strong>Bold</strong></p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"text-decoration:none;\" href=\"http://matrix.org\"><u>Linked</u></a></p><ul><li><p>Nested</p></li></ul></li></ol>");
             assert_eq!(
                 dom.to_markdown().unwrap().to_string(),
                 indoc! {r#"
                 1. *Italic*
-                2. Bold
+                2. __Bold__
                 3. Unformatted
                 4. ~~Strikethrough~~
                 5. <u>Underlined</u>

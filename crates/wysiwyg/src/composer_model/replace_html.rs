@@ -100,7 +100,7 @@ mod test {
         let html_str = html.to_string();
         assert!(!html_str.contains("<meta"));
         assert!(!html_str.contains("docs-internal-guid"));
-        assert_eq!(html_str, "<ol><li><p><i>Italic</i></p></li><li><p>Bold</p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"text-decoration:none;\" href=\"http://matrix.org\"><u>Linked</u></a></p><ul><li><p>Nested</p></li></ul></li></ol>");
+        assert_eq!(html_str, "<ol><li><p><i>Italic</i></p></li><li><p><b>Bold</b></p></li><li><p>Unformatted</p></li><li><p><del>Strikethrough</del></p></li><li><p><u>Underlined</u></p></li><li><p><a style=\"text-decoration:none;\" href=\"http://matrix.org\"><u>Linked</u></a></p><ul><li><p>Nested</p></li></ul></li></ol>");
     }
 
     #[test]
