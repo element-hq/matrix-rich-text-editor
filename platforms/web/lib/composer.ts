@@ -79,13 +79,11 @@ export function processInput(
             return action(
                 composerModel.replace_html(htmlData, htmlSource),
                 'replace_html_paste',
-                htmlData,
             );
         }
         return action(
             composerModel.replace_text(plainData),
             'replace_text_paste',
-            plainData,
         );
     }
 

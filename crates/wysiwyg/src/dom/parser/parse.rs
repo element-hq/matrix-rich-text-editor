@@ -1178,7 +1178,6 @@ mod sys {
                 )
                 .unwrap();
             let tree = dom.to_tree().to_string();
-            println!("{}", tree);
             assert_eq!(
                 tree,
                 indoc! {
