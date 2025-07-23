@@ -298,14 +298,14 @@ where
 
     pub fn location_for_node(&self, node_handle: &DomHandle) -> DomLocation {
         let locations = find_range::find_range(self, 0, usize::MAX);
-        return locations.find_location(node_handle).unwrap().clone();
+        locations.find_location(node_handle).unwrap().clone()
     }
 
     pub fn locations_for_node(
         &self,
         node_handle: &DomHandle,
     ) -> Vec<DomLocation> {
-        let result = find_range::find_pos(self, &node_handle, 0, usize::MAX);
+        let result = find_range::find_pos(self, node_handle, 0, usize::MAX);
         match result {
             FindResult::Found(locations) => locations,
             _ => panic!("Node does not exist"),

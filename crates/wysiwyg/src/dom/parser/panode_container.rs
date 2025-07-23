@@ -24,18 +24,17 @@ impl PaNodeContainer {
     }
 
     pub(crate) fn contains_style(&self, name: &str, value: &str) -> bool {
-        return self
-            .get_attr("style")
+        self.get_attr("style")
             .map(|v| {
-                return Regex::new(&format!(
+                Regex::new(&format!(
                     r"(?i){}:\s*{};",
                     regex::escape(name),
                     regex::escape(value)
                 ))
                 .map(|re| re.is_match(v))
-                .unwrap_or(false);
+                .unwrap_or(false)
             })
-            .unwrap_or(false);
+            .unwrap_or(false)
     }
 }
 

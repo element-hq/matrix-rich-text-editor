@@ -88,7 +88,7 @@ mod sys {
         where
             S: UnicodeString,
         {
-            return self.parse_internal(html, HtmlSource::Matrix);
+            self.parse_internal(html, HtmlSource::Matrix)
         }
 
         pub(super) fn parse_from_source<S>(
@@ -304,8 +304,10 @@ mod sys {
                             // For the google docs case, we can add the nested list to the last list item instead.
                             if html_source != HtmlSource::GoogleDoc
                                 || node.last_child_mut().is_none()
-                                || node.last_child_mut().unwrap().is_list_item()
-                                    == false
+                                || !node
+                                    .last_child_mut()
+                                    .unwrap()
+                                    .is_list_item()
                             {
                                 // If source is not Google Docs or the last child is not a list item, we return an error.
                                 invalid_node_error =
@@ -1309,7 +1311,7 @@ fn post_process_blocks<S: UnicodeString>(mut dom: Dom<S>) -> Dom<S> {
     let block_handles = find_blocks(&dom);
     for handle in block_handles.iter().rev() {
         dom = post_process_block_lines(dom, handle);
-        dom.join_nodes_in_container(&handle);
+        dom.join_nodes_in_container(handle);
     }
     dom
 }
