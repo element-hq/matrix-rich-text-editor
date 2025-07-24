@@ -28,8 +28,8 @@ describe('inputEventProcessor', () => {
         fireEvent.keyDown(textbox, { key: 'A', code: 'KeyA' });
 
         await waitFor(() => {
-            expect(inputEventProcessor).toBeCalledTimes(1);
-            expect(inputEventProcessor).toBeCalledWith(
+            expect(inputEventProcessor).toHaveBeenCalledTimes(1);
+            expect(inputEventProcessor).toHaveBeenCalledWith(
                 new KeyboardEvent('keyDown', {
                     key: 'A',
                     code: 'KeyA',
@@ -54,8 +54,8 @@ describe('inputEventProcessor', () => {
         // anything to be displayed
         expect(textbox).toHaveTextContent('');
         expect(textbox).toHaveAttribute('data-content', '');
-        expect(inputEventProcessor).toBeCalledTimes(1);
-        expect(inputEventProcessor).toBeCalledWith(
+        expect(inputEventProcessor).toHaveBeenCalledTimes(1);
+        expect(inputEventProcessor).toHaveBeenCalledWith(
             inputEvent,
             expect.anything(),
             expect.anything(),
