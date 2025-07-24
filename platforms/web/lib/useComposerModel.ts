@@ -6,14 +6,12 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { RefObject, useCallback, useEffect, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useState } from 'react';
 // rust generated bindings
 import {
     initAsync,
-    ComposerModel,
-    // eslint-disable-next-line camelcase
+    type ComposerModel,
     new_composer_model,
-    // eslint-disable-next-line camelcase
     new_composer_model_from_html,
 } from '@vector-im/matrix-wysiwyg-wasm';
 

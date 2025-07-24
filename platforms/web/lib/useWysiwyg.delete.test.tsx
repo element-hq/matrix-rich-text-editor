@@ -93,7 +93,6 @@ describe('delete content', () => {
         });
     });
 
-    // eslint-disable-next-line max-len
     it('Should call Selection.modify with the correct arguments when using meta + backspace', async () => {
         // this test is the best we can do given the limitation that jsdom does
         // not implement Selection.modify

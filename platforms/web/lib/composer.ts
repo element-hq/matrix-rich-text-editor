@@ -7,17 +7,17 @@ Please see LICENSE in the repository root for full details.
 */
 
 import {
-    ComposerModel,
-    ComposerUpdate,
-    SuggestionPattern,
+    type ComposerModel,
+    type ComposerUpdate,
+    type SuggestionPattern,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import {
-    WysiwygInputEvent,
-    InputEventProcessor,
-    Wysiwyg,
-    FormattingFunctions,
-    WysiwygEvent,
+    type WysiwygInputEvent,
+    type InputEventProcessor,
+    type Wysiwyg,
+    type FormattingFunctions,
+    type WysiwygEvent,
 } from './types';
 import {
     isAtRoomSuggestionEvent,
@@ -25,7 +25,7 @@ import {
     isLinkEvent,
     isSuggestionEvent,
 } from './useListeners/assert';
-import { TestUtilities } from './useTestCases/types';
+import { type TestUtilities } from './useTestCases/types';
 
 export function processEvent<T extends WysiwygEvent>(
     e: T,
@@ -231,7 +231,7 @@ export function processInput(
             return null;
         default:
             // We should cover all of
-            // eslint-disable-next-line max-len
+
             // https://rawgit.com/w3c/input-events/v1/index.html#interface-InputEvent-Attributes
             // Internal task to make sure we cover all inputs: PSU-740
             console.error(`Unknown input type: ${event.inputType}`);

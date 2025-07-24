@@ -6,16 +6,16 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { RefObject, useMemo } from 'react';
-import { ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
+import { type RefObject, useMemo } from 'react';
+import { type ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { BlockType, FormattingFunctions } from './types';
+import { type BlockType, type FormattingFunctions } from './types';
 import { sendWysiwygInputEvent } from './useListeners';
 import {
-    AllowedMentionAttributes,
-    AtRoomSuggestionEvent,
-    LinkEvent,
-    SuggestionEvent,
+    type AllowedMentionAttributes,
+    type AtRoomSuggestionEvent,
+    type LinkEvent,
+    type SuggestionEvent,
 } from './useListeners/types';
 
 export function useFormattingFunctions(

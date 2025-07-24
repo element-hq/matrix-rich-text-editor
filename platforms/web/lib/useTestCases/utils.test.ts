@@ -8,7 +8,7 @@ Please see LICENSE in the repository root for full details.
 
 import { initAsync } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { Actions } from './types';
+import { type Actions } from './types';
 import {
     escapeHtml,
     generateTestCase,

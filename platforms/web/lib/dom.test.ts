@@ -389,7 +389,6 @@ describe('computeNodeAndOffset', () => {
         expect(node?.textContent).toHaveLength(12);
     });
 
-    // eslint-disable-next-line max-len
     it('does not count the length of "empty paragraphs" ie paragraphs with an nbsp inside them', () => {
         // When
         setEditorHtml('<p><del>foo</del></p><p>&nbsp;</p><p><del></del></p>');
@@ -412,7 +411,6 @@ describe('computeNodeAndOffset', () => {
         expect(offset).toBe(0);
     });
 
-    // eslint-disable-next-line max-len
     it('should deal with nbsp caused by line breaking part way through a tag', () => {
         // When
         // case when we have <strong>bold</strong> line2 then move cursor to
@@ -430,7 +428,6 @@ describe('computeNodeAndOffset', () => {
     it('can find the beginning of a mention correctly', () => {
         // When
         setEditorHtml(
-            // eslint-disable-next-line max-len
             '<a data-mention-type="something" contenteditable="false">test</a>&nbsp;',
         );
         const { node, offset } = computeNodeAndOffset(editor, 0);
@@ -444,7 +441,6 @@ describe('computeNodeAndOffset', () => {
         // When
         // we have a mention, ie a tag with a data-mention-type attribute
         setEditorHtml(
-            // eslint-disable-next-line max-len
             '<a data-mention-type="something" contenteditable="false">test</a>&nbsp;',
         );
         const { node, offset } = computeNodeAndOffset(editor, 1);
@@ -458,7 +454,6 @@ describe('computeNodeAndOffset', () => {
         // When
         // we have a mention, ie a tag with a data-mention-type attribute
         setEditorHtml(
-            // eslint-disable-next-line max-len
             '<a data-mention-type="something" contenteditable="false">test</a>&nbsp;',
         );
         const { node, offset } = computeNodeAndOffset(editor, 2);
@@ -471,7 +466,6 @@ describe('computeNodeAndOffset', () => {
     it('can find the beginning of a mention inside a paragraph', () => {
         // When
         setEditorHtml(
-            // eslint-disable-next-line max-len
             '<p><a data-mention-type="something" contenteditable="false">test</a>&nbsp;</p>',
         );
         const { node, offset } = computeNodeAndOffset(editor, 0);
@@ -484,7 +478,6 @@ describe('computeNodeAndOffset', () => {
     it('can find the start of nbsp after a mention inside a paragraph', () => {
         // When
         setEditorHtml(
-            // eslint-disable-next-line max-len
             '<p><a data-mention-type="something" contenteditable="false">test</a>&nbsp;</p>',
         );
         const { node, offset } = computeNodeAndOffset(editor, 1);
@@ -497,7 +490,6 @@ describe('computeNodeAndOffset', () => {
     it('can find the end of nbsp after a mention inside a paragraph', () => {
         // When
         setEditorHtml(
-            // eslint-disable-next-line max-len
             '<p><a data-mention-type="something" contenteditable="false">test</a>&nbsp;</p>',
         );
         const { node, offset } = computeNodeAndOffset(editor, 2);
@@ -615,7 +607,6 @@ describe('countCodeunit', () => {
         // we use the presence of a data-mention-type attribute to determine
         // if we have a mention, the tag is unimportant
         setEditorHtml(
-            // eslint-disable-next-line max-len
             'hello <span data-mention-type="something" contenteditable="false">Alice</span>',
         );
         const helloTextNode = editor.childNodes[0];
@@ -867,7 +858,6 @@ describe('textNodeNeedsExtraOffset', () => {
             const openingTag = wrappingTag ? `<${wrappingTag}>` : '';
             const closingTag = wrappingTag ? `<${wrappingTag}>` : '';
             setEditorHtml(
-                // eslint-disable-next-line max-len
                 `${openingTag}<${testTag}>test test</${testTag}>${closingTag}<p>some adjacent text</p>`,
             );
             const { node } = computeNodeAndOffset(editor, 1);
@@ -939,7 +929,6 @@ describe('textNodeNeedsExtraOffset', () => {
         expect(textNodeNeedsExtraOffset(node)).toBe(false);
     });
 
-    // eslint-disable-next-line max-len
     it('applies extra offset for nested formatting inside a paragraph adjacent to unordered list', () => {
         // When
         setEditorHtml(
@@ -956,7 +945,6 @@ describe('textNodeNeedsExtraOffset', () => {
         expect(textNodeNeedsExtraOffset(node)).toBe(true);
     });
 
-    // eslint-disable-next-line max-len
     it('applies extra offset for nested formatting inside a paragraph adjacent to unordered list', () => {
         // When
         setEditorHtml(

@@ -6,16 +6,16 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
+import { type RefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { type ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { Actions } from './types';
+import { type Actions } from './types';
 import {
     getSelectionAccordingToActions,
     resetTestCase,
     traceAction,
 } from './utils';
-import { TraceAction } from '../types';
+import { type TraceAction } from '../types';
 
 export type UseTestCases = {
     testRef: RefObject<HTMLDivElement | null>;

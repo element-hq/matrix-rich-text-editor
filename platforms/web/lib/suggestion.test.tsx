@@ -8,9 +8,8 @@ Please see LICENSE in the repository root for full details.
 
 import {
     initAsync,
-    // eslint-disable-next-line camelcase
     new_composer_model,
-    SuggestionPattern,
+    type SuggestionPattern,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { SUGGESTIONS } from './constants';

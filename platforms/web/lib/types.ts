@@ -6,10 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { ComposerUpdate } from '@vector-im/matrix-wysiwyg-wasm';
+import { type ComposerUpdate } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { ACTION_TYPES, SUGGESTIONS } from './constants';
-import { AllowedMentionAttributes, LinkEvent } from './useListeners/types';
+import { type ACTION_TYPES, type SUGGESTIONS } from './constants';
+import {
+    type AllowedMentionAttributes,
+    type LinkEvent,
+} from './useListeners/types';
 
 export type BlockType = InputEvent['inputType'] | 'formatInlineCode' | 'clear';
 

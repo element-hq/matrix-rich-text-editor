@@ -6,22 +6,22 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import {
-    ComposerModel,
-    SuggestionPattern,
+    type ComposerModel,
+    type SuggestionPattern,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { isClipboardEvent, isInputEvent } from './assert';
 import { handleInput, handleKeyDown, handleSelectionChange } from './event';
 import {
-    FormattingFunctions,
-    AllActionStates,
-    InputEventProcessor,
-    WysiwygInputEvent,
+    type FormattingFunctions,
+    type AllActionStates,
+    type InputEventProcessor,
+    type WysiwygInputEvent,
 } from '../types';
-import { TestUtilities } from '../useTestCases/types';
-import { FormatBlockEvent } from './types';
+import { type TestUtilities } from '../useTestCases/types';
+import { type FormatBlockEvent } from './types';
 import { createDefaultActionStates, mapToAllActionStates } from './utils';
 
 type State = {
