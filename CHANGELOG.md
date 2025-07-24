@@ -1,5 +1,10 @@
 # Changelog
 
+# [2.39.0]
+- [Rust] Adds support for pasting rich content
+- [Web] Adds support for pasting rich content
+- [Web] Updated dependencies #39 #40 #72 #73
+
 # [2.38.5]
 - [Rust] Add support for `<ol start='N'>` attribute.
 - [Android] Add support for `<ol start='N'>` attribute when rendering HTML.
