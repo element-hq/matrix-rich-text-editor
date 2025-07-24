@@ -7,7 +7,11 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { ACTION_TYPES } from '../constants';
-import { ActionTypes, ActionState, AllActionStates } from '../types';
+import {
+    type ActionTypes,
+    type ActionState,
+    type AllActionStates,
+} from '../types';
 
 export function createDefaultActionStates(): AllActionStates {
     return ACTION_TYPES.reduce<AllActionStates>((acc, action) => {

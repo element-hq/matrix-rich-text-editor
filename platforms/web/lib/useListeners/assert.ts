@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { LinkEvent, SuggestionEvent } from './types';
+import { type LinkEvent, type SuggestionEvent } from './types';
 
 export function isInputEvent(e: Event): e is InputEvent {
     return 'inputType' in e;

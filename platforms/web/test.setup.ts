@@ -34,7 +34,7 @@ globalThis.fetch = async (url): Promise<Response> => {
 
 // Work around missing ClipboardEvent type
 class MyClipboardEvent {}
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
 // @ts-ignore
 globalThis.ClipboardEvent = MyClipboardEvent as unknown as ClipboardEvent;
 

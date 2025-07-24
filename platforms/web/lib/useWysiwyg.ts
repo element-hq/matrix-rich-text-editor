@@ -6,14 +6,14 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-    AllActionStates,
-    FormattingFunctions,
-    InputEventProcessor,
-    MappedSuggestion,
-    TraceAction,
+    type AllActionStates,
+    type FormattingFunctions,
+    type InputEventProcessor,
+    type MappedSuggestion,
+    type TraceAction,
 } from './types.js';
 import { useFormattingFunctions } from './useFormattingFunctions';
 import { useComposerModel } from './useComposerModel';

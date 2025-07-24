@@ -8,16 +8,15 @@ Please see LICENSE in the repository root for full details.
 
 // rust generated bindings
 import {
-    ComposerModel,
-    ComposerUpdate,
-    // eslint-disable-next-line camelcase
+    type ComposerModel,
+    type ComposerUpdate,
     new_composer_model_from_html,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { getCurrentSelection } from '../dom';
-import { TraceAction } from '../types';
+import { type TraceAction } from '../types';
 import { isSelectTuple } from './assert';
-import { Actions } from './types';
+import { type Actions } from './types';
 
 export function traceAction(
     testNode: HTMLElement | null,

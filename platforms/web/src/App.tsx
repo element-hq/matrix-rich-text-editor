@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { MouseEventHandler, ReactElement, useState } from 'react';
+import { type MouseEventHandler, type ReactElement, useState } from 'react';
 
 import { useWysiwyg } from '../lib/useWysiwyg';
 import boldImage from './images/bold.svg';
@@ -22,7 +22,7 @@ import codeBlockImage from './images/code_block.svg';
 import quoteImage from './images/quote.svg';
 import indentImage from './images/indent.svg';
 import unindentImage from './images/unindent.svg';
-import { Wysiwyg, WysiwygEvent } from '../lib/types';
+import { type Wysiwyg, type WysiwygEvent } from '../lib/types';
 
 type ButtonProps = {
     onClick: MouseEventHandler<HTMLButtonElement>;

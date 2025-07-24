@@ -7,10 +7,7 @@ Please see LICENSE in the repository root for full details.
 */
 
 // rust generated bindings
-import {
-    // eslint-disable-next-line camelcase
-    new_composer_model,
-} from '@vector-im/matrix-wysiwyg-wasm';
+import { new_composer_model } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { initOnce } from './useComposerModel.js';
 

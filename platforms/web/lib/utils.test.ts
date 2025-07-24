@@ -26,7 +26,6 @@ export const MAC_OS_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9';
 
 export const LINUX_UA =
-    // eslint-disable-next-line max-len
     'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1';
 
 export const IOS_UA =

@@ -6,10 +6,14 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { SuggestionPattern } from '@vector-im/matrix-wysiwyg-wasm';
+import { type SuggestionPattern } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { SUGGESTIONS } from './constants';
-import { MappedSuggestion, SuggestionChar, SuggestionType } from './types';
+import {
+    type MappedSuggestion,
+    type SuggestionChar,
+    type SuggestionType,
+} from './types';
 
 export function getSuggestionChar(
     suggestion: SuggestionPattern,

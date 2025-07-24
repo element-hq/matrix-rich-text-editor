@@ -8,11 +8,11 @@ Please see LICENSE in the repository root for full details.
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, MutableRefObject } from 'react';
+import { createRef, type MutableRefObject } from 'react';
 
 import { Editor } from './testUtils/Editor';
 import { select } from './testUtils/selection';
-import { FormattingFunctions } from './types';
+import { type FormattingFunctions } from './types';
 
 describe.each([
     [
@@ -21,7 +21,7 @@ describe.each([
         'reversed',
         '<strong>foo</strong>',
         'fo<strong>o&nbsp;</strong>bar',
-        // eslint-disable-next-line max-len
+
         '<p><del>fo<strong>o</strong></del></p><p><del><strong>b</strong>ar</del></p>',
         '<strong>fo</strong>o <strong>bar</strong>',
     ],
@@ -125,7 +125,6 @@ describe.each([
             expect(button).toHaveAttribute('data-state', defaultState);
         });
 
-        // eslint-disable-next-line max-len
         it(`Should be ${expectedActivationState} after single activation`, async () => {
             // When
             await userEvent.click(button);
@@ -327,7 +326,6 @@ describe('indentation', () => {
         });
     });
 
-    // eslint-disable-next-line max-len
     it('Should show the indent/unindent buttons when a list is reversed', async () => {
         await userEvent.click(
             screen.getByRole('button', { name: 'orderedList' }),
@@ -345,7 +343,6 @@ describe('indentation', () => {
         });
     });
 
-    // eslint-disable-next-line max-len
     it('Should not be able to change indentation on first list item', async () => {
         await userEvent.click(
             screen.getByRole('button', { name: 'orderedList' }),
@@ -359,7 +356,6 @@ describe('indentation', () => {
         expect(indentButton).toHaveAttribute('data-state', 'disabled');
     });
 
-    // eslint-disable-next-line max-len
     it('Should be able to change indentation on second list item', async () => {
         // Select the ordered list and then enter two lines of input
         await userEvent.click(
@@ -497,7 +493,7 @@ describe('edge cases', () => {
             expect(textbox).toHaveAttribute('contentEditable', 'true'),
         );
     });
-    // eslint-disable-next-line max-len
+
     it('handles selection properly when formatted text is followed by list', async () => {
         // When
         // Input bold text (nb first input needs to use fireEvent)

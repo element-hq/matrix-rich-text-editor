@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { ComposerModel, HtmlSource } from '@vector-im/matrix-wysiwyg-wasm';
+import { type ComposerModel, HtmlSource } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { processInput } from './composer';
-import { FormattingFunctions } from './types';
+import { type FormattingFunctions } from './types';
 
 // mocks and spies
 const mockComposerModel = {
@@ -205,7 +205,7 @@ describe('processInput', () => {
             });
 
             // We can't easily generate the correct type here, so disable ts
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
             // @ts-ignore
             e.clipboardData = {
                 getData: mockGetter,

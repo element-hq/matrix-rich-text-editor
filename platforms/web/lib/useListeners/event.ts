@@ -6,11 +6,11 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { MouseEvent as ReactMouseEvent } from 'react';
+import { type MouseEvent as ReactMouseEvent } from 'react';
 import {
-    ComposerModel,
-    MenuStateUpdate,
-    SuggestionPattern,
+    type ComposerModel,
+    type MenuStateUpdate,
+    type SuggestionPattern,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { processEvent, processInput } from '../composer';
@@ -20,15 +20,19 @@ import {
     replaceEditor,
 } from '../dom';
 import {
-    BlockType,
-    FormattingFunctions,
-    InputEventProcessor,
-    WysiwygInputEvent,
+    type BlockType,
+    type FormattingFunctions,
+    type InputEventProcessor,
+    type WysiwygInputEvent,
 } from '../types';
-import { TestUtilities } from '../useTestCases/types';
-import { AllActionStates } from '../types';
+import { type TestUtilities } from '../useTestCases/types';
+import { type AllActionStates } from '../types';
 import { mapToAllActionStates } from './utils';
-import { AtRoomSuggestionEvent, LinkEvent, SuggestionEvent } from './types';
+import {
+    type AtRoomSuggestionEvent,
+    type LinkEvent,
+    type SuggestionEvent,
+} from './types';
 import { getUserOperatingSystem } from '../utils';
 
 /**
