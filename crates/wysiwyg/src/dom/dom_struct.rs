@@ -11,6 +11,7 @@ use crate::dom::nodes::{ContainerNode, DomNode};
 use crate::dom::to_html::ToHtmlState;
 use crate::dom::to_markdown::{MarkdownError, MarkdownOptions, ToMarkdown};
 use crate::dom::unicode_string::UnicodeStrExt;
+use crate::dom::DomLocation;
 use crate::dom::{
     find_range, to_raw_text::ToRawText, DomHandle, Range, ToTree, UnicodeString,
 };
@@ -295,14 +296,24 @@ where
         find_range::find_range(self, start, end)
     }
 
-    pub fn find_range_by_node(&self, node_handle: &DomHandle) -> Range {
-        let result = find_range::find_pos(self, node_handle, 0, usize::MAX);
+    pub fn location_for_node(&self, node_handle: &DomHandle) -> DomLocation {
+        let locations = find_range::find_range(self, 0, usize::MAX);
+        locations.find_location(node_handle).unwrap().clone()
+    }
 
-        let locations = match result {
+    pub fn locations_for_node(
+        &self,
+        node_handle: &DomHandle,
+    ) -> Vec<DomLocation> {
+        let result = find_range::find_pos(self, node_handle, 0, usize::MAX);
+        match result {
             FindResult::Found(locations) => locations,
             _ => panic!("Node does not exist"),
-        };
+        }
+    }
 
+    pub fn find_range_by_node(&self, node_handle: &DomHandle) -> Range {
+        let locations = self.locations_for_node(node_handle);
         let leaves = locations.iter().filter(|l| l.is_leaf());
 
         let s = leaves.clone().map(|l| l.position).min().unwrap();
@@ -924,12 +935,15 @@ mod test {
     #[test]
     fn find_parent_list_item_or_self_finds_our_grandparent() {
         let d = cm("|<ul><li>b<strong>c</strong></li></ul>d").state.dom;
+        // The "|" at the start infers that when the dom is created, it be within a paragraph
+        // (as inline nodes and blocks are not allowed to be siblings).
+        // So the handle is [1, 0, 1, 0].
         let res =
             d.find_ancestor_list_item_or_self(&DomHandle::from_raw(vec![
-                0, 0, 1, 0,
+                1, 0, 1, 0,
             ]));
         let res = res.expect("Should have found a list parent!");
-        assert_eq!(res.into_raw(), vec![0, 0]);
+        assert_eq!(res.into_raw(), vec![1, 0]);
     }
 
     #[test]

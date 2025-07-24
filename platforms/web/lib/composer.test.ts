@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { type ComposerModel } from '@vector-im/matrix-wysiwyg-wasm';
+import { type ComposerModel, HtmlSource } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { processInput } from './composer';
 import { type FormattingFunctions } from './types';
@@ -14,6 +14,7 @@ import { type FormattingFunctions } from './types';
 // mocks and spies
 const mockComposerModel = {
     replace_text: vi.fn(),
+    replace_html: vi.fn(),
     code_block: vi.fn(),
     backspace_word: vi.fn(),
     delete_word: vi.fn(),
@@ -187,16 +188,29 @@ describe('processInput', () => {
     });
 
     it('handles truthy and falsy data from clipboard with replace_text', () => {
-        const sampleContent = ['clipboardData', null];
+        const sampleContent = [
+            ['<b>clipboardData</b>', 'clipboardData'],
+            [null, 'clipboardData'],
+            [null, null],
+        ];
 
         sampleContent.forEach((clipboardContent) => {
             const e = new ClipboardEvent('some clipboard event');
-            const mockGetter = vi.fn().mockReturnValue(clipboardContent);
+            const mockGetter = vi.fn().mockImplementation((type) => {
+                if (type === 'text/html') {
+                    return clipboardContent[0];
+                } else {
+                    return clipboardContent[1];
+                }
+            });
 
             // We can't easily generate the correct type here, so disable ts
 
             // @ts-ignore
-            e.clipboardData = { getData: mockGetter };
+            e.clipboardData = {
+                getData: mockGetter,
+                types: ['text/html', 'text/plain'],
+            };
 
             processInput(
                 e,
@@ -207,12 +221,24 @@ describe('processInput', () => {
                 mockSuggestion,
             );
 
-            expect(mockGetter).toHaveBeenCalledTimes(1);
-            expect(mockComposerModel.replace_text).toHaveBeenCalledWith(
-                // falsy values are defaulted to empty string
-                clipboardContent || '',
-            );
-            expect(mockAction).toHaveBeenCalledWith(undefined, 'paste');
+            expect(mockGetter).toHaveBeenCalledTimes(2);
+            if (clipboardContent[0]) {
+                expect(mockComposerModel.replace_html).toHaveBeenCalledWith(
+                    // falsy values are defaulted to empty string
+                    clipboardContent[0] || '',
+                    HtmlSource.UnknownExternal,
+                );
+            } else {
+                expect(mockComposerModel.replace_text).toHaveBeenCalledWith(
+                    // falsy values are defaulted to empty string
+                    clipboardContent[1] || '',
+                );
+            }
+
+            const action = clipboardContent[0]
+                ? 'replace_html_paste'
+                : 'replace_text_paste';
+            expect(mockAction).toHaveBeenCalledWith(undefined, action);
         });
     });
 

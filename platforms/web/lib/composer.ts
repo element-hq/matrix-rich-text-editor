@@ -10,6 +10,7 @@ import {
     type ComposerModel,
     type ComposerUpdate,
     type SuggestionPattern,
+    HtmlSource,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import {
@@ -65,8 +66,25 @@ export function processInput(
     }
 
     if (isClipboardEvent(event)) {
-        const data = event.clipboardData?.getData('text/plain') ?? '';
-        return action(composerModel.replace_text(data), 'paste');
+        const clipboardData = event.clipboardData;
+        const htmlData = clipboardData?.getData('text/html');
+        const plainData = clipboardData?.getData('text/plain') ?? '';
+
+        if (htmlData && htmlData !== plainData) {
+            const htmlSource = clipboardData?.types.includes(
+                'application/x-vnd.google-docs-document-slice-clip+wrapped',
+            )
+                ? HtmlSource.GoogleDoc
+                : HtmlSource.UnknownExternal;
+            return action(
+                composerModel.replace_html(htmlData, htmlSource),
+                'replace_html_paste',
+            );
+        }
+        return action(
+            composerModel.replace_text(plainData),
+            'replace_text_paste',
+        );
     }
 
     switch (event.inputType) {

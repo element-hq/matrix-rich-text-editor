@@ -67,6 +67,10 @@ where
             };
         }
 
+        self.wrap_inline_nodes_into_paragraphs_if_needed(
+            &self.parent(&inserted_handle).handle(),
+        );
+
         #[cfg(any(test, feature = "assert-invariants"))]
         self.assert_invariants();
 

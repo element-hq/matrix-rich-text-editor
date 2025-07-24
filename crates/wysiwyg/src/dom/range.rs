@@ -7,6 +7,7 @@
 use crate::dom::dom_handle::DomHandle;
 use crate::dom::nodes::dom_node::DomNodeKind;
 use std::cmp::{min, Ordering};
+use std::fmt;
 
 /// Represents the relative position of a DomLocation towards
 /// the range start and end.
@@ -199,6 +200,21 @@ impl DomLocation {
         } else {
             self.length == 0
         }
+    }
+}
+
+impl fmt::Display for DomLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "DomLocation[node_handle: {:?}, position: {}, start_offset: {}, end_offset: {}, length: {}, kind: {:?}]",
+            self.node_handle.raw(),
+            self.position,
+            self.start_offset,
+            self.end_offset,
+            self.length,
+            self.kind
+        )
     }
 }
 
