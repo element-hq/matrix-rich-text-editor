@@ -63,7 +63,12 @@ export type InputEventProcessor = (
 ) => WysiwygEvent | null;
 
 export type SuggestionChar = (typeof SUGGESTIONS)[number] | '';
-export type SuggestionType = 'mention' | 'command' | 'custom' | 'emoji'| 'unknown';
+export type SuggestionType =
+    | 'mention'
+    | 'command'
+    | 'custom'
+    | 'emoji'
+    | 'unknown';
 
 export type MappedSuggestion = {
     keyChar: SuggestionChar;
