@@ -86,7 +86,7 @@ private fun processSuggestion(suggestion: MenuAction.Suggestion, roomMemberSugge
         PatternKey.At -> people + everyone
         PatternKey.Hash -> rooms
         PatternKey.Slash -> slashCommands
-        is PatternKey.Custom -> listOf()
+        is PatternKey.Custom, PatternKey.Colon -> listOf()
     }
 
     val suggestions = names

@@ -12,11 +12,12 @@ pub enum PatternKey {
     Hash,
     Slash,
     Custom(String),
+    Colon,
 }
 
 impl PatternKey {
     pub(crate) fn is_static_pattern(&self) -> bool {
-        matches!(self, Self::At | Self::Hash | Self::Slash)
+        matches!(self, Self::At | Self::Hash | Self::Slash | Self::Colon)
     }
 
     pub(crate) fn from_string_and_suggestions(
@@ -31,6 +32,7 @@ impl PatternKey {
             '\u{0040}' => Some(Self::At),
             '\u{0023}' => Some(Self::Hash),
             '\u{002F}' => Some(Self::Slash),
+            '\u{003A}' => Some(Self::Colon),
             _ => None,
         }
     }

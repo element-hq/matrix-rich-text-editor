@@ -720,6 +720,7 @@ pub enum PatternKeyType {
     Hash,
     Slash,
     Custom,
+    Colon,
 }
 
 #[derive(Clone)]
@@ -748,6 +749,10 @@ impl From<wysiwyg::PatternKey> for PatternKey {
                 key_type: PatternKeyType::Custom,
                 custom_key_value: Some(key),
             },
+            wysiwyg::PatternKey::Colon => Self {
+                key_type: PatternKeyType::Colon,
+                custom_key_value: None,
+            },
         }
     }
 }
@@ -761,6 +766,7 @@ impl From<PatternKey> for wysiwyg::PatternKey {
             PatternKeyType::Custom => {
                 Self::Custom(key.custom_key_value.unwrap())
             }
+            PatternKeyType::Colon => Self::Colon,
         }
     }
 }

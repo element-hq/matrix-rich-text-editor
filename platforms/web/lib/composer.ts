@@ -126,13 +126,15 @@ export function processInput(
             }
             break;
         }
-        case 'insertCommand': {
+        case 'insertCommand':
+        case 'insertEmoji': {
             if (suggestion && event.data) {
+                const appendSpace = event.inputType === 'insertCommand';
                 return action(
                     composerModel.replace_text_suggestion(
                         event.data,
                         suggestion,
-                        true,
+                        appendSpace,
                     ),
                     'replace_text_suggestion',
                 );
