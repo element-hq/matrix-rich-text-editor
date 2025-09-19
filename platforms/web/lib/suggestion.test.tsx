@@ -58,6 +58,22 @@ describe('getSuggestionType', () => {
         expect(getSuggestionType(slashSuggestion)).toBe('command');
     });
 
+    it('returns the expected type for a custom suggestion', () => {
+        const slashSuggestion = {
+            key: { key_type: 3 },
+        } as unknown as SuggestionPattern;
+
+        expect(getSuggestionType(slashSuggestion)).toBe('custom');
+    });
+
+    it('returns the expected type for an emoji suggestion', () => {
+        const slashSuggestion = {
+            key: { key_type: 4 },
+        } as unknown as SuggestionPattern;
+
+        expect(getSuggestionType(slashSuggestion)).toBe('emoji');
+    });
+
     it('returns unknown for any other implementations', () => {
         const slashSuggestion = { key: 200 } as unknown as SuggestionPattern;
 
@@ -70,24 +86,35 @@ describe('mapSuggestion', () => {
         expect(mapSuggestion(null)).toBe(null);
     });
 
-    it('returns the input with additional keys keyChar and type', () => {
-        const suggestion: SuggestionPattern = {
-            free: () => {},
-            start: 1,
-            end: 2,
-            key: {
-                free: () => {},
-                key_type: 0,
-                custom_key_value: undefined,
-            },
-            text: 'some text',
-        };
+    it('returns the input with additional keys keyChar and type for each key_type', () => {
+        const testCases = [
+            { key_type: 0, expectedKeyChar: '@', expectedType: 'mention' }, // user mention
+            { key_type: 1, expectedKeyChar: '#', expectedType: 'mention' }, // room mention
+            { key_type: 2, expectedKeyChar: '/', expectedType: 'command' }, // slash command
+            { key_type: 3, expectedKeyChar: '', expectedType: 'custom' }, // custom
+            { key_type: 4, expectedKeyChar: ':', expectedType: 'emoji' }, // emoji
+            { key_type: 200, expectedKeyChar: '', expectedType: 'unknown' }, // unknown
+        ];
 
-        const mappedSuggestion = mapSuggestion(suggestion);
-        expect(mappedSuggestion).toMatchObject({
-            keyChar: '@',
-            type: 'mention',
-            text: suggestion.text,
+        testCases.forEach(({ key_type, expectedKeyChar, expectedType }) => {
+            const suggestion: SuggestionPattern = {
+                free: () => {},
+                start: 1,
+                end: 2,
+                key: {
+                    free: () => {},
+                    key_type,
+                    custom_key_value: undefined,
+                },
+                text: 'some text',
+            };
+
+            const mappedSuggestion = mapSuggestion(suggestion);
+            expect(mappedSuggestion).toMatchObject({
+                keyChar: expectedKeyChar,
+                type: expectedType,
+                text: suggestion.text,
+            });
         });
     });
 });
