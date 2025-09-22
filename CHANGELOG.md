@@ -1,7 +1,7 @@
 # Changelog
 
 # [2.40.0]
-- [Web] Adds support for emoji suggestions(E.g. :smile:) #81
+- [Web] Adds support for emoji suggestions(E.g. `:smile:`) #81
 - [Web] Updated dependencies #76
 
 # [2.39.0]
