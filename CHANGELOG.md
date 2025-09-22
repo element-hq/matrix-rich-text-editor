@@ -2,7 +2,7 @@
 
 # [2.40.0]
 - [Web] Adds support for emoji suggestions(E.g. :smile:) #81
-- [Web] Updated dependencies #39 #40 #72 #76
+- [Web] Updated dependencies #76
 
 # [2.39.0]
 - [Rust] Adds support for pasting rich content
