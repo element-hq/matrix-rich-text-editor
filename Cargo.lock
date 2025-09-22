@@ -1481,7 +1481,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi-wysiwyg-composer"
-version = "2.39.0"
+version = "2.40.0"
 dependencies = [
  "html-escape",
  "matrix_mentions",
@@ -1893,7 +1893,7 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 
 [[package]]
 name = "wysiwyg"
-version = "2.39.0"
+version = "2.40.0"
 dependencies = [
  "cfg-if",
  "email_address",
@@ -1917,7 +1917,7 @@ dependencies = [
 
 [[package]]
 name = "wysiwyg-wasm"
-version = "2.39.0"
+version = "2.40.0"
 dependencies = [
  "console_error_panic_hook",
  "html-escape",
