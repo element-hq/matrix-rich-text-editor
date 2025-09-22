@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-use crate::PatternKey::{At, Hash, Slash};
+use crate::PatternKey::{At, Colon, Hash, Slash};
 use crate::{
     tests::testutils_composer_model::cm, Location, MenuAction, PatternKey,
     SuggestionPattern,
@@ -191,6 +191,18 @@ fn at_pattern_is_not_detected_after_moving_in_code_block() {
     let mut model = cm("@alic|");
     let update = model.code_block();
     assert_eq!(update.menu_action, MenuAction::None);
+}
+
+#[test]
+fn emoji_pattern_is_detected() {
+    let model = cm(":smil|");
+    assert_eq!(model.compute_menu_action(), sp(Colon, "smil", 0, 5));
+}
+
+#[test]
+fn emoji_pattern_is_not_detected_after_immediate_preceeding_text() {
+    let model = cm("text:smil|");
+    assert_eq!(model.compute_menu_action(), MenuAction::None);
 }
 
 #[test]

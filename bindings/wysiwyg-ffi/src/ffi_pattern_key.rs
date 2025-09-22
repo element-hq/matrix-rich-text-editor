@@ -10,6 +10,7 @@ pub enum PatternKey {
     Hash,
     Slash,
     Custom(String),
+    Colon,
 }
 
 impl From<wysiwyg::PatternKey> for PatternKey {
@@ -19,6 +20,7 @@ impl From<wysiwyg::PatternKey> for PatternKey {
             wysiwyg::PatternKey::Hash => Self::Hash,
             wysiwyg::PatternKey::Slash => Self::Slash,
             wysiwyg::PatternKey::Custom(key) => Self::Custom(key),
+            wysiwyg::PatternKey::Colon => Self::Colon,
         }
     }
 }
@@ -30,6 +32,7 @@ impl From<PatternKey> for wysiwyg::PatternKey {
             PatternKey::Hash => Self::Hash,
             PatternKey::Slash => Self::Slash,
             PatternKey::Custom(key) => Self::Custom(key),
+            PatternKey::Colon => Self::Colon,
         }
     }
 }

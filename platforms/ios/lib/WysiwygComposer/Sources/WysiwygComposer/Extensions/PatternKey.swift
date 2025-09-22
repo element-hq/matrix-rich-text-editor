@@ -14,7 +14,7 @@ public extension PatternKey {
             return .user
         case .hash:
             return .room
-        case .slash, .custom:
+        case .slash, .custom, .colon:
             return nil
         }
     }

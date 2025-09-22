@@ -65,7 +65,7 @@ struct WysiwygSuggestionList: View {
                             .accessibilityIdentifier(command.accessibilityIdentifier)
                         }
                     }
-                case .custom:
+                case .custom, .colon:
                     EmptyView()
                 }
             }

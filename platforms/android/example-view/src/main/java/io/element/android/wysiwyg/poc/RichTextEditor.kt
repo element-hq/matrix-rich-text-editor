@@ -179,7 +179,7 @@ class RichTextEditor : LinearLayout {
                 val names = when (menuAction.suggestionPattern.key) {
                     PatternKey.At -> people + everyone
                     PatternKey.Hash -> rooms
-                    PatternKey.Slash, is PatternKey.Custom ->
+                    PatternKey.Slash, is PatternKey.Custom, PatternKey.Colon ->
                         emptyList() // TODO
                 }
                 val suggestions = names

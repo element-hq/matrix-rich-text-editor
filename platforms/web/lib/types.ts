@@ -45,6 +45,7 @@ export type FormattingFunctions = Record<
     ) => void;
     mentionAtRoom: (attributes: AllowedMentionAttributes) => void;
     command: (text: string) => void;
+    emoji: (text: string) => void;
     removeLinks: () => void;
     getLink: () => string;
 };
@@ -62,7 +63,12 @@ export type InputEventProcessor = (
 ) => WysiwygEvent | null;
 
 export type SuggestionChar = (typeof SUGGESTIONS)[number] | '';
-export type SuggestionType = 'mention' | 'command' | 'custom' | 'unknown';
+export type SuggestionType =
+    | 'mention'
+    | 'command'
+    | 'custom'
+    | 'emoji'
+    | 'unknown';
 
 export type MappedSuggestion = {
     keyChar: SuggestionChar;

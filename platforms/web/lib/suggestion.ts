@@ -32,6 +32,8 @@ export function getSuggestionType(
             return 'command';
         case 3:
             return 'custom';
+        case 4:
+            return 'emoji';
         default:
             return 'unknown';
     }

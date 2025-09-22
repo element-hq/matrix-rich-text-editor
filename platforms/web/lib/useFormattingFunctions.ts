@@ -72,6 +72,7 @@ export function useFormattingFunctions(
                 attributes: AllowedMentionAttributes,
             ): void => sendEvent('insertSuggestion', { url, text, attributes }),
             command: (text: string): void => sendEvent('insertCommand', text),
+            emoji: (text: string): void => sendEvent('insertEmoji', text),
             mentionAtRoom: (attributes: AllowedMentionAttributes): void =>
                 sendEvent('insertAtRoomSuggestion', { attributes }),
         };

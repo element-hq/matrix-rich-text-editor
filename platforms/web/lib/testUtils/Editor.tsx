@@ -44,7 +44,8 @@ export const Editor = forwardRef<HTMLDivElement, EditorProps>(function Editor(
             key !== 'mention' &&
             key !== 'command' &&
             key !== 'indent' &&
-            key !== 'unindent',
+            key !== 'unindent' &&
+            key !== `emoji`,
     ) as Array<
         Exclude<
             keyof typeof wysiwyg,
@@ -57,6 +58,7 @@ export const Editor = forwardRef<HTMLDivElement, EditorProps>(function Editor(
             | 'indent'
             | 'unindent'
             | 'mentionAtRoom'
+            | 'emoji'
         >
     >;
 
