@@ -2,11 +2,11 @@ name: Deploy Web demo
 
 on:
   workflow_run:
-    workflows: 
+    workflows:
       - React build
     types:
       - completed
-    branches: 
+    branches:
       - main
   workflow_dispatch:
 
@@ -33,7 +33,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [22.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
