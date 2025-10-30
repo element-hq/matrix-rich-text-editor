@@ -24,7 +24,7 @@ where
     S: UnicodeString,
 {
     /// Return an iterator over all nodes of this DOM, in depth-first order
-    pub fn iter(&self) -> DomIterator<S> {
+    pub fn iter(&self) -> DomIterator<'_, S> {
         DomIterator::over(self.document_node())
     }
 
@@ -48,34 +48,37 @@ where
 
     /// Return an iterator over all nodes of the DOM from the passed node,
     /// depth-first order (including self).
-    #[allow(elided_named_lifetimes)]
-    pub fn iter_from<'a>(&'a self, node: &'a DomNode<S>) -> DomNodeIterator<S> {
+    pub fn iter_from<'a>(
+        &'a self,
+        node: &'a DomNode<S>,
+    ) -> DomNodeIterator<'a, S> {
         DomNodeIterator::over(self, node)
     }
 
     /// Return an iterator over all nodes of the DOM from the passed DomHandle,
     /// depth-first order (including self).
-    pub fn iter_from_handle(&self, handle: &DomHandle) -> DomNodeIterator<S> {
+    pub fn iter_from_handle(
+        &self,
+        handle: &DomHandle,
+    ) -> DomNodeIterator<'_, S> {
         DomNodeIterator::over(self, self.lookup_node(handle))
     }
 
     /// Return an iterator over all handles of the DOM from the passed handle,
     /// depth-first order (including self).
-    #[allow(elided_named_lifetimes)]
     pub fn handle_iter_from<'a>(
         &'a self,
         handle: &'a DomHandle,
-    ) -> DomHandleIterator<S> {
+    ) -> DomHandleIterator<'a, S> {
         DomHandleIterator::over(self, handle)
     }
 
     /// Return an iterator over all text nodes of the DOM from the passed node,
     /// depth-first order (including self).
-    #[allow(elided_named_lifetimes)]
     pub fn iter_text_from<'a>(
         &'a self,
         node: &'a DomNode<S>,
-    ) -> impl Iterator<Item = &TextNode<S>> {
+    ) -> impl Iterator<Item = &'a TextNode<S>> {
         self.iter_from(node).filter_map(DomNode::as_text)
     }
 
@@ -135,7 +138,7 @@ where
 {
     /// Return an iterator over all nodes of the subtree starting from this
     /// node (including self), in depth-first order
-    pub fn iter_subtree(&self) -> DomIterator<S> {
+    pub fn iter_subtree(&self) -> DomIterator<'_, S> {
         DomIterator::over(self)
     }
 
@@ -212,7 +215,6 @@ where
     }
 }
 
-#[allow(clippy::needless_lifetimes)]
 impl<'a, S> DoubleEndedIterator for DomNodeIterator<'a, S>
 where
     S: UnicodeString,
@@ -300,7 +302,6 @@ where
     }
 }
 
-#[allow(clippy::needless_lifetimes)]
 impl<'a, S> Iterator for DomHandleIterator<'a, S>
 where
     S: UnicodeString,
@@ -330,7 +331,6 @@ where
     }
 }
 
-#[allow(clippy::needless_lifetimes)]
 impl<'a, S> DoubleEndedIterator for DomHandleIterator<'a, S>
 where
     S: UnicodeString,

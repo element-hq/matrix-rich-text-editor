@@ -183,7 +183,7 @@ where
     ) -> ComposerUpdate<S> {
         let list_loc_in_range =
             range.locations.iter().find(|l| l.kind == DomNodeKind::List);
-        let list_is_before_selection = list_loc_in_range.map_or(false, |l| {
+        let list_is_before_selection = list_loc_in_range.is_some_and(|l| {
             l.relative_position() == DomLocationPosition::Before
         });
         let list_is_last_node_in_selection =

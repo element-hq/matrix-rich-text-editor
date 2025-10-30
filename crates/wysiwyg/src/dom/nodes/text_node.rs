@@ -220,17 +220,13 @@ where
         if !state.is_inside_code_block {
             escaped = escaped.replace("  ", "\u{A0}\u{A0}");
 
-            if state.next_sibling.is_none()
-                && escaped.chars().next_back().map_or(false, |c| c == ' ')
-            {
+            if state.next_sibling.is_none() && (escaped.ends_with(' ')) {
                 // If this is the last node and it ends in a space, replace that
                 // space with a non-breaking one.
                 escaped.replace_range(escaped.len() - 1.., "\u{A0}");
             }
 
-            if state.prev_sibling.is_none()
-                && escaped.chars().next().map_or(false, |c| c == ' ')
-            {
+            if state.prev_sibling.is_none() && (escaped.starts_with(' ')) {
                 // If this is the first node and it starts with a space, replace that
                 // space with a non-breaking one.
                 escaped.replace_range(..1, "\u{A0}");
