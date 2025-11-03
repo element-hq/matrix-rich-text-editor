@@ -396,22 +396,23 @@ mod sys {
                             _ => None,
                         };
 
-                        if is_mention && text.is_some() {
-                            self.current_path.push(DomNodeKind::Mention);
-                            let mention =
-                                Self::new_mention(child, text.unwrap());
-                            node.append_child(mention);
-                        } else {
-                            self.current_path.push(DomNodeKind::Link);
-
-                            let link = Self::new_link(child);
-                            node.append_child(link);
-                            self.convert_children(
-                                padom,
-                                child,
-                                last_container_mut_in(&mut node),
-                                html_source,
-                            )?;
+                        match (is_mention, text) {
+                            (true, Some(text)) => {
+                                self.current_path.push(DomNodeKind::Mention);
+                                let mention = Self::new_mention(child, text);
+                                node.append_child(mention);
+                            }
+                            _ => {
+                                self.current_path.push(DomNodeKind::Link);
+                                let link = Self::new_link(child);
+                                node.append_child(link);
+                                self.convert_children(
+                                    padom,
+                                    child,
+                                    last_container_mut_in(&mut node),
+                                    html_source,
+                                )?;
+                            }
                         }
                         self.current_path.remove(cur_path_idx);
                     }
