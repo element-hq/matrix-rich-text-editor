@@ -223,7 +223,7 @@ where
 
             let mut children = sub_tree_container.remove_children();
             let new_paragraph =
-                if children.first().map_or(false, |n| n.kind() == Paragraph) {
+                if children.first().is_some_and(|n| n.kind() == Paragraph) {
                     children.remove(0)
                 } else {
                     DomNode::new_paragraph(children)
