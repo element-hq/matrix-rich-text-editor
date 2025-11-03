@@ -83,6 +83,9 @@ jobs:
   npm:
     name: Publish to npm
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: 🧮 Checkout code
         uses: actions/checkout@v4
@@ -97,6 +100,10 @@ jobs:
           cache-dependency-path: platforms/web/yarn.lock
           registry-url: "https://registry.npmjs.org"
 
+      # Ensure npm 11.5.1 or later is installed
+      - name: Update npm
+        run: npm install -g npm@latest
+
       - name: 🔨 Install dependencies
         run: "yarn install --pure-lockfile"
         working-directory: platforms/web
@@ -106,9 +113,5 @@ jobs:
         working-directory: platforms/web
 
       - name: 🚀 Publish to npm
-        id: npm-publish
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          package: platforms/web/package.json
-          token: ${{ secrets.NPM_TOKEN }}
-          access: public
+        run: npm publish --access public --provenance
+        working-directory: platforms/web
