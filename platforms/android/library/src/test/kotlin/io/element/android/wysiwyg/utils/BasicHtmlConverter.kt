@@ -8,10 +8,14 @@
 
 package io.element.android.wysiwyg.utils
 
+import org.jsoup.nodes.Document
+
 /**
  * HTML converter that is not depend on Android, for unit tests.
  */
 class BasicHtmlConverter: HtmlConverter {
-
     override fun fromHtmlToSpans(html: String): CharSequence = html.replace("<[^>]*>".toRegex(), "")
+    override fun fromDocumentToSpans(dom: Document): CharSequence {
+        return fromHtmlToSpans(dom.html())
+    }
 }

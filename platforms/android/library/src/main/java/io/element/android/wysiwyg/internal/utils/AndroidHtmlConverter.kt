@@ -9,13 +9,20 @@
 package io.element.android.wysiwyg.internal.utils
 
 import io.element.android.wysiwyg.utils.HtmlConverter
+import io.element.android.wysiwyg.utils.HtmlToDomParser
 import io.element.android.wysiwyg.utils.HtmlToSpansParser
+import org.jsoup.nodes.Document
 
 internal class AndroidHtmlConverter(
-    private val provideHtmlToSpansParser: (html: String) -> HtmlToSpansParser
+    private val provideHtmlToSpansParser: (dom: Document) -> HtmlToSpansParser
 ) : HtmlConverter {
 
-    override fun fromHtmlToSpans(html: String): CharSequence =
-        provideHtmlToSpansParser(html).convert()
+    override fun fromHtmlToSpans(html: String): CharSequence {
+        val dom = HtmlToDomParser.document(html)
+        return fromDocumentToSpans(dom)
+    }
 
+    override fun fromDocumentToSpans(dom: Document): CharSequence {
+        return provideHtmlToSpansParser(dom).convert()
+    }
 }

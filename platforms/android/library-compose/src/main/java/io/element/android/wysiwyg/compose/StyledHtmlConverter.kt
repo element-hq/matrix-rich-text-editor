@@ -12,6 +12,7 @@ import android.content.Context
 import io.element.android.wysiwyg.compose.internal.toStyleConfig
 import io.element.android.wysiwyg.display.MentionDisplayHandler
 import io.element.android.wysiwyg.utils.HtmlConverter
+import org.jsoup.nodes.Document
 import timber.log.Timber
 
 /**
@@ -41,9 +42,11 @@ class StyledHtmlConverter(
         return htmlConverter?.fromHtmlToSpans(html) ?: errorNotConfigured()
     }
 
+    override fun fromDocumentToSpans(dom: Document): CharSequence {
+        return htmlConverter?.fromDocumentToSpans(dom) ?: errorNotConfigured()
+    }
+
     private fun errorNotConfigured(): Nothing {
         error("ComposableHtmlConverter must be configured with a RichTextEditorStyle before use")
     }
-
-
 }
