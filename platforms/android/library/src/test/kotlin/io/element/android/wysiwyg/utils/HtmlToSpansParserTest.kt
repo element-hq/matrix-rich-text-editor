@@ -304,7 +304,7 @@ class HtmlToSpansParserTest {
         val styleConfig = createFakeStyleConfig()
         return HtmlToSpansParser(
             resourcesHelper = AndroidResourcesHelper(context = app),
-            html = html,
+            dom = HtmlToDomParser.document(html),
             styleConfig = styleConfig,
             mentionDisplayHandler = mentionDisplayHandler,
             isEditor = isEditor,

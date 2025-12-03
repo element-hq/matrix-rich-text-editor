@@ -8,15 +8,15 @@
 
 package io.element.android.wysiwyg.utils
 
-import android.app.Application
 import android.content.Context
 import io.element.android.wysiwyg.display.MentionDisplayHandler
 import io.element.android.wysiwyg.internal.utils.AndroidHtmlConverter
 import io.element.android.wysiwyg.view.StyleConfig
+import org.jsoup.nodes.Document
 
 interface HtmlConverter {
-
     fun fromHtmlToSpans(html: String): CharSequence
+    fun fromDocumentToSpans(dom: Document): CharSequence
 
     object Factory {
         fun create(
@@ -27,10 +27,10 @@ interface HtmlConverter {
             isMention: ((text: String, url: String) -> Boolean)? = null,
         ): HtmlConverter {
             val resourcesProvider = AndroidResourcesHelper(context)
-            return AndroidHtmlConverter(provideHtmlToSpansParser = { html ->
+            return AndroidHtmlConverter(provideHtmlToSpansParser = { dom ->
                 HtmlToSpansParser(
                     resourcesHelper = resourcesProvider,
-                    html = html,
+                    dom = dom,
                     styleConfig = styleConfig,
                     mentionDisplayHandler = mentionDisplayHandler,
                     isEditor = isEditor,
@@ -39,6 +39,4 @@ interface HtmlConverter {
             })
         }
     }
-
-
 }
