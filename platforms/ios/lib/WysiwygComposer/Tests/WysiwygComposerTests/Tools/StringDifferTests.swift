@@ -59,7 +59,7 @@ final class StringDifferTests: XCTestCase {
                 .filter(\.isWhitespace)
         )
         XCTAssertNil(StringDiffer.replacement(from: whitespaceString,
-                                                  to: String(repeating: Character.nbsp, count: whitespaceString.utf16Length)))
+                                              to: String(repeating: Character.nbsp, count: whitespaceString.utf16Length)))
     }
 
     func testDiffingWithLeadingWhitespaces() throws {

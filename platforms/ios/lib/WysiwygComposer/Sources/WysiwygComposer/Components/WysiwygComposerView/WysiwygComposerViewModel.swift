@@ -681,7 +681,7 @@ private extension WysiwygComposerViewModel {
     }
     
     /// Reconciliate the content of the model with the content of the text view.
-    func reconciliateIfNeeded() {
+    func reconciliateIfNeeded(ignoreLatinCharsCheck: Bool = false) {
         guard !textView.isDictationRunning,
               let replacement = StringDiffer.replacement(from: attributedContent.text.htmlChars,
                                                          to: textView.attributedText.htmlChars) else {
@@ -690,7 +690,9 @@ private extension WysiwygComposerViewModel {
         
         // Don't use reconciliate if the replacement is only latin character languages
         // as it shouldn't be needed. It is needed for CJK lanuages like Japanese Kana.
-        if replacement.text.containsLatinAndCommonCharactersOnly, !replacement.hasMore {
+        if !ignoreLatinCharsCheck,
+           !replacement.hasMore,
+           replacement.text.containsLatinAndCommonCharactersOnly {
             return
         }
         
@@ -703,7 +705,8 @@ private extension WysiwygComposerViewModel {
                                                 end: UInt32(replacement.range.upperBound))
         applyUpdate(replaceUpdate, skipTextViewUpdate: true)
         if replacement.hasMore {
-            reconciliateIfNeeded()
+            reconciliateIfNeeded(ignoreLatinCharsCheck: true)
+            return
         }
         
         // Resync selectedRange
@@ -714,8 +717,7 @@ private extension WysiwygComposerViewModel {
             applyUpdate(selectUpdate)
         } catch {
             switch error {
-            case AttributedRangeError.outOfBoundsAttributedIndex,
-                AttributedRangeError.outOfBoundsHtmlIndex:
+            case AttributedRangeError.outOfBoundsAttributedIndex, AttributedRangeError.outOfBoundsHtmlIndex:
                 // Just log here for now, the composer is already in a broken state
                 Logger.viewModel.logError(["Reconciliate failed due to out of bounds indexes"],
                                           functionName: #function)

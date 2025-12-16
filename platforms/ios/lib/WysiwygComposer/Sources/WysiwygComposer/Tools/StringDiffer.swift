@@ -52,7 +52,7 @@ final class StringDiffer {
         }
 
         if let removal = difference.removals.first {
-            if let insertion = difference.insertions.first(where: { $0.range.location == removal.location}) {
+            if let insertion = difference.insertions.first(where: { $0.range.location == removal.location }) {
                 return StringDifferReplacement(range: removal, text: insertion.text, hasMore: difference.isComplex)
             } else {
                 // Simple removal
