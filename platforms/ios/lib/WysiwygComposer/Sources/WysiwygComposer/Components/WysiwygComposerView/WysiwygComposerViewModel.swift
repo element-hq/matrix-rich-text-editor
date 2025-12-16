@@ -688,7 +688,7 @@ private extension WysiwygComposerViewModel {
             return
         }
         
-        // Don't use reconciliate if the replacement is only latin character languages
+        // Don't use reconciliate if the replacement is simple and only contains latin character languages
         // as it shouldn't be needed. It is needed for CJK lanuages like Japanese Kana.
         if !ignoreLatinCharsCheck,
            !replacement.hasMore,
