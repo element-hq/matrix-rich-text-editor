@@ -775,7 +775,7 @@ extension WysiwygComposerViewModel: ComposerModelWrapperDelegate {
 
 // MARK: - Logger
 
-extension Logger {
+private extension Logger {
     static let viewModel = Logger(subsystem: subsystem, category: "ViewModel")
 }
 

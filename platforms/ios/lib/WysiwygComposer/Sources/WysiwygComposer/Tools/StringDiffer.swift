@@ -56,7 +56,7 @@ final class StringDiffer {
                 return StringDifferReplacement(range: removal, text: insertion.text, hasMore: difference.isComplex)
             } else {
                 // Simple removal
-                return StringDifferReplacement(range: removal, text: "", hasMore: difference.isComplex)
+                return StringDifferReplacement(range: removal, text: "", hasMore: difference.isComplex || !difference.insertions.isEmpty)
             }
         } else if let insertion = difference.insertions.first {
             // Simple insertion
