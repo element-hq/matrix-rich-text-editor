@@ -1,4 +1,5 @@
 //
+// Copyright 2025 Element Creations Ltd.
 // Copyright 2024 New Vector Ltd.
 // Copyright 2022 The Matrix.org Foundation C.I.C
 //
@@ -681,45 +682,43 @@ private extension WysiwygComposerViewModel {
     }
     
     /// Reconciliate the content of the model with the content of the text view.
-    func reconciliateIfNeeded() {
+    func reconciliateIfNeeded(ignoreLatinCharsCheck: Bool = false) {
+        guard !textView.isDictationRunning,
+              let replacement = StringDiffer.replacement(from: attributedContent.text.htmlChars,
+                                                         to: textView.attributedText.htmlChars) else {
+            return
+        }
+        
+        // Don't use reconciliate if the replacement is simple and only contains latin character languages
+        // as it shouldn't be needed. It is needed for CJK lanuages like Japanese Kana.
+        if !ignoreLatinCharsCheck,
+           !replacement.hasMore,
+           replacement.text.containsLatinAndCommonCharactersOnly {
+            return
+        }
+        
+        // Reconciliate
+        Logger.viewModel.logDebug(["Reconciliate from \"\(attributedContent.text.string)\" to \"\(textView.text ?? "")\""],
+                                  functionName: #function)
+        
+        let replaceUpdate = model.replaceTextIn(newText: replacement.text,
+                                                start: UInt32(replacement.range.location),
+                                                end: UInt32(replacement.range.upperBound))
+        applyUpdate(replaceUpdate, skipTextViewUpdate: true)
+        if replacement.hasMore {
+            reconciliateIfNeeded(ignoreLatinCharsCheck: true)
+            return
+        }
+        
+        // Resync selectedRange
         do {
-            guard !textView.isDictationRunning,
-                  let replacement = try StringDiffer.replacement(from: attributedContent.text.htmlChars,
-                                                                 to: textView.attributedText.htmlChars) else {
-                return
-            }
-            
-            // Don't use reconciliate if the replacement is only latin character languages
-            // as it shouldn't be needed. It is needed for CJK lanuages like Japanese Kana.
-            if replacement.text.containsLatinAndCommonCharactersOnly {
-                return
-            }
-            
-            // Reconciliate
-            Logger.viewModel.logDebug(["Reconciliate from \"\(attributedContent.text.string)\" to \"\(textView.text ?? "")\""],
-                                      functionName: #function)
-
-            let replaceUpdate = model.replaceTextIn(newText: replacement.text,
-                                                    start: UInt32(replacement.range.location),
-                                                    end: UInt32(replacement.range.upperBound))
-            applyUpdate(replaceUpdate, skipTextViewUpdate: true)
-
-            // Resync selectedRange
             let rustSelection = try textView.attributedText.htmlRange(from: textView.selectedRange)
             let selectUpdate = model.select(startUtf16Codeunit: UInt32(rustSelection.location),
                                             endUtf16Codeunit: UInt32(rustSelection.upperBound))
             applyUpdate(selectUpdate)
         } catch {
             switch error {
-            case StringDifferError.tooComplicated,
-                 StringDifferError.insertionsDontMatchRemovals:
-                // Restore from the model, as otherwise the composer will enter a broken state
-                applyAtributedContent()
-                updateCompressedHeightIfNeeded()
-                Logger.viewModel.logError(["Reconciliate failed(\(error)), content has been restored from the model"],
-                                          functionName: #function)
-            case AttributedRangeError.outOfBoundsAttributedIndex,
-                 AttributedRangeError.outOfBoundsHtmlIndex:
+            case AttributedRangeError.outOfBoundsAttributedIndex, AttributedRangeError.outOfBoundsHtmlIndex:
                 // Just log here for now, the composer is already in a broken state
                 Logger.viewModel.logError(["Reconciliate failed due to out of bounds indexes"],
                                           functionName: #function)

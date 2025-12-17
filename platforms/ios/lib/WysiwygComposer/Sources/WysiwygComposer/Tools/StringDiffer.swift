@@ -1,4 +1,5 @@
 //
+// Copyright 2025 Element Creations Ltd.
 // Copyright 2024 New Vector Ltd.
 // Copyright 2022 The Matrix.org Foundation C.I.C
 //
@@ -9,34 +10,22 @@
 import Foundation
 import OSLog
 
-/// Describe an error occurring during string diffing.
-enum StringDifferError: LocalizedError, Equatable {
-    case tooComplicated
-    case insertionsDontMatchRemovals
-
-    var errorDescription: String? {
-        switch self {
-        case .tooComplicated:
-            return "Diff is too complicated to be handled as a simple replacement"
-        case .insertionsDontMatchRemovals:
-            return "Insertions don't match removals"
-        }
-    }
-}
-
 /// Describes the output replacement from string diffing.
 struct StringDifferReplacement: Equatable {
     let range: NSRange
     let text: String
+    let hasMore: Bool
 
-    init(range: NSRange, text: String) {
+    init(range: NSRange, text: String, hasMore: Bool) {
         self.range = range
         self.text = text
+        self.hasMore = hasMore
     }
 
-    init(location: Int, length: Int, text: String) {
+    init(location: Int, length: Int, text: String, hasMore: Bool) {
         range = NSRange(location: location, length: length)
         self.text = text
+        self.hasMore = hasMore
     }
 }
 
@@ -56,32 +45,23 @@ final class StringDiffer {
     ///   - oldText: The old (previous) text.
     ///   - newText: The new text.
     /// - Returns: Replacement that have occured in order to get from `oldText` to `newText`. Nil if strings are identical.
-    static func replacement(from oldText: String, to newText: String) throws -> StringDifferReplacement? {
+    static func replacement(from oldText: String, to newText: String) -> StringDifferReplacement? {
         let difference = newText.withNBSP.utf16Difference(from: oldText.withNBSP)
 
         guard !difference.isEmpty else {
             return nil
         }
 
-        guard !difference.isComplex else {
-            throw StringDifferError.tooComplicated
-        }
-
         if let removal = difference.removals.first {
-            if let insertion = difference.insertions.first {
-                if insertion.range.location == removal.location {
-                    // Replacement
-                    return StringDifferReplacement(range: removal, text: insertion.text)
-                } else {
-                    throw StringDifferError.insertionsDontMatchRemovals
-                }
+            if let insertion = difference.insertions.first(where: { $0.range.location == removal.location }) {
+                return StringDifferReplacement(range: removal, text: insertion.text, hasMore: difference.isComplex)
             } else {
                 // Simple removal
-                return StringDifferReplacement(range: removal, text: "")
+                return StringDifferReplacement(range: removal, text: "", hasMore: difference.isComplex || !difference.insertions.isEmpty)
             }
         } else if let insertion = difference.insertions.first {
             // Simple insertion
-            return StringDifferReplacement(location: insertion.range.location, length: 0, text: insertion.text)
+            return StringDifferReplacement(location: insertion.range.location, length: 0, text: insertion.text, hasMore: difference.isComplex)
         } else {
             fatalError("Should never happen => difference is empty")
         }

@@ -1,4 +1,5 @@
 //
+// Copyright 2025 Element Creations Ltd.
 // Copyright 2024 New Vector Ltd.
 // Copyright 2022 The Matrix.org Foundation C.I.C
 //
@@ -12,45 +13,43 @@ import XCTest
 final class StringDifferTests: XCTestCase {
     func testNoReplacement() throws {
         let identicalText = "text"
-        XCTAssertNil(try StringDiffer.replacement(from: identicalText, to: identicalText))
+        XCTAssertNil(StringDiffer.replacement(from: identicalText, to: identicalText))
     }
 
     func testSimpleRemoval() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: "text", to: "te"),
-                       .init(location: 2, length: 2, text: ""))
+        XCTAssertEqual(StringDiffer.replacement(from: "text", to: "te"),
+                       .init(location: 2, length: 2, text: "", hasMore: false))
     }
 
     func testSimpleInsertion() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: "te", to: "text"),
-                       .init(location: 2, length: 0, text: "xt"))
+        XCTAssertEqual(StringDiffer.replacement(from: "te", to: "text"),
+                       .init(location: 2, length: 0, text: "xt", hasMore: false))
     }
 
     func testFullReplacement() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: "wa", to: "わ"),
-                       .init(location: 0, length: 2, text: "わ"))
+        XCTAssertEqual(StringDiffer.replacement(from: "wa", to: "わ"),
+                       .init(location: 0, length: 2, text: "わ", hasMore: false))
     }
 
     func testPartialReplacement() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: "わta", to: "わた"),
-                       .init(location: 1, length: 2, text: "た"))
+        XCTAssertEqual(StringDiffer.replacement(from: "わta", to: "わた"),
+                       .init(location: 1, length: 2, text: "た", hasMore: false))
     }
 
-    func testDoubleReplacementIsNotHandled() throws {
-        XCTAssertThrowsError(try StringDiffer.replacement(from: "text", to: "fexf"), "doubleReplacementIsNotHandled") { error in
-            XCTAssertEqual(error as? StringDifferError,
-                           StringDifferError.tooComplicated)
-            XCTAssertEqual(error.localizedDescription,
-                           StringDifferError.tooComplicated.localizedDescription)
-        }
+    func testDoubleReplacementIsHandledOneAtTime() throws {
+        XCTAssertEqual(StringDiffer.replacement(from: "text", to: "fexf"),
+                       .init(location: 0, length: 1, text: "f", hasMore: true))
+        // Simulate the change
+        XCTAssertEqual(StringDiffer.replacement(from: "fext", to: "fexf"),
+                       .init(location: 3, length: 1, text: "f", hasMore: false))
     }
 
-    func testInsertionsDontMatchRemovalsLocation() throws {
-        XCTAssertThrowsError(try StringDiffer.replacement(from: "text", to: "extab"), "insertionsDontMatchRemovalsLocation") { error in
-            XCTAssertEqual(error as? StringDifferError,
-                           StringDifferError.insertionsDontMatchRemovals)
-            XCTAssertEqual(error.localizedDescription,
-                           StringDifferError.insertionsDontMatchRemovals.localizedDescription)
-        }
+    func testNonMatchingRemovalAndInsertionsAreHandledOneAtTime() throws {
+        XCTAssertEqual(StringDiffer.replacement(from: "text", to: "extab"),
+                       .init(location: 0, length: 1, text: "", hasMore: true))
+        // Simulate the change
+        XCTAssertEqual(StringDiffer.replacement(from: "ext", to: "extab"),
+                       .init(location: 3, length: 0, text: "ab", hasMore: false))
     }
 
     func testDifferentWhitespacesAreEquivalent() throws {
@@ -60,23 +59,23 @@ final class StringDifferTests: XCTestCase {
                 // We need to remove unicode characters that are related to whitespaces but have a property `White_space = no`
                 .filter(\.isWhitespace)
         )
-        XCTAssertNil(try StringDiffer.replacement(from: whitespaceString,
-                                                  to: String(repeating: Character.nbsp, count: whitespaceString.utf16Length)))
+        XCTAssertNil(StringDiffer.replacement(from: whitespaceString,
+                                              to: String(repeating: Character.nbsp, count: whitespaceString.utf16Length)))
     }
 
     func testDiffingWithLeadingWhitespaces() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: " text", to: " test"),
-                       .init(location: 3, length: 1, text: "s"))
+        XCTAssertEqual(StringDiffer.replacement(from: " text", to: " test"),
+                       .init(location: 3, length: 1, text: "s", hasMore: false))
     }
 
     func testDiffingWithMultipleLeadingWhitespaces() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: " \u{00A0} text", to: " \u{00A0} test"),
-                       .init(location: 5, length: 1, text: "s"))
+        XCTAssertEqual(StringDiffer.replacement(from: " \u{00A0} text", to: " \u{00A0} test"),
+                       .init(location: 5, length: 1, text: "s", hasMore: false))
     }
-    
+
     func testDoubleSpaceDotConversion() throws {
-        XCTAssertEqual(try StringDiffer.replacement(from: "a  ", to: "a."),
-                       .init(location: 1, length: 2, text: "."))
+        XCTAssertEqual(StringDiffer.replacement(from: "a  ", to: "a."),
+                       .init(location: 1, length: 2, text: ".", hasMore: false))
     }
 }
 

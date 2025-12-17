@@ -34,10 +34,10 @@ extension WysiwygComposerTests {
             .action { $0.setLinkWithText(url: "link", text: "text", attributes: []) }
             .assertTree(
                 """
-
+                
                 └>a \"https://link\"
                   └>\"text\"
-
+                
                 """
             )
     }
@@ -47,10 +47,10 @@ extension WysiwygComposerTests {
             .action { $0.setLinkWithText(url: "http://link", text: "text", attributes: []) }
             .assertTree(
                 """
-
+                
                 └>a \"http://link\"
                   └>\"text\"
-
+                
                 """
             )
     }
@@ -60,10 +60,10 @@ extension WysiwygComposerTests {
             .action { $0.setLinkWithText(url: "test@element.io", text: "text", attributes: []) }
             .assertTree(
                 """
-
+                
                 └>a \"mailto:test@element.io\"
                   └>\"text\"
-
+                
                 """
             )
     }
@@ -75,10 +75,10 @@ extension WysiwygComposerTests {
             .action { $0.setLink(url: "link", attributes: []) }
             .assertTree(
                 """
-
+                
                 └>a \"https://link\"
                   └>\"text\"
-
+                
                 """
             )
     }
@@ -88,18 +88,18 @@ extension WysiwygComposerTests {
             .action { $0.setLinkWithText(url: "link", text: "text", attributes: []) }
             .assertTree(
                 """
-
+                
                 └>a \"https://link\"
                   └>\"text\"
-
+                
                 """
             )
             .action { $0.removeLinks() }
             .assertTree(
                 """
-
+                
                 └>"text"
-
+                
                 """
             )
     }

@@ -13,14 +13,14 @@ private enum Constants {
     static let resultHtml = "<blockquote><p>Some quote</p><p>More text</p></blockquote><p>\(Character.nbsp)</p>"
     static let resultTree =
         """
-
+        
         ├>blockquote
         │ ├>p
         │ │ └>"Some quote"
         │ └>p
         │   └>"More text"
         └>p
-
+        
         """
 }
 
