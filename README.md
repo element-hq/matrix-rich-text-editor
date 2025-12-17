@@ -54,6 +54,8 @@ Rust bindings like those generated here, see
 
 ## Copyright & License
 
+Copyright (c) 2025 Element Creations Ltd.
+
 Copyright (c) 2022-2024 The Matrix.org Foundation C.I.C.
 
 Copyright (c) 2024-2025 New Vector Ltd
