@@ -1,5 +1,9 @@
 # Changelog
 
+# [2.41.0]
+- [iOS] Multipass reconciliation #93
+- [Common] Update the README to include Element Creations Ltd Copyright.
+
 # [2.40.0]
 - [Web] Adds support for emoji suggestions(E.g. `:smile:`) #81
 - [Web] Updated dependencies #76
