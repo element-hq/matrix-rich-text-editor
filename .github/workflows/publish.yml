@@ -18,10 +18,10 @@ env:
 jobs:
   ios:
     name: Publish to Swift repo
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -56,12 +56,12 @@ jobs:
     runs-on: ubuntu-latest # No need for macos-latest if there are no UI tests
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: ☕️ Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -88,13 +88,13 @@ jobs:
       id-token: write
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🦀 Build Rust
         run: "make web"
 
       - name: 🔧 Yarn cache
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: "yarn"
           cache-dependency-path: platforms/web/yarn.lock
