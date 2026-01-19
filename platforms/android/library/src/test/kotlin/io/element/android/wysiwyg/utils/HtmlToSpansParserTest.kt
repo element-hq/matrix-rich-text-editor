@@ -295,6 +295,19 @@ class HtmlToSpansParserTest {
         )
     }
 
+    @Test
+    fun testMultipleLineBreaksWithNoBlockTags() {
+        val html = "1<br/>2<br/>3<br/>4<br/><br/>5"
+        val spanned = convertHtml(
+            html = html,
+            isEditor = false,
+        )
+        assertThat(
+            spanned.toString(),
+            equalTo("1\n2\n3\n4\n\n5")
+        )
+    }
+
     private fun convertHtml(
         html: String,
         isEditor: Boolean = true,
