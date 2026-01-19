@@ -1,5 +1,8 @@
 # Changelog
 
+# [2.41.1]
+- [Android] Fix rendering issue where line breaks could be duplicated.
+
 # [2.41.0]
 - [iOS] Multipass reconciliation #93
 - [Common] Update the README to include Element Creations Ltd Copyright.
