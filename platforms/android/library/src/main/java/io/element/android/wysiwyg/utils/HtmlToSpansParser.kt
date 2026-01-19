@@ -140,7 +140,8 @@ internal class HtmlToSpansParser(
     }
 
     private fun SpannableStringBuilder.parseLineBreak(element: Element) {
-        if (element.previousElementSibling()?.isBlock == true) {
+        val previousElementSibling = element.previousElementSibling()
+        if (previousElementSibling?.isBlock == true && !isLineBreak(previousElementSibling)) {
             append('\n')
         }
         append('\n')
