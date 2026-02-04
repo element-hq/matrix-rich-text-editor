@@ -1,5 +1,8 @@
 # Changelog
 
+# [2.41.1-classic]
+- [Android] Special version for compatibility with Element Classic.
+
 # [2.41.1]
 - [Android] Fix rendering issue where line breaks could be duplicated.
 
