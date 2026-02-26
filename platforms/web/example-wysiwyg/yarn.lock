@@ -468,24 +468,24 @@
   integrity sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==
 
 "@types/react-dom@^19.0.0":
-  version "19.1.9"
-  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-19.1.9.tgz#5ab695fce1e804184767932365ae6569c11b4b4b"
-  integrity sha512-qXRuZaOsAdXKFyOhRBg6Lqqc0yay13vN7KrIg4L7N4aaHN68ma9OK3NE1BoDFgFOTfM7zg+3/8+2n8rLUH3OKQ==
+  version "19.2.3"
+  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-19.2.3.tgz#c1e305d15a52a3e508d54dca770d202cb63abf2c"
+  integrity sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==
 
 "@types/react@^19.0.0":
-  version "19.1.13"
-  resolved "https://registry.yarnpkg.com/@types/react/-/react-19.1.13.tgz#fc650ffa680d739a25a530f5d7ebe00cdd771883"
-  integrity sha512-hHkbU/eoO3EG5/MZkuFSKmYqPbSVk5byPFa3e7y/8TybHiLMACgI8seVYlicwk7H5K/rI2px9xrQp/C+AUDTiQ==
+  version "19.2.14"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-19.2.14.tgz#39604929b5e3957e3a6fa0001dafb17c7af70bad"
+  integrity sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==
   dependencies:
-    csstype "^3.0.2"
+    csstype "^3.2.2"
 
 "@vector-im/matrix-wysiwyg-wasm@link:../../bindings/wysiwyg-wasm":
   version "0.0.0"
 
-"@vector-im/matrix-wysiwyg@2.39.0":
-  version "2.39.0"
-  resolved "https://registry.yarnpkg.com/@vector-im/matrix-wysiwyg/-/matrix-wysiwyg-2.39.0.tgz#a6238e517f23a2f3025d9c65445914771c63b163"
-  integrity sha512-OROXnzPcQWrCMoUpIrCKEC4FYU+9SsRomUgu+VbJwWtBDkCbfvLD4z6w/mgiADw3iTUpBPgmcWJoGxesFuB20Q==
+"@vector-im/matrix-wysiwyg@2.40.0":
+  version "2.40.0"
+  resolved "https://registry.yarnpkg.com/@vector-im/matrix-wysiwyg/-/matrix-wysiwyg-2.40.0.tgz#53c9ca5ea907d91e4515da64f20a82e5586b882c"
+  integrity sha512-8LRFLs5PEKYs4lOL7aJ4lL/hGCrvEvOYkCR3JggXYXDVMtX4LmfdlKYucSAe98pCmqAAbLRvlRcR1bTOYvM8ug==
   dependencies:
     "@vector-im/matrix-wysiwyg-wasm" "link:../../bindings/wysiwyg-wasm"
 
@@ -521,10 +521,10 @@ convert-source-map@^2.0.0:
   resolved "https://registry.yarnpkg.com/convert-source-map/-/convert-source-map-2.0.0.tgz#4b560f649fc4e918dd0ab75cf4961e8bc882d82a"
   integrity sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==
 
-csstype@^3.0.2:
-  version "3.1.3"
-  resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.1.3.tgz#d80ff294d114fb0e6ac500fbf85b60137d7eff81"
-  integrity sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==
+csstype@^3.2.2:
+  version "3.2.3"
+  resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.2.3.tgz#ec48c0f3e993e50648c86da559e2610995cf989a"
+  integrity sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==
 
 debug@^4.1.0, debug@^4.3.1:
   version "4.4.1"
@@ -647,11 +647,11 @@ postcss@^8.5.6:
     source-map-js "^1.2.1"
 
 react-dom@^19.0.0:
-  version "19.1.1"
-  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-19.1.1.tgz#2daa9ff7f3ae384aeb30e76d5ee38c046dc89893"
-  integrity sha512-Dlq/5LAZgF0Gaz6yiqZCf6VCcZs1ghAJyrsu84Q/GT0gV+mCxbfmKNoGRKBYMJ8IEdGPqu49YWXD02GCknEDkw==
+  version "19.2.4"
+  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-19.2.4.tgz#6fac6bd96f7db477d966c7ec17c1a2b1ad8e6591"
+  integrity sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==
   dependencies:
-    scheduler "^0.26.0"
+    scheduler "^0.27.0"
 
 react-refresh@^0.17.0:
   version "0.17.0"
@@ -659,9 +659,9 @@ react-refresh@^0.17.0:
   integrity sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==
 
 react@^19.0.0:
-  version "19.1.1"
-  resolved "https://registry.yarnpkg.com/react/-/react-19.1.1.tgz#06d9149ec5e083a67f9a1e39ce97b06a03b644af"
-  integrity sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ==
+  version "19.2.4"
+  resolved "https://registry.yarnpkg.com/react/-/react-19.2.4.tgz#438e57baa19b77cb23aab516cf635cd0579ee09a"
+  integrity sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ==
 
 rollup@^4.40.0:
   version "4.45.1"
@@ -692,10 +692,10 @@ rollup@^4.40.0:
     "@rollup/rollup-win32-x64-msvc" "4.45.1"
     fsevents "~2.3.2"
 
-scheduler@^0.26.0:
-  version "0.26.0"
-  resolved "https://registry.yarnpkg.com/scheduler/-/scheduler-0.26.0.tgz#4ce8a8c2a2095f13ea11bf9a445be50c555d6337"
-  integrity sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==
+scheduler@^0.27.0:
+  version "0.27.0"
+  resolved "https://registry.yarnpkg.com/scheduler/-/scheduler-0.27.0.tgz#0c4ef82d67d1e5c1e359e8fc76d3a87f045fe5bd"
+  integrity sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==
 
 semver@^6.3.1:
   version "6.3.1"
@@ -716,9 +716,9 @@ tinyglobby@^0.2.14:
     picomatch "^4.0.2"
 
 typescript@^5.0.0:
-  version "5.8.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.8.3.tgz#92f8a3e5e3cf497356f4178c34cd65a7f5e8440e"
-  integrity sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==
+  version "5.9.3"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.9.3.tgz#5b4f59e15310ab17a216f5d6cf53ee476ede670f"
+  integrity sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==
 
 update-browserslist-db@^1.1.3:
   version "1.1.3"
