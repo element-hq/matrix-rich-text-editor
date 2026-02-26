@@ -39,11 +39,11 @@ jobs:
           echo "Contents:"
           find $ANDROID_NDK_TOOLCHAIN_DIR -maxdepth 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -85,7 +85,7 @@ jobs:
 
       - name : Upload test results
         if : ${{ always() }}
-        uses : actions/upload-artifact@v4
+        uses : actions/upload-artifact@v7
         with :
           name : android-test-results-${{ matrix.api-level }}
           path : |
