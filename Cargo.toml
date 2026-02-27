@@ -17,9 +17,9 @@ rust-version = "1.90"
 license-file = "README.md"
 
 [workspace.dependencies]
-uniffi = { git = "https://github.com/mozilla/uniffi-rs", rev = "789a9023b522562a95618443cee5a0d4f111c4c7" }
-uniffi_macros = { git = "https://github.com/mozilla/uniffi-rs", rev = "789a9023b522562a95618443cee5a0d4f111c4c7" }
-uniffi_build = { git = "https://github.com/mozilla/uniffi-rs", rev = "789a9023b522562a95618443cee5a0d4f111c4c7" }
+uniffi = { git = "https://github.com/mozilla/uniffi-rs", rev = "e7c91a1dcda0dfcacf5c7d44dacf40fdfd2d1750" }
+uniffi_macros = { git = "https://github.com/mozilla/uniffi-rs", rev = "e7c91a1dcda0dfcacf5c7d44dacf40fdfd2d1750" }
+uniffi_build = { git = "https://github.com/mozilla/uniffi-rs", rev = "e7c91a1dcda0dfcacf5c7d44dacf40fdfd2d1750" }
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.
