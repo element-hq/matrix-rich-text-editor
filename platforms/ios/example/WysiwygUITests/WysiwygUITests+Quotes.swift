@@ -17,7 +17,7 @@
 import XCTest
 
 extension WysiwygUITests {
-    func testQuote() throws {
+    func testQuote() {
         // Type something into composer.
         textView.typeTextCharByChar("Some text")
         button(.quoteButton).tap()

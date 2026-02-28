@@ -15,6 +15,7 @@
 //
 
 import Foundation
+import HTMLParser
 
 /// Defines message content displayed in the composer.
 @objcMembers
@@ -47,6 +48,8 @@ public struct WysiwygComposerAttributedContent {
     public var selection: NSRange
     /// Plain text variant of the content saved for recovery.
     public let plainText: String
+    /// List markers to draw in the gutter (not part of text content).
+    public var listMarkers: [ListMarkerInfo]
 
     // MARK: - Internal
 
@@ -56,11 +59,14 @@ public struct WysiwygComposerAttributedContent {
     ///   - text: Attributed string representation of the displayed text.
     ///   - selection: Range of the selected text within the attributed representation.
     ///   - plainText: Plain text variant of the content saved for recovery.
+    ///   - listMarkers: List markers to draw in the gutter.
     init(text: NSAttributedString = .init(string: ""),
          selection: NSRange = .zero,
-         plainText: String = "") {
+         plainText: String = "",
+         listMarkers: [ListMarkerInfo] = []) {
         self.text = text
         self.selection = selection
         self.plainText = plainText
+        self.listMarkers = listMarkers
     }
 }

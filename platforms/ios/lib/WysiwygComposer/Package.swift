@@ -21,24 +21,11 @@ let package = Package(
             url: "https://github.com/pointfreeco/swift-snapshot-testing",
             from: "1.17.2"
         ),
-        .package(
-            url: "https://github.com/Cocoanetics/DTCoreText",
-            exact: "1.6.26"
-        ),
     ],
     targets: [
         .target(
-            name: "DTCoreTextExtended",
-            dependencies: [
-                .product(name: "DTCoreText", package: "DTCoreText"),
-            ]
-        ),
-        .target(
             name: "HTMLParser",
-            dependencies: [
-                .product(name: "DTCoreText", package: "DTCoreText"),
-                .target(name: "DTCoreTextExtended"),
-            ]
+            dependencies: []
         ),
         .binaryTarget(
             name: "WysiwygComposerFFI",

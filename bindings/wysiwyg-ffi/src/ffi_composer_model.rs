@@ -387,6 +387,16 @@ impl ComposerModel {
         self.inner.lock().unwrap().get_mentions_state().into()
     }
 
+    /// Returns a flat projection of all blocks and their inline runs.
+    /// Offsets are UTF-16 code units, consistent with select() and replace_text_in().
+    pub fn get_block_projections(self: &Arc<Self>) -> Vec<crate::ffi_block_projection::FfiBlockProjection> {
+        let inner = self.inner.lock().unwrap();
+        inner.state.dom.get_block_projections()
+            .iter()
+            .map(crate::ffi_block_projection::FfiBlockProjection::from)
+            .collect()
+    }
+
     /// Force a panic for test purposes
     pub fn debug_panic(self: &Arc<Self>) {
         #[cfg(debug_assertions)]

@@ -17,7 +17,7 @@
 import XCTest
 
 extension WysiwygUITests {
-    func testRichTextModeAutocorrection() throws {
+    func testRichTextModeAutocorrection() {
         textView.typeTextCharByChar("/")
         XCTAssertFalse(image(.autocorrectionIndicator).exists)
         textView.typeText(XCUIKeyboardKey.delete.rawValue)
@@ -29,7 +29,7 @@ extension WysiwygUITests {
         XCTAssertTrue(image(.autocorrectionIndicator).exists)
     }
 
-    func testPlainTextModeAutocorrection() throws {
+    func testPlainTextModeAutocorrection() {
         waitForButtonToExistAndTap(.plainRichButton)
         textView.typeTextCharByChar("/")
         XCTAssertFalse(image(.autocorrectionIndicator).exists)
@@ -42,12 +42,12 @@ extension WysiwygUITests {
         XCTAssertTrue(image(.autocorrectionIndicator).exists)
     }
 
-    func testRichTextModeNonLeadingCommand() throws {
+    func testRichTextModeNonLeadingCommand() {
         textView.typeTextCharByChar("text /not_a_command")
         XCTAssertTrue(image(.autocorrectionIndicator).exists)
     }
 
-    func testPlainTextModeNonLeadingCommand() throws {
+    func testPlainTextModeNonLeadingCommand() {
         waitForButtonToExistAndTap(.plainRichButton)
         textView.typeTextCharByChar("text /not_a_command")
         XCTAssertTrue(image(.autocorrectionIndicator).exists)

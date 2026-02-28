@@ -19,7 +19,7 @@ import HTMLParser
 import XCTest
 
 extension WysiwygComposerTests {
-    func testFormatBold() throws {
+    func testFormatBold() {
         ComposerModelWrapper()
             .action { $0.replaceText(newText: "This is bold text") }
             .action { $0.select(startUtf16Codeunit: 8, endUtf16Codeunit: 12) }
@@ -29,10 +29,9 @@ extension WysiwygComposerTests {
             .assertSelection(start: 8, end: 12)
             .execute {
                 // Constructed attributed string sets bold on the selected range.
-                guard let attributed = try? HTMLParser.parse(html: $0.getContentAsHtml()) else {
-                    XCTFail("Parsing unexpectedly failed")
-                    return
-                }
+                let projections = $0.getBlockProjections()
+                let (attributed, _) = ProjectionRenderer(style: .standard)
+                    .render(projections: projections)
                 attributed.enumerateTypedAttribute(.font, in: .init(location: 8, length: 4)) { (font: UIFont, range, _) in
                     XCTAssertEqual(range, .init(location: 8, length: 4))
                     XCTAssertTrue(font.fontDescriptor.symbolicTraits.contains(.traitBold))

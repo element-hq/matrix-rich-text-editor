@@ -27,7 +27,7 @@ class WysiwygUITests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func testMinMaxResizing() throws {
+    func testMinMaxResizing() {
         sleep(1)
         XCTAssertEqual(textView.frame.height.roundedToFirstTwoDigits(),
                        WysiwygSharedConstants.composerMinHeight.roundedToFirstTwoDigits())
@@ -41,7 +41,7 @@ class WysiwygUITests: XCTestCase {
                        WysiwygSharedConstants.composerMinHeight.roundedToFirstTwoDigits())
     }
 
-    func testCrashRecovery() throws {
+    func testCrashRecovery() {
         button(.boldButton).tap()
         textView.typeTextCharByChar("Some ")
         button(.italicButton).tap()
@@ -62,7 +62,7 @@ class WysiwygUITests: XCTestCase {
         )
     }
 
-    func testRemoveFocus() throws {
+    func testRemoveFocus() {
         textView.typeTextCharByChar("Test")
         XCTAssertTrue(keyboardIsDisplayed)
         button(.toggleFocusButton).tap()

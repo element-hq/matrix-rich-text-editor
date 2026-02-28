@@ -16,8 +16,8 @@
 
 import XCTest
 
-// These tests work on the assunmption that we always have the software keyboard enabled which is handled through a build phase run script.
-// The following tests may also require specific keyboard languages that will be automatically added if needed.
+/// These tests work on the assunmption that we always have the software keyboard enabled which is handled through a build phase run script.
+/// The following tests may also require specific keyboard languages that will be automatically added if needed.
 extension WysiwygUITests {
     func testInlinePredictiveText() {
         sleep(1)
@@ -101,7 +101,7 @@ extension WysiwygUITests {
         )
     }
     
-    // This test only works on a real device, but not on simulator
+    /// This test only works on a real device, but not on simulator
     func disabled_testDotAfterInlinePredictiveText() {
         sleep(1)
         setupKeyboard(.englishQWERTY)
@@ -137,6 +137,8 @@ extension WysiwygUITests {
         setupKeyboard(.japaneseKana)
 
         app.typeTextCharByCharUsingKeyboard("は")
+        // Confirm the IME composition so the text is committed to the Rust model.
+        app.buttons["確定"].tap()
         assertTextViewContent("は")
         assertTreeEquals(
             """

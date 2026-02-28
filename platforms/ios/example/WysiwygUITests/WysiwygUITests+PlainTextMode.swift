@@ -17,7 +17,7 @@
 import XCTest
 
 extension WysiwygUITests {
-    func testMarkdownFromPlainTextModeIsParsed() throws {
+    func testMarkdownFromPlainTextModeIsParsed() {
         textView.typeTextCharByChar("text ")
         button(.plainRichButton).tap()
         textView.typeTextCharByChar("__bold__ *italic*")
@@ -40,7 +40,7 @@ extension WysiwygUITests {
     }
 
     // FIXME: disabled for now, should be re-enabled when this is supported
-    func testPlainTextModePreservesPills() throws {
+    func testPlainTextModePreservesPills() {
         // Create a Pill in RTE.
         textView.typeTextCharByChar("@ali")
         button(.aliceButton).tap()
