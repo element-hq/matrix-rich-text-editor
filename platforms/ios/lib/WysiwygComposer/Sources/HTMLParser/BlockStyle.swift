@@ -85,7 +85,7 @@ extension BlockStyle {
     }
 
     /// Computes a default `NSParagraphStyle` with applied padding.
-    var paragraphStyle: NSParagraphStyle {
+    public var paragraphStyle: NSParagraphStyle {
         let paragraphStyle = NSParagraphStyle.default.mut()
         paragraphStyle.firstLineHeadIndent = padding.horizontal
         paragraphStyle.headIndent = padding.horizontal
