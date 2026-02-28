@@ -19,19 +19,15 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         viewModel.clearContent()
     }
 
-    func testIsContentEmpty() throws {
+    func testIsContentEmpty() {
         XCTAssertTrue(viewModel.isContentEmpty)
 
         let expectFalse = expectContentEmpty(false)
-        _ = viewModel.replaceText(range: .zero,
-                                  replacementText: "Test")
-        viewModel.textView.attributedText = viewModel.attributedContent.text
+        simulateTyping("Test", in: .zero)
         waitExpectation(expectation: expectFalse, timeout: 2.0)
 
         let expectTrue = expectContentEmpty(true)
-        _ = viewModel.replaceText(range: .init(location: 0, length: viewModel.attributedContent.text.length),
-                                  replacementText: "")
-        viewModel.textView.attributedText = viewModel.attributedContent.text
+        simulateTyping("", in: NSRange(location: 0, length: viewModel.attributedContent.text.length))
         waitExpectation(expectation: expectTrue, timeout: 2.0)
     }
     
@@ -65,28 +61,29 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isContentEmpty)
     }
 
-    func testSimpleTextInputIsAccepted() throws {
+    func testSimpleTextInputIsAccepted() {
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "A")
         XCTAssertTrue(shouldChange)
     }
 
-    func testSimpleTextInputIsNotAccepted() throws {
+    func testSimpleTextInputIsNotAccepted() {
         viewModel.shouldReplaceText = false
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "A")
         XCTAssertFalse(shouldChange)
     }
 
-    func testNewlineIsNotAccepted() throws {
+    func testNewlineIsNotAccepted() {
+        // Enter is driven through Rust directly (model.enter()),
+        // so replaceText returns false to prevent UIKit from also applying it.
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "\n")
         XCTAssertFalse(shouldChange)
     }
 
     func testReconciliateModel() {
-        _ = viewModel.replaceText(range: .zero,
-                                  replacementText: "wa")
+        simulateTyping("wa", in: .zero)
         XCTAssertEqual(viewModel.attributedContent.text.string, "wa")
         XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 2, length: 0))
         reconciliate(to: "わ", selectedRange: NSRange(location: 1, length: 0))
@@ -95,14 +92,14 @@ final class WysiwygComposerViewModelTests: XCTestCase {
     }
 
     func testReconciliateRestoresSelection() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "I\'m")
+        simulateTyping("I\'m", in: .zero)
         XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 3, length: 0))
-        reconciliate(to: "I’m", selectedRange: NSRange(location: 3, length: 0))
+        reconciliate(to: "I\u{2019}m", selectedRange: NSRange(location: 3, length: 0))
         XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 3, length: 0))
 
         viewModel.clearContent()
 
-        _ = viewModel.replaceText(range: .zero, replacementText: "Some text")
+        simulateTyping("Some text", in: .zero)
         viewModel.select(range: .zero)
         XCTAssertEqual(viewModel.attributedContent.selection, .zero)
         reconciliate(to: "Some test", selectedRange: .zero)
@@ -110,9 +107,7 @@ final class WysiwygComposerViewModelTests: XCTestCase {
     }
 
     func testPlainTextMode() {
-        _ = viewModel.replaceText(range: .zero,
-                                  replacementText: "Some bold text")
-        viewModel.textView.attributedText = NSAttributedString(string: "Some bold text")
+        simulateTyping("Some bold text", in: .zero)
         viewModel.select(range: .init(location: 10, length: 4))
         viewModel.apply(.bold)
 
@@ -126,26 +121,22 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.content.html, "Some bold <strong>text</strong>")
     }
     
-    func testReplaceTextAfterLinkIsNotAccepted() {
+    func testReplaceTextAfterLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 4, length: 0), replacementText: "abc")
-        XCTAssertFalse(result)
+        // UIKit owns the edit, reconciliation places text outside the link.
+        simulateTyping("abc", in: .init(location: 4, length: 0))
         XCTAssertEqual(viewModel.content.html, "<a href=\"https://element.io\">test</a>abc")
-        XCTAssertTrue(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
     }
     
-    func testReplaceTextPartiallyInsideAndAfterLinkIsNotAccepted() {
+    func testReplaceTextPartiallyInsideAndAfterLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 3, length: 1), replacementText: "abc")
-        XCTAssertFalse(result)
+        simulateTyping("abc", in: .init(location: 3, length: 1))
         XCTAssertEqual(viewModel.content.html, "<a href=\"https://element.io\">tes</a>abc")
-        XCTAssertTrue(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
     }
     
-    func testReplaceTextInsideLinkIsAccepted() {
+    func testReplaceTextInsideLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 2, length: 0), replacementText: "abc")
-        XCTAssertTrue(result)
+        simulateTyping("abc", in: .init(location: 2, length: 0))
         XCTAssertEqual(viewModel.content.html, "<a href=\"https://element.io\">teabcst</a>")
     }
 
@@ -252,6 +243,27 @@ extension WysiwygComposerViewModelTests {
 // MARK: - Helpers
 
 extension WysiwygComposerViewModelTests {
+    /// Simulate the full UIKit typing cycle: replaceText → text view update → didUpdateText.
+    /// If replaceText returns false (e.g. backspace, enter — handled by Rust directly),
+    /// skips the UIKit text mutation since Rust already updated the text view.
+    ///
+    /// - Parameters:
+    ///   - text: Replacement text (use empty string for deletions).
+    ///   - range: The range being replaced in the text view.
+    func simulateTyping(_ text: String, in range: NSRange) {
+        let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: text)
+        if shouldAcceptChange {
+            let mutable = NSMutableAttributedString(attributedString: viewModel.textView.attributedText)
+            mutable.replaceCharacters(in: range, with: text)
+            viewModel.textView.attributedText = mutable
+            viewModel.textView.selectedRange = NSRange(
+                location: range.location + (text as NSString).length,
+                length: 0
+            )
+            viewModel.didUpdateText()
+        }
+    }
+
     /// Mock typing at given location.
     ///
     /// - Parameters:
@@ -261,14 +273,7 @@ extension WysiwygComposerViewModelTests {
         guard location <= viewModel.textView.attributedText.length else {
             fatalError("Invalid location index")
         }
-
-        let range = NSRange(location: location, length: 0)
-        let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: text)
-        if shouldAcceptChange {
-            // Force apply since the text view should've updated by itself
-            viewModel.applyAtributedContent()
-            viewModel.didUpdateText()
-        }
+        simulateTyping(text, in: NSRange(location: location, length: 0))
     }
 
     /// Mock typing trailing text.
@@ -289,8 +294,12 @@ extension WysiwygComposerViewModelTests {
         let range: NSRange = location == 0 ? .zero : NSRange(location: location - 1, length: 1)
         let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: "")
         if shouldAcceptChange {
-            // Force apply since the text view should've updated by itself
-            viewModel.applyAtributedContent()
+            let mutable = NSMutableAttributedString(attributedString: viewModel.textView.attributedText)
+            if range.length > 0 {
+                mutable.replaceCharacters(in: range, with: "")
+            }
+            viewModel.textView.attributedText = mutable
+            viewModel.textView.selectedRange = NSRange(location: range.location, length: 0)
             viewModel.didUpdateText()
         }
     }

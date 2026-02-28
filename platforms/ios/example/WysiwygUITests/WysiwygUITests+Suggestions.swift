@@ -9,14 +9,14 @@
 import XCTest
 
 extension WysiwygUITests {
-    func testAtMention() throws {
+    func testAtMention() {
         textView.typeTextCharByChar("@ali")
         XCTAssertTrue(button(.aliceButton).exists)
         button(.aliceButton).tap()
         assertMatchingPill("Alice")
         // Mention is replaced by a pill view, so there
         // is only the space after it in the field.
-        assertTextViewContent("￼\u{00A0}")
+        assertTextViewContent("￼ ")
         assertTreeEquals(
             """
             ├>mention "Alice", https://matrix.to/#/@alice:matrix.org
@@ -25,7 +25,7 @@ extension WysiwygUITests {
         )
     }
 
-    func testHashMention() throws {
+    func testHashMention() {
         textView.typeTextCharByChar("#roo")
         XCTAssertTrue(button(.room1Button).exists)
         button(.room1Button).tap()
@@ -39,11 +39,11 @@ extension WysiwygUITests {
         )
     }
 
-    func testCommand() throws {
+    func testCommand() {
         textView.typeTextCharByChar("/inv")
         XCTAssertTrue(button(.inviteCommandButton).exists)
         button(.inviteCommandButton).tap()
-        assertTextViewContent("/invite\u{00A0}")
+        assertTextViewContent("/invite ")
         assertTreeEquals(
             """
             └>"/invite "

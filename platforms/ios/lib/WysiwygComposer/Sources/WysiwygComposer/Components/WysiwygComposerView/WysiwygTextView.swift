@@ -6,6 +6,7 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import HTMLParser
 import UIKit
 
 /// An internal delegate for the `WysiwygTextView`, used to bring paste and key commands events
@@ -37,6 +38,13 @@ public class WysiwygTextView: UITextView {
     weak var wysiwygDelegate: WysiwygTextViewDelegate?
     
     public var mentionDisplayHelper: MentionDisplayHelper?
+    
+    /// List markers to draw in the paragraph gutter (not part of text content).
+    var listMarkers: [ListMarkerInfo] = []
+
+    /// Guard against re-entrant drawListMarkers calls (e.g. layoutIfNeeded
+    /// inside drawListMarkers triggers layoutSubviews which calls drawListMarkers).
+    private var isDrawingMarkers = false
     
     private let flusher = WysiwygPillsFlusher()
     
@@ -103,6 +111,30 @@ public class WysiwygTextView: UITextView {
     ///
     /// - Parameters:
     ///   - content: Content to apply.
+    /// Update list markers and redraw them. Called from the view model
+    /// whenever the model changes, regardless of whether the full text
+    /// view update is skipped. Also updates typingAttributes so the
+    /// cursor sits at the correct indented position.
+    func updateListMarkers(_ markers: [ListMarkerInfo]) {
+        listMarkers = markers
+        isDrawingMarkers = true
+        drawListMarkers(markers)
+        isDrawingMarkers = false
+
+        // Find the marker whose paragraph the cursor is currently in
+        // and update typingAttributes to match its indentation.
+        let cursorPos = selectedRange.location
+        if let activeMarker = markers.last(where: { $0.characterIndex <= cursorPos }) {
+            let para = NSMutableParagraphStyle()
+            para.firstLineHeadIndent = activeMarker.headIndent
+            para.headIndent = activeMarker.headIndent
+            typingAttributes[.paragraphStyle] = para
+        } else if markers.isEmpty {
+            // Exited list context — remove any list paragraph style.
+            typingAttributes.removeValue(forKey: .paragraphStyle)
+        }
+    }
+
     func apply(_ content: WysiwygComposerAttributedContent, committed: inout NSAttributedString) {
         guard content.text.length == 0
             || content.text != attributedText
@@ -112,15 +144,36 @@ public class WysiwygTextView: UITextView {
         performWithoutDelegate {
             // Update committed text at the same time we update the text view.
             committed = content.text
+            // listMarkers are updated via updateListMarkers() in applyUpdate,
+            // no need to set them here.
             self.attributedText = content.text
             // Set selection to {0, 0} then to expected position
             // avoids an issue with autocapitalization.
             self.selectedRange = .zero
             self.selectedRange = content.selection
 
+            // Carry the paragraph style at the cursor position into
+            // typingAttributes so the cursor renders at the correct
+            // indented position (important for empty list item paragraphs).
+            if content.text.length > 0 {
+                let index = min(content.selection.location, content.text.length - 1)
+                if let paraStyle = content.text.attribute(.paragraphStyle, at: index, effectiveRange: nil) {
+                    self.typingAttributes[.paragraphStyle] = paraStyle
+                }
+            } else if let firstMarker = content.listMarkers.first {
+                // Empty composer in list context — build a paragraph style
+                // from the marker so the cursor sits at the indented position.
+                let para = NSMutableParagraphStyle()
+                para.firstLineHeadIndent = firstMarker.headIndent
+                para.headIndent = firstMarker.headIndent
+                self.typingAttributes[.paragraphStyle] = para
+            }
+
             // Force redraw when applying content
             // FIXME: this could be improved further as we sometimes draw twice in a row.
             self.drawBackgroundStyleLayers()
+            // List markers are drawn by updateListMarkers() called from applyUpdate.
+            self.setNeedsDisplay()
         }
     }
 
@@ -138,6 +191,17 @@ public class WysiwygTextView: UITextView {
         super.draw(rect)
 
         drawBackgroundStyleLayers()
+        // List markers are drawn via CALayer in apply() and repositioned
+        // in layoutSubviews(). No need to recreate them here.
+    }
+
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+        // Re-draw layer-based decorations whenever layout changes
+        // (e.g. scrolling, text edits that change line positions).
+        drawBackgroundStyleLayers()
+        guard !isDrawingMarkers else { return }
+        drawListMarkers(listMarkers)
     }
 
     override public func caretRect(for position: UITextPosition) -> CGRect {
@@ -159,7 +223,7 @@ public class WysiwygTextView: UITextView {
                                                          action: #selector(keyCommandAction)) }
     }
     
-    // This needs to be handled here, if the selector was directly added to the WysiwygKeyCommand it would not work properly.
+    /// This needs to be handled here, if the selector was directly added to the WysiwygKeyCommand it would not work properly.
     @objc private func keyCommandAction(sender: UIKeyCommand) {
         wysiwygDelegate?.keyCommands?.first(where: { $0.input == sender.input && $0.modifierFlags == sender.modifierFlags })?.action()
     }

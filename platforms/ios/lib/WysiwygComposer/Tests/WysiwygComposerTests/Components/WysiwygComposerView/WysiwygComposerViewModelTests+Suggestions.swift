@@ -15,12 +15,12 @@ extension WysiwygComposerViewModelTests {
         let expectation = expectSuggestionPattern(
             expectedPattern: SuggestionPattern(key: .at, text: "ali", start: 0, end: 4)
         )
-        _ = viewModel.replaceText(range: .zero, replacementText: "@ali")
+        simulateTyping("@ali", in: .zero)
         waitExpectation(expectation: expectation, timeout: 2.0)
         let expectation2 = expectSuggestionPattern(
             expectedPattern: SuggestionPattern(key: .at, text: "alice", start: 0, end: 6)
         )
-        _ = viewModel.replaceText(range: .init(location: 4, length: 0), replacementText: "ce")
+        simulateTyping("ce", in: .init(location: 4, length: 0))
         waitExpectation(expectation: expectation2, timeout: 2.0)
     }
 
@@ -28,7 +28,7 @@ extension WysiwygComposerViewModelTests {
         let expectation = expectSuggestionPattern(
             expectedPattern: SuggestionPattern(key: .hash, text: "room", start: 0, end: 5)
         )
-        _ = viewModel.replaceText(range: .zero, replacementText: "#room")
+        simulateTyping("#room", in: .zero)
         waitExpectation(expectation: expectation, timeout: 2.0)
     }
 
@@ -36,12 +36,12 @@ extension WysiwygComposerViewModelTests {
         let expectation = expectSuggestionPattern(
             expectedPattern: SuggestionPattern(key: .slash, text: "inv", start: 0, end: 4)
         )
-        _ = viewModel.replaceText(range: .zero, replacementText: "/inv")
+        simulateTyping("/inv", in: .zero)
         waitExpectation(expectation: expectation, timeout: 2.0)
     }
 
     func testAtSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "@ali")
+        simulateTyping("@ali", in: .zero)
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
         XCTAssertEqual(
             viewModel.content.html,
@@ -52,7 +52,7 @@ extension WysiwygComposerViewModelTests {
     }
     
     func testAtRoomSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "@ro")
+        simulateTyping("@ro", in: .zero)
         viewModel.setAtRoomMention()
         XCTAssertEqual(
             viewModel.content.html,
@@ -63,35 +63,33 @@ extension WysiwygComposerViewModelTests {
     }
 
     func testAtMentionWithNoSuggestion() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 4))
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
-        // Text is not removed, and the
-        // mention is added after the text
+        // Selected text is replaced by the mention
         XCTAssertEqual(
             viewModel.content.html,
             """
-            Text<a href="https://matrix.to/#/@alice:matrix.org">Alice</a>\u{00A0}
+            <a href="https://matrix.to/#/@alice:matrix.org">Alice</a>\u{00A0}
             """
         )
     }
     
     func testAtRoomMentionWithNoSuggestion() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 4))
         viewModel.setAtRoomMention()
-        // Text is not removed, and the
-        // mention is added after the text
+        // Selected text is replaced by the mention
         XCTAssertEqual(
             viewModel.content.html,
             """
-            Text@room\u{00A0}
+            @room\u{00A0}
             """
         )
     }
     
     func testAtMentionWithNoSuggestionAtLeading() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 0))
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
         // Text is not removed, and the mention is added before the text
@@ -104,7 +102,7 @@ extension WysiwygComposerViewModelTests {
     }
     
     func testAtRoomMentionWithNoSuggestionAtLeading() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 0))
         viewModel.setAtRoomMention()
         // Text is not removed, and the mention is added before the text
@@ -117,7 +115,7 @@ extension WysiwygComposerViewModelTests {
     }
 
     func testHashSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "#roo")
+        simulateTyping("#roo", in: .zero)
         viewModel.setMention(url: "https://matrix.to/#/#room1:matrix.org", name: "Room 1", mentionType: .room)
         XCTAssertEqual(
             viewModel.content.html,
@@ -128,19 +126,20 @@ extension WysiwygComposerViewModelTests {
     }
 
     func testHashMentionWithNoSuggestion() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 4))
         viewModel.setMention(url: "https://matrix.to/#/#room1:matrix.org", name: "Room 1", mentionType: .room)
+        // Selected text is replaced by the mention
         XCTAssertEqual(
             viewModel.content.html,
             """
-            Text<a href="https://matrix.to/#/#room1:matrix.org">#room1:matrix.org</a>\u{00A0}
+            <a href="https://matrix.to/#/#room1:matrix.org">#room1:matrix.org</a>\u{00A0}
             """
         )
     }
 
     func testHashMentionWithNoSuggestionAtLeading() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 0))
         viewModel.setMention(url: "https://matrix.to/#/#room1:matrix.org", name: "Room 1", mentionType: .room)
         XCTAssertEqual(
@@ -152,7 +151,7 @@ extension WysiwygComposerViewModelTests {
     }
 
     func testSlashSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "/inv")
+        simulateTyping("/inv", in: .zero)
         viewModel.setCommand(name: "/invite")
         XCTAssertEqual(
             viewModel.content.html,

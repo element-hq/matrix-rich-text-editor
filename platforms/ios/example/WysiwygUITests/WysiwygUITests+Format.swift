@@ -11,7 +11,7 @@ import XCTest
 extension WysiwygUITests {
     /// Type a text and make it bold in the composer.
     /// A screenshot is saved since string attributes can't be read from this context.
-    func testTypingAndBolding() throws {
+    func testTypingAndBolding() {
         // Type something into composer.
         textView.typeTextCharByChar("Some bold text")
 

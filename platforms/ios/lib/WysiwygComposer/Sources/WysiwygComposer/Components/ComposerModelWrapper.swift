@@ -34,6 +34,9 @@ protocol ComposerModelWrapperProtocol {
     func actionStates() -> [ComposerAction: ActionState]
     func getLinkAction() -> LinkAction
 
+    /// Block projection API
+    func getBlockProjections() -> [FfiBlockProjection]
+
     // Extensions
     func apply(_ action: ComposerAction) -> ComposerUpdate
     var reversedActions: Set<ComposerAction> { get }
@@ -164,6 +167,12 @@ final class ComposerModelWrapper: ComposerModelWrapperProtocol {
         model.getMentionsState()
     }
 
+    // MARK: Block projection API
+
+    func getBlockProjections() -> [FfiBlockProjection] {
+        model.getBlockProjections()
+    }
+
     // MARK: Extensions
 
     func apply(_ action: ComposerAction) -> ComposerUpdate {
@@ -181,14 +190,12 @@ private extension ComposerModelWrapper {
     /// Execute some failable action on the model and restore provided fallback content if needed.
     func execute(_ action: @escaping (ComposerModel) throws -> ComposerUpdate) -> ComposerUpdate {
         do {
-            let update = try action(model)
-            return update
+            return try action(model)
         } catch {
             model = newComposerModel()
             if let fallbackContent = delegate?.fallbackContent() {
                 do {
-                    let update = try model.replaceText(newText: fallbackContent)
-                    return update
+                    return try model.replaceText(newText: fallbackContent)
                 } catch {
                     // If setting the fallback content fails, just reset to empty.
                     model = newComposerModel()

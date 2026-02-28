@@ -19,7 +19,7 @@ private enum Constants {
 }
 
 extension WysiwygComposerViewModelTests {
-    func testSetHtmlContent() throws {
+    func testSetHtmlContent() {
         viewModel.setHtmlContent(Constants.sampleHtml)
         XCTAssertEqual(viewModel.content.html, Constants.sampleHtml)
         XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown)
@@ -29,7 +29,7 @@ extension WysiwygComposerViewModelTests {
         XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown2)
     }
 
-    func testSetMarkdownContent() throws {
+    func testSetMarkdownContent() {
         viewModel.setMarkdownContent(Constants.sampleMarkdown)
         XCTAssertEqual(viewModel.content.html, Constants.sampleHtml)
         XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown)

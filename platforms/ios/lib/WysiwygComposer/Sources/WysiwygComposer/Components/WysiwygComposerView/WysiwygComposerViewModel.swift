@@ -31,6 +31,7 @@ public class WysiwygComposerViewModel: WysiwygComposerViewModelProtocol, Observa
             textView.linkTextAttributes[.foregroundColor] = parserStyle.linkColor
             textView.mentionDisplayHelper = mentionDisplayHelper
             textView.apply(attributedContent, committed: &committedAttributedText)
+            textView.updateListMarkers(attributedContent.listMarkers)
         }
     }
         
@@ -77,7 +78,7 @@ public class WysiwygComposerViewModel: WysiwygComposerViewModelProtocol, Observa
             textView.linkTextAttributes[.foregroundColor] = parserStyle.linkColor
             let update = model.setContentFromHtml(html: content.html)
             applyUpdate(update)
-            updateTextView()
+            didUpdateText()
         }
     }
     
@@ -133,13 +134,6 @@ public class WysiwygComposerViewModel: WysiwygComposerViewModelProtocol, Observa
     /// that could be in the editor that is not yet committed (e.g. from inline predictive text or dictation ).
     private lazy var committedAttributedText = NSAttributedString(string: "", attributes: defaultTextAttributes)
     
-    private var lastReplaceTextUpdate: ReplaceTextUpdate?
-    
-    /// Wether the view contains uncommitted text(e.g. a predictive suggestion is shown in grey).
-    private var hasUncommitedText: Bool {
-        textView.attributedText.htmlChars.withNBSP != committedAttributedText.htmlChars.withNBSP
-    }
-    
     // MARK: - Public
 
     public init(minHeight: CGFloat = 22,
@@ -172,10 +166,6 @@ public class WysiwygComposerViewModel: WysiwygComposerViewModelProtocol, Observa
                 }
             }
             .store(in: &cancellables)
-    }
-
-    deinit {
-        mentionReplacer = nil
     }
 }
 
@@ -297,14 +287,12 @@ public extension WysiwygComposerViewModel {
     func updateCompressedHeightIfNeeded() {
         let idealTextHeight = textView
             .sizeThatFits(CGSize(width: textView.bounds.size.width,
-                                 height: CGFloat.greatestFiniteMagnitude)
-            )
+                                 height: CGFloat.greatestFiniteMagnitude))
             .height
 
         compressedHeight = min(maxCompressedHeight, max(minHeight, idealTextHeight))
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
     func replaceText(range: NSRange, replacementText: String) -> Bool {
         guard shouldReplaceText else {
             return false
@@ -313,96 +301,89 @@ public extension WysiwygComposerViewModel {
         guard !plainTextMode else {
             return true
         }
-        
-        let nextTextUpdate = ReplaceTextUpdate(date: Date.now, range: range, text: replacementText)
-        // This is to specifically to work around an issue when tapping on an inline predictive text suggestion within the text view.
-        // Even though we have the delegate disabled during modifications to the textview we still get some duplicate
-        // calls to this method in this case specifically. It's very unlikely we would get a valid subsequent call
-        // with the same range and replacement text within such a short period of time, so should be safe.
-        if let lastReplaceTextUpdate, lastReplaceTextUpdate.shouldDebounce(with: nextTextUpdate) {
-            return true
-        }
-        
-        // This fixes a bug where the attributed string keeps link and inline code formatting
-        // when they are the last formatting to be deleted
+
+        // Reset typing attributes when the text view is empty to prevent
+        // stale link/code formatting from persisting after deletion.
         if textView.attributedText.length == 0 {
             textView.typingAttributes = defaultTextAttributes
         }
 
-        let update: ComposerUpdate
-        let skipTextViewUpdate: Bool
+        // --- Structural operations must be driven through Rust directly ---
+        // A text diff (reconcileNative) can't communicate the *intent* of these
+        // operations to Rust, which needs them for list exit, item creation, etc.
 
-        if range != attributedContent.selection {
-            select(range: range)
-        }
-        
-        // The system handles certain auto-compelete use-cases with somewhat unusual replacementText/range
-        // combinations, some of those edge cases are handled below.
-        
-        // Are we replacing some selected text by tapping the suggestion toolbar
-        // When this happens a range/replacementText of this combination is sent.
-        let isReplacingWordWithSuggestion = replacementText == "" && !hasUncommitedText && range.length == 0
-        
-        // A no-op rte side is required here
-        if isReplacingWordWithSuggestion {
-            return true
-        }
-        
-        // Are we backspacing from an inline predictive text suggestion.
-        // When this happens a range/replacementText of this combination is sent.
-        let isExitingPredictiveText = replacementText == ""
-            && hasUncommitedText
-            && range == attributedContent.selection && range.length == 0
-        
-        let isNormalBackspace = attributedContent.selection.length == 0 && replacementText == ""
-        
-        if isNormalBackspace || isExitingPredictiveText {
-            update = model.backspace()
-            skipTextViewUpdate = false
-        } else if replacementText.count == 1, replacementText[String.Index(utf16Offset: 0, in: replacementText)].isNewline {
-            update = createEnterUpdate()
-            skipTextViewUpdate = false
-        } else {
-            update = model.replaceText(newText: replacementText)
-            skipTextViewUpdate = true
-        }
-        
-        // Reconciliates the model with the text any time the link state changes
-        // this adjusts an iOS behaviour that extends a link when typing after it
-        // which does not reflect the model state.
-        switch update.menuState() {
-        case let .update(newState):
-            if newState[.link] != actionStates[.link] {
-                applyUpdate(update, skipTextViewUpdate: true)
-                applyAtributedContent()
-                updateCompressedHeightIfNeeded()
-                return false
+        // Detect backspace: empty replacement deleting the character before the cursor,
+        // or at cursor position with zero length (start-of-block backspace),
+        // or deleting a selection.
+        let uiSelection = textView.selectedRange
+        let isSingleCharBackspace = replacementText.isEmpty
+            && uiSelection.length == 0
+            && (
+                (range.length == 1 && range.upperBound == uiSelection.location)
+                    || (range.length == 0 && range.location == uiSelection.location)
+            )
+        let isSelectionDeletion = replacementText.isEmpty && range.length > 0 && uiSelection.length > 0
+
+        if isSingleCharBackspace {
+            // Sync Rust cursor as a zero-length selection so list extraction
+            // logic in backspace_single_cursor runs correctly.
+            let cursorPos = uiSelection.location
+            if attributedContent.selection.location != cursorPos || attributedContent.selection.length != 0 {
+                let selUpdate = model.select(startUtf16Codeunit: UInt32(cursorPos),
+                                             endUtf16Codeunit: UInt32(cursorPos))
+                applyUpdate(selUpdate)
             }
-        default: break
+            let update = model.backspace()
+            applyUpdate(update, skipTextViewUpdate: false)
+            return false
         }
-        
-        applyUpdate(update, skipTextViewUpdate: skipTextViewUpdate)
-        lastReplaceTextUpdate = nextTextUpdate
-        return skipTextViewUpdate
+
+        if isSelectionDeletion {
+            // Sync Rust selection to match UIKit's selected range.
+            if range != attributedContent.selection {
+                select(range: range)
+            }
+            let update = model.backspace()
+            applyUpdate(update, skipTextViewUpdate: false)
+            return false
+        }
+
+        // Detect enter/newline.
+        if replacementText.count == 1,
+           replacementText[replacementText.startIndex].isNewline {
+            // Sync Rust selection if needed.
+            if range != attributedContent.selection {
+                select(range: range)
+            }
+            let update = createEnterUpdate()
+            applyUpdate(update, skipTextViewUpdate: false)
+            return false
+        }
+
+        // --- Pending formats: Rust must handle insertion so it can apply the format ---
+        // e.g. user tapped Bold/InlineCode before typing — Rust's replaceText()
+        // applies the pending formatting that replaceTextIn() would miss.
+        if hasPendingFormats {
+            if range != attributedContent.selection {
+                select(range: range)
+            }
+            let update = model.replaceText(newText: replacementText)
+            applyUpdate(update, skipTextViewUpdate: false)
+            hasPendingFormats = false
+            return false
+        }
+
+        // --- Everything else: UIKit owns the mutation, reconcileNative() syncs to Rust ---
+        return true
     }
     
     func select(range: NSRange) {
-        do {
-            guard let text = textView.attributedText, !plainTextMode else { return }
-            let htmlSelection = try text.htmlRange(from: range)
-            Logger.viewModel.logDebug(["Sel(att): \(range)",
-                                       "Sel: \(htmlSelection)",
-                                       "Text: \"\(text.string)\""],
-                                      functionName: #function)
-            let update = model.select(startUtf16Codeunit: UInt32(htmlSelection.location),
-                                      endUtf16Codeunit: UInt32(htmlSelection.upperBound))
-
-            applyUpdate(update)
-        } catch {
-            Logger.viewModel.logError(["Sel(att): \(range)",
-                                       "Error: \(error.localizedDescription)"],
-                                      functionName: #function)
-        }
+        guard !plainTextMode else { return }
+        Logger.viewModel.logDebug(["Sel(att): \(range)", "select"],
+                                  functionName: #function)
+        let update = model.select(startUtf16Codeunit: UInt32(range.location),
+                                  endUtf16Codeunit: UInt32(range.upperBound))
+        applyUpdate(update)
     }
 
     func didUpdateText() {
@@ -412,91 +393,13 @@ public extension WysiwygComposerViewModel {
             }
             plainTextContent = textView.attributedText
         } else {
-            let updated = updateForDoubleSpaceToDotConversionIfNeeded() || updateDotAfterInlineTextPredicationIfNeeded()
-            if !updated {
-                reconciliateIfNeeded()
-            }
+            reconcileNative()
             applyPendingFormatsIfNeeded()
         }
         
         updateCompressedHeightIfNeeded()
     }
     
-    /// Checks if the editor automatically replaced two spaces with a dot and reconcile with the model if it did.
-    /// - Returns: Whether the an update was applied.
-    func updateForDoubleSpaceToDotConversionIfNeeded() -> Bool {
-        let text = textView.attributedText.htmlChars.withNBSP
-        let textSelection = textView.selectedRange
-        // Check if the last character in the editor is a dot.
-        guard text.count > 1,
-              textSelection.location > 1,
-              text.prefix(textSelection.location).hasSuffix(".")
-        else {
-            return false
-        }
-        // Check if the last 2 characters before the cursor in the model are whitespace. i.e. "  |"
-        let content = attributedContent.text.htmlChars.withNBSP
-        let contentSelection = attributedContent.selection
-        guard content.count > 1,
-              contentSelection.location > 1,
-              String(content.prefix(contentSelection.location)
-                  .suffix(2))
-              .trimmingCharacters(in: .whitespaces)
-              .isEmpty
-        else {
-            return false
-        }
-        // replace the 2 whitespace characters just before and cursor with ". "
-        let replaceUpdate = model.replaceTextIn(newText: ". ",
-                                                start: UInt32(contentSelection.location - 2),
-                                                end: UInt32(contentSelection.location))
-        applyUpdate(replaceUpdate, skipTextViewUpdate: true)
-        return true
-    }
-    
-    /// Checks if the editor automatically moved the cursor back a space when pressing a dot after
-    /// accepting an inline predictive text suggestion. It then reconciles with the model if it did.
-    /// - Returns: Whether the an update was applied.
-    func updateDotAfterInlineTextPredicationIfNeeded() -> Bool {
-        // This optimisation to predictive inline text only came in in 17.5
-        guard #available(iOS 17.5, *) else {
-            return false
-        }
-        let text = textView.attributedText.htmlChars.withNBSP
-        let textSelection = textView.selectedRange
-        // Check if the last character in the editor is a dot.
-        guard text.count > 1,
-              textSelection.location > 1,
-              text.prefix(textSelection.location).hasSuffix(".")
-        else {
-            return false
-        }
-        let content = attributedContent.text.htmlChars.withNBSP
-        let contentSelection = attributedContent.selection
-        guard content.count > 1,
-              contentSelection.location > 1,
-              contentSelection.location + 1 <= content.count
-        else {
-            return false
-        }
-        let lastTwo = content.prefix(contentSelection.location + 1).suffix(2)
-        // Check if the characters just before and after the cursor are a dot and whitespace ie " |."
-        guard lastTwo.prefix(1)
-            .trimmingCharacters(in: .whitespaces)
-            .isEmpty,
-            lastTwo.suffix(1) == "."
-        else {
-            return false
-        }
-        
-        // replace characters just before and after the cursor with a dot
-        let replaceUpdate = model.replaceTextIn(newText: ".",
-                                                start: UInt32(contentSelection.location - 1),
-                                                end: UInt32(contentSelection.location + 1))
-        applyUpdate(replaceUpdate, skipTextViewUpdate: true)
-        return true
-    }
-
     func applyLinkOperation(_ linkOperation: WysiwygLinkOperation) {
         let update: ComposerUpdate
         switch linkOperation {
@@ -535,7 +438,7 @@ public extension WysiwygComposerViewModel {
                       height: maximised ? maxExpandedHeight : min(maxCompressedHeight, max(minHeight, idealHeight)))
     }
     
-    func applyAtributedContent() {
+    func applyAttributedContent() {
         textView.apply(attributedContent, committed: &committedAttributedText)
     }
 }
@@ -543,8 +446,15 @@ public extension WysiwygComposerViewModel {
 // MARK: - Private
 
 private extension WysiwygComposerViewModel {
-    func updateTextView() {
-        didUpdateText()
+    /// Re-render list markers from the current model and push them to
+    /// the text view.  Also updates `typingAttributes` so the cursor
+    /// sits at the correct indented position for empty list items.
+    func refreshListMarkers() {
+        let projections = model.getBlockProjections()
+        let (_, markers) = ProjectionRenderer(style: parserStyle, mentionReplacer: mentionReplacer)
+            .render(projections: projections)
+        attributedContent.listMarkers = markers
+        textView.updateListMarkers(markers)
     }
 
     /// Apply given composer update to the composer.
@@ -565,7 +475,7 @@ private extension WysiwygComposerViewModel {
                 // is not reflected in committedAttributedText yet, so update it.
                 committedAttributedText = attributedContent.text
             } else {
-                applyAtributedContent()
+                applyAttributedContent()
                 updateCompressedHeightIfNeeded()
             }
         case let .select(startUtf16Codeunit: start,
@@ -574,6 +484,13 @@ private extension WysiwygComposerViewModel {
         case .keep:
             break
         }
+
+        // Always keep the text view's list markers in sync with the model
+        // after ANY update (replaceAll, select, or keep). This handles:
+        //  - indent/outdent on empty items (replaceAll where apply() guard skips)
+        //  - exiting list mode via backspace on empty item (.keep update)
+        //  - any other state change
+        refreshListMarkers()
 
         switch update.menuState() {
         case let .update(actionStates: actionStates):
@@ -599,28 +516,20 @@ private extension WysiwygComposerViewModel {
     ///   - start: Start location for the selection.
     ///   - end: End location for the selection.
     func applyReplaceAll(codeUnits: [UInt16], start: UInt32, end: UInt32) {
-        do {
-            let html = String(utf16CodeUnits: codeUnits, count: codeUnits.count)
-            let attributed = try HTMLParser.parse(html: html,
-                                                  style: parserStyle,
-                                                  mentionReplacer: mentionReplacer)
-            // FIXME: handle error for out of bounds index
-            let htmlSelection = NSRange(location: Int(start), length: Int(end - start))
-            let textSelection = try attributed.attributedRange(from: htmlSelection)
-            attributedContent = WysiwygComposerAttributedContent(text: attributed,
-                                                                 selection: textSelection,
-                                                                 plainText: model.getContentAsPlainText())
-            Logger.viewModel.logDebug(["Sel(att): \(textSelection)",
-                                       "Sel: \(htmlSelection)",
-                                       "HTML: \"\(html)\"",
-                                       "replaceAll"],
-                                      functionName: #function)
-        } catch {
-            Logger.viewModel.logError(["Sel: {\(start), \(end - start)}",
-                                       "Error: \(error.localizedDescription)",
-                                       "replaceAll"],
-                                      functionName: #function)
-        }
+        let projections = model.getBlockProjections()
+        let (attributed, listMarkers) = ProjectionRenderer(style: parserStyle, mentionReplacer: mentionReplacer)
+            .render(projections: projections)
+        let selection = NSRange(location: Int(start), length: Int(end - start))
+        attributedContent = WysiwygComposerAttributedContent(
+            text: attributed,
+            selection: selection,
+            plainText: model.getContentAsPlainText(),
+            listMarkers: listMarkers
+        )
+        Logger.viewModel.logDebug(["Sel: {\(start), \(end - start)}",
+                                   "Projections: \(projections.count) blocks",
+                                   "replaceAll (projection)"],
+                                  functionName: #function)
     }
 
     /// Apply a select update to the composer
@@ -629,23 +538,13 @@ private extension WysiwygComposerViewModel {
     ///   - start: Start location for the selection.
     ///   - end: End location for the selection.
     func applySelect(start: UInt32, end: UInt32) {
-        do {
-            let htmlSelection = NSRange(location: Int(start), length: Int(end - start))
-            let textSelection = try attributedContent.text.attributedRange(from: htmlSelection)
-            if textSelection != attributedContent.selection {
-                attributedContent.selection = textSelection
-                // Ensure we re-apply required pending formats when switching to a zero-length selection.
-                // This fixes selecting in and out of a list / quote / etc
-                hasPendingFormats = textSelection.length == 0 && !model.reversedActions.isEmpty
-            }
-            Logger.viewModel.logDebug(["Sel(att): \(textSelection)",
-                                       "Sel: \(htmlSelection)"],
-                                      functionName: #function)
-        } catch {
-            Logger.viewModel.logError(["Sel: {\(start), \(end - start)}",
-                                       "Error: \(error.localizedDescription)"],
-                                      functionName: #function)
+        let selection = NSRange(location: Int(start), length: Int(end - start))
+        if selection != attributedContent.selection {
+            attributedContent.selection = selection
+            hasPendingFormats = selection.length == 0 && !model.reversedActions.isEmpty
         }
+        Logger.viewModel.logDebug(["Sel: {\(start), \(end - start)}", "applySelect"],
+                                  functionName: #function)
     }
     
     /// Update the composer ideal height based on the maximised state.
@@ -676,63 +575,49 @@ private extension WysiwygComposerViewModel {
         } else {
             let update = model.setContentFromMarkdown(markdown: computeMarkdownContent())
             applyUpdate(update)
-            updateTextView()
+            didUpdateText()
             plainTextContent = NSAttributedString()
         }
     }
     
-    /// Reconciliate the content of the model with the content of the text view.
-    func reconciliateIfNeeded(ignoreLatinCharsCheck: Bool = false) {
-        guard !textView.isDictationRunning,
-              let replacement = StringDiffer.replacement(from: attributedContent.text.htmlChars,
-                                                         to: textView.attributedText.htmlChars) else {
-            return
-        }
-        
-        // Don't use reconciliate if the replacement is simple and only contains latin character languages
-        // as it shouldn't be needed. It is needed for CJK lanuages like Japanese Kana.
-        if !ignoreLatinCharsCheck,
-           !replacement.hasMore,
-           replacement.text.containsLatinAndCommonCharactersOnly {
-            return
-        }
-        
-        // Reconciliate
-        Logger.viewModel.logDebug(["Reconciliate from \"\(attributedContent.text.string)\" to \"\(textView.text ?? "")\""],
-                                  functionName: #function)
-        
-        let replaceUpdate = model.replaceTextIn(newText: replacement.text,
-                                                start: UInt32(replacement.range.location),
-                                                end: UInt32(replacement.range.upperBound))
-        applyUpdate(replaceUpdate, skipTextViewUpdate: true)
-        if replacement.hasMore {
-            reconciliateIfNeeded(ignoreLatinCharsCheck: true)
-            return
-        }
-        
-        // Resync selectedRange
-        do {
-            let rustSelection = try textView.attributedText.htmlRange(from: textView.selectedRange)
-            let selectUpdate = model.select(startUtf16Codeunit: UInt32(rustSelection.location),
-                                            endUtf16Codeunit: UInt32(rustSelection.upperBound))
-            applyUpdate(selectUpdate)
-        } catch {
-            switch error {
-            case AttributedRangeError.outOfBoundsAttributedIndex, AttributedRangeError.outOfBoundsHtmlIndex:
-                // Just log here for now, the composer is already in a broken state
-                Logger.viewModel.logError(["Reconciliate failed due to out of bounds indexes"],
-                                          functionName: #function)
-            default:
-                break
-            }
-        }
+    /// Reconcile the text view content back into the Rust model.
+    ///
+    /// Compares `committedAttributedText.string` (last known state from Rust)
+    /// with `textView.attributedText.string` (current UIKit state) using a
+    /// prefix/suffix diff, then feeds the minimal replacement into
+    /// `model.replaceTextIn()`.
+    ///
+    /// Because ProjectionRenderer guarantees 1:1 UTF-16 offset mapping,
+    /// the diff offsets can be sent directly to Rust without any HTML-range
+    /// translation.
+    func reconcileNative() {
+        guard !textView.isDictationRunning else { return }
+        let oldText = committedAttributedText.string
+        let newText = textView.attributedText.string
+        guard oldText != newText else { return }
+
+        let diff = computePrefixSuffixDiff(old: oldText, new: newText)
+        let update = model.replaceTextIn(
+            newText: diff.replacement,
+            start: UInt32(diff.replaceStart),
+            end: UInt32(diff.replaceEnd)
+        )
+        applyUpdate(update, skipTextViewUpdate: true)
+
+        // Resync cursor — 1:1 UTF-16 offsets thanks to ProjectionRenderer.
+        let sel = textView.selectedRange
+        let selUpdate = model.select(
+            startUtf16Codeunit: UInt32(sel.location),
+            endUtf16Codeunit: UInt32(sel.upperBound)
+        )
+        applyUpdate(selUpdate)
     }
 
     /// Updates the text view with the current content if we have some pending formats
     /// to apply (e.g. we hit the bold button with no selection).
     func applyPendingFormatsIfNeeded() {
         guard hasPendingFormats else { return }
-        applyAtributedContent()
+        applyAttributedContent()
         updateCompressedHeightIfNeeded()
         hasPendingFormats = false
     }
@@ -757,8 +642,8 @@ private extension WysiwygComposerViewModel {
         let update = model.enter()
         // Pending formats need to be reapplied to the
         // NSAttributedString upon next character input if we
-        // are in a structure that might add non-formatted
-        // representation chars to it (e.g. NBSP/ZWSP, list prefixes)
+        // are in a structure that adds special formatting
+        // (e.g. code blocks, quotes, list items).
         if !model
             .reversedActions
             .isDisjoint(with: [.codeBlock, .quote, .orderedList, .unorderedList]) {
@@ -780,19 +665,4 @@ extension WysiwygComposerViewModel: ComposerModelWrapperDelegate {
 
 private extension Logger {
     static let viewModel = Logger(subsystem: subsystem, category: "ViewModel")
-}
-
-private struct ReplaceTextUpdate {
-    static let debounceThreshold = 0.1
-    var date: Date
-    var range: NSRange
-    var text: String
-}
-
-private extension ReplaceTextUpdate {
-    func shouldDebounce(with other: ReplaceTextUpdate) -> Bool {
-        range == other.range
-            && text == other.text
-            && fabs(date.timeIntervalSince(other.date)) < Self.debounceThreshold
-    }
 }
