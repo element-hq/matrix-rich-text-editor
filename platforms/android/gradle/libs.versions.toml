@@ -5,7 +5,7 @@
 activity-compose = "1.10.1"
 androidx-junit = "1.2.1"
 coroutines = "1.10.2"
-compose-bom = "2025.06.00"
+compose-bom = "2026.02.01"
 lifecycle-runtime-ktx = "2.9.1"
 timber = "5.0.1"
 androidx-core = "1.16.0"
@@ -18,7 +18,7 @@ robolectric = "4.14.1"
 mockk = "1.14.2" # https://github.com/mockk/mockk/issues/1033
 hamcrest = "3.0"
 espresso = "3.6.1"
-agp = "8.10.1"
+agp = "9.0.1"
 kotlin = "2.1.21"
 maven-publish = "0.32.0"
 molecule = "2.1.0"
@@ -28,7 +28,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version = "0.9.6" }
-sonarqube = { id = "org.sonarqube", version = "6.2.0.5505" }
+sonarqube = { id = "org.sonarqube", version = "7.2.2.6593" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 maven-publish-base = { id = "com.vanniktech.maven.publish.base", version.ref = "maven-publish" }
 jacoco-android = { id = "com.mxalbert.gradle.jacoco-android", version = "0.2.1" }
