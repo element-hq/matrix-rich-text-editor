@@ -67,6 +67,10 @@ final class ComposerModelWrapper: ComposerModelWrapperProtocol {
 
     // MARK: - Internal
 
+    /// Provides direct access to the underlying FFI model for
+    /// collaboration APIs that don't need crash-recovery wrapping.
+    var rawModel: ComposerModel { model }
+
     // MARK: Rust direct bindings
 
     weak var delegate: ComposerModelWrapperDelegate?

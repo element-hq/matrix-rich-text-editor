@@ -46,6 +46,23 @@ public class WysiwygComposerViewModel: WysiwygComposerViewModelProtocol, Observa
     public let minHeight: CGFloat
     /// The mention replacer defined by the hosting application.
     public var mentionReplacer: MentionReplacer?
+
+    // MARK: - Collaboration
+
+    /// The collaboration manager for this composer instance.
+    /// Created lazily on first access. Set its `delegate` to receive
+    /// debounced deltas suitable for sending as Matrix events.
+    public private(set) lazy var collaborationManager: CollaborationManager = {
+        CollaborationManager(model: model.rawModel)
+    }()
+
+    /// Convenience: set the collaboration delegate directly on the
+    /// view model instead of going through `collaborationManager`.
+    public weak var collaborationDelegate: CollaborationDelegate? {
+        get { collaborationManager.delegate }
+        set { collaborationManager.delegate = newValue }
+    }
+
     /// Published object for the composer attributed content.
     @Published public var attributedContent: WysiwygComposerAttributedContent = .init()
     /// Published value for the content of the text view in plain text mode.
@@ -286,6 +303,23 @@ public extension WysiwygComposerViewModel {
         let update = model.replaceTextSuggestion(newText: name, suggestion: suggestionPattern)
         applyUpdate(update)
     }
+
+    // MARK: - Collaboration convenience
+
+    /// Apply remote changes received from a Matrix event.
+    ///
+    /// - Parameter data: The raw delta bytes from the event payload.
+    /// - Throws: `CollaborationError` if the data is invalid.
+    func receiveRemoteChanges(_ data: Data) throws {
+        let update = try collaborationManager.receiveRemoteChanges(data)
+        applyUpdate(update)
+    }
+
+    /// Immediately flush any pending local delta (e.g. before sending
+    /// a message or navigating away).
+    func flushCollaborationDelta() {
+        collaborationManager.flushNow()
+    }
 }
 
 // MARK: - WysiwygComposerViewModelProtocol
@@ -498,6 +532,12 @@ private extension WysiwygComposerViewModel {
         //  - exiting list mode via backspace on empty item (.keep update)
         //  - any other state change
         refreshListMarkers()
+
+        // Notify the collaboration manager that local content changed.
+        // The actual delta will be produced after the debounce interval.
+        if case .replaceAll = update.textUpdate() {
+            collaborationManager.notifyLocalChange()
+        }
 
         switch update.menuState() {
         case let .update(actionStates: actionStates):
