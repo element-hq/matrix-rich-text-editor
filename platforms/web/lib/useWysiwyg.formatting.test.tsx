@@ -522,7 +522,7 @@ describe('edge cases', () => {
         expect(textbox).toMatchInlineSnapshot(`
           <div
             contenteditable="true"
-            data-content="<p><strong>one</strong></p><ul><li>two</li></ul>"
+            data-content="<p><strong>one</strong></p><ul><li>before two</li></ul>"
             role="textbox"
           >
             <p>
@@ -535,7 +535,6 @@ describe('edge cases', () => {
                 before two
               </li>
             </ul>
-            <br />
           </div>
         `);
     });

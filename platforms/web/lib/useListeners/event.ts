@@ -19,6 +19,7 @@ import {
     refreshComposerView,
     replaceEditor,
     selectContent,
+    textNodeNeedsExtraOffset,
 } from '../dom';
 import { renderProjections, BlockProjection } from '../blockProjection';
 import { computePrefixSuffixDiff } from '../inlineReconciliation';
@@ -263,17 +264,13 @@ export function handleInput(
  * It is called after the browser has applied a plain-text edit that wasn't
  * intercepted by a structural handler (enter, backspace, formatting).
  *
- * Because `renderProjections()` guarantees 1:1 UTF-16 offsets between
- * `editor.textContent` and the Rust model, the diff offsets can be sent
- * directly to Rust without any HTML range translation.
- *
- * @returns updated committed text, or undefined if no change was detected
+ * @returns updated HTML content string if the model was changed, or undefined
  */
 export function reconcileNative(
     editor: HTMLElement,
     composerModel: ComposerModel,
     committedTextRef: { current: string },
-): string | undefined {
+): { content?: string } | undefined {
     const newText = editor.textContent ?? '';
     const oldText = committedTextRef.current;
 
@@ -281,28 +278,92 @@ export function reconcileNative(
 
     const diff = computePrefixSuffixDiff(oldText, newText);
 
+    // Translate DOM text offsets to Rust model offsets (block separators are
+    // implicit in editor.textContent but explicit in Rust's UTF-16 model).
+    const modelStart = domTextOffsetToModelOffset(editor, diff.replaceStart);
+    const modelEnd = domTextOffsetToModelOffset(editor, diff.replaceEnd);
+
     // Push the diff into Rust.
-    (composerModel as any).replace_text_in?.(
+    const rustUpdate = (composerModel as any).replace_text_in?.(
         diff.replacement,
-        diff.replaceStart,
-        diff.replaceEnd,
+        modelStart,
+        modelEnd,
     );
 
-    // Re-render from the updated model.
+    // Re-render from the updated model and sync cursor from Rust's selection.
     const projections = (composerModel as any).get_block_projections?.() as BlockProjection[] | undefined;
+    let content: string | undefined;
     if (projections) {
         committedTextRef.current = renderProjections(projections, editor);
     }
-
-    // Resync cursor — 1:1 UTF-16 offsets mean we can use the raw text offset.
-    const sel = document.getSelection();
-    if (sel && sel.rangeCount > 0) {
-        const [start, end] = getCurrentSelection(editor, sel);
-        const selUpdate = composerModel.select(start, end);
-        void selUpdate; // action states handled by the selectionchange listener
+    if (rustUpdate) {
+        const textUpdate = rustUpdate.text_update();
+        const repl = textUpdate.replace_all;
+        const sel = textUpdate.select;
+        const cursorStart = repl?.start_utf16_codeunit ?? sel?.start_utf16_codeunit;
+        const cursorEnd = repl?.end_utf16_codeunit ?? sel?.end_utf16_codeunit;
+        if (cursorStart !== undefined && cursorEnd !== undefined) {
+            selectContent(editor, cursorStart, cursorEnd);
+        }
+        content = repl?.replacement_html;
     }
 
-    return committedTextRef.current;
+    return { content };
+}
+
+/**
+ * Convert an offset within `editor.textContent` (which omits block-boundary
+ * separators) to the equivalent Rust UTF-16 model offset (which includes them).
+ *
+ * For each block boundary we cross, the model offset is +1 larger than the
+ * DOM text offset.  A boundary is crossed when we move past a text node that
+ * has a block-level ancestor (`<p>`, `<li>`, `<pre>`, `<blockquote>`).
+ */
+function domTextOffsetToModelOffset(editor: HTMLElement, textOffset: number): number {
+    // Collect text nodes in document order.
+    const textNodes: Node[] = [];
+    (function collect(n: Node): void {
+        if (n.nodeType === Node.TEXT_NODE) textNodes.push(n);
+        else for (const ch of n.childNodes) collect(ch);
+    })(editor);
+
+    let pos = 0; // DOM text position cursor
+    let extra = 0; // accumulated block-separator adjustments
+
+    for (let i = 0; i < textNodes.length; i++) {
+        const node = textNodes[i];
+        const len = node.textContent?.length ?? 0;
+        const nodeEnd = pos + len;
+
+        if (textOffset < nodeEnd) {
+            // Target is strictly inside this text node — no extra separators
+            break;
+        }
+
+        if (textOffset === nodeEnd) {
+            // Exactly at the end of this node.  If the *next* text node is in a
+            // different block (needs an extra offset) and this is not the last
+            // node, account for the implicit separator.
+            if (
+                i < textNodes.length - 1 &&
+                textNodeNeedsExtraOffset(textNodes[i + 1])
+            ) {
+                extra += 1;
+            }
+            break;
+        }
+
+        // Target is past this node — consume it and account for the boundary.
+        pos = nodeEnd;
+        if (
+            i < textNodes.length - 1 &&
+            textNodeNeedsExtraOffset(textNodes[i + 1])
+        ) {
+            extra += 1;
+        }
+    }
+
+    return textOffset + extra;
 }
 
 /**
