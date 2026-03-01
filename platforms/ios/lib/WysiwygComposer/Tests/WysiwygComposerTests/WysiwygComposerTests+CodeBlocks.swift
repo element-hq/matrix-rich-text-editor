@@ -21,14 +21,14 @@ private enum Constants {
     static let resultHtml = "<pre><code>Some code\n\tmore code</code></pre><p>\(Character.nbsp)</p>"
     static let resultTree =
         """
-
+        
         ├>codeblock
         │ ├>p
         │ │ └>"Some code"
         │ └>p
         │   └>"\tmore code"
         └>p
-
+        
         """
 }
 

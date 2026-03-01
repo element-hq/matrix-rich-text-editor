@@ -11,3 +11,9 @@ impl IntoFfi for &HashMap<wysiwyg::ComposerAction, wysiwyg::ActionState> {
         self.iter().map(|(a, s)| (a.into(), s.into())).collect()
     }
 }
+
+impl IntoFfi for HashMap<wysiwyg::ComposerAction, wysiwyg::ActionState> {
+    fn into_ffi(self) -> HashMap<ComposerAction, ActionState> {
+        self.iter().map(|(a, s)| (a.into(), s.into())).collect()
+    }
+}

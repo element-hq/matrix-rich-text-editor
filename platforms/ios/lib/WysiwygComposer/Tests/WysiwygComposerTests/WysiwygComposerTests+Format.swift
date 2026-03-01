@@ -39,12 +39,12 @@ extension WysiwygComposerTests {
             }
             .assertTree(
                 """
-
+                
                 ├>\"This is \"
                 ├>strong
                 │ └>\"bold\"
                 └>\" text\"
-
+                
                 """
             )
     }

@@ -17,6 +17,7 @@ pub mod block_projection;
 mod char;
 mod composer_action;
 mod composer_model;
+pub mod composer_model_interface;
 mod composer_state;
 mod composer_update;
 mod dom;
@@ -68,3 +69,12 @@ pub use crate::text_update::TextUpdate;
 pub use crate::block_projection::{
     AttributeSet, BlockId, BlockKind, BlockProjection, InlineRun, InlineRunKind,
 };
+
+// Composer model interface
+pub use crate::composer_model_interface::{Attribute, ComposerModelInterface};
+
+// Automerge-backed model (behind feature flag)
+#[cfg(feature = "automerge-backend")]
+pub mod automerge_model;
+#[cfg(feature = "automerge-backend")]
+pub use crate::automerge_model::AutomergeModel;

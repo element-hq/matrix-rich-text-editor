@@ -1,28 +1,41 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::vec;
-
-use widestring::Utf16String;
 
 use crate::ffi_composer_state::ComposerState;
 use crate::ffi_composer_update::ComposerUpdate;
-use crate::ffi_dom_creation_error::DomCreationError;
 use crate::ffi_link_actions::LinkAction;
 use crate::ffi_mentions_state::MentionsState;
 use crate::into_ffi::IntoFfi;
 use crate::{ActionState, ComposerAction, SuggestionPattern};
 
-#[derive(Default, uniffi::Object)]
+#[derive(uniffi::Object)]
 pub struct ComposerModel {
-    inner: Mutex<wysiwyg::ComposerModel<Utf16String>>,
+    inner: Mutex<wysiwyg::AutomergeModel>,
+}
+
+impl Default for ComposerModel {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ComposerModel {
     pub fn new() -> Self {
         Self {
-            inner: Mutex::new(wysiwyg::ComposerModel::new()),
+            inner: Mutex::new(wysiwyg::AutomergeModel::new()),
         }
     }
+}
+
+/// Convert an FFI `Attribute` into the core crate's `Attribute`.
+fn to_core_attrs(attrs: &[Attribute]) -> Vec<wysiwyg::Attribute> {
+    attrs
+        .iter()
+        .map(|a| wysiwyg::Attribute {
+            key: a.key.clone(),
+            value: a.value.clone(),
+        })
+        .collect()
 }
 
 #[uniffi::export]
@@ -30,22 +43,20 @@ impl ComposerModel {
     pub fn set_content_from_html(
         self: &Arc<Self>,
         html: String,
-    ) -> Result<Arc<ComposerUpdate>, DomCreationError> {
-        let html = Utf16String::from_str(&html);
-        let update = self.inner.lock().unwrap().set_content_from_html(&html)?;
+    ) -> Result<Arc<ComposerUpdate>, crate::ffi_dom_creation_error::DomCreationError> {
+        let update = self.inner.lock().unwrap().set_content_from_html(&html);
         Ok(Arc::new(ComposerUpdate::from(update)))
     }
 
     pub fn set_content_from_markdown(
         self: &Arc<Self>,
         markdown: String,
-    ) -> Result<Arc<ComposerUpdate>, DomCreationError> {
-        let markdown = Utf16String::from_str(&markdown);
+    ) -> Result<Arc<ComposerUpdate>, crate::ffi_dom_creation_error::DomCreationError> {
         let update = self
             .inner
             .lock()
             .unwrap()
-            .set_content_from_markdown(&markdown)?;
+            .set_content_from_markdown(&markdown);
         Ok(Arc::new(ComposerUpdate::from(update)))
     }
 
@@ -56,43 +67,27 @@ impl ComposerModel {
         self.inner
             .lock()
             .unwrap()
-            .set_custom_suggestion_patterns(custom_suggestion_patterns)
+            .custom_suggestion_patterns = custom_suggestion_patterns.into_iter().collect();
     }
 
     pub fn get_content_as_html(self: &Arc<Self>) -> String {
-        self.inner.lock().unwrap().get_content_as_html().to_string()
+        self.inner.lock().unwrap().get_content_as_html()
     }
 
     pub fn get_content_as_message_html(self: &Arc<Self>) -> String {
-        self.inner
-            .lock()
-            .unwrap()
-            .get_content_as_message_html()
-            .to_string()
+        self.inner.lock().unwrap().get_content_as_message_html()
     }
 
     pub fn get_content_as_markdown(self: &Arc<Self>) -> String {
-        self.inner
-            .lock()
-            .unwrap()
-            .get_content_as_markdown()
-            .to_string()
+        self.inner.lock().unwrap().get_content_as_markdown()
     }
 
     pub fn get_content_as_message_markdown(self: &Arc<Self>) -> String {
-        self.inner
-            .lock()
-            .unwrap()
-            .get_content_as_message_markdown()
-            .to_string()
+        self.inner.lock().unwrap().get_content_as_message_markdown()
     }
 
     pub fn get_content_as_plain_text(self: &Arc<Self>) -> String {
-        self.inner
-            .lock()
-            .unwrap()
-            .get_content_as_plain_text()
-            .to_string()
+        self.inner.lock().unwrap().get_content_as_plain_text()
     }
 
     pub fn clear(self: &Arc<Self>) -> Arc<ComposerUpdate> {
@@ -104,13 +99,8 @@ impl ComposerModel {
         start_utf16_codeunit: u32,
         end_utf16_codeunit: u32,
     ) -> Arc<ComposerUpdate> {
-        let start = wysiwyg::Location::from(
-            usize::try_from(start_utf16_codeunit).unwrap(),
-        );
-        let end = wysiwyg::Location::from(
-            usize::try_from(end_utf16_codeunit).unwrap(),
-        );
-
+        let start = usize::try_from(start_utf16_codeunit).unwrap();
+        let end = usize::try_from(end_utf16_codeunit).unwrap();
         Arc::new(ComposerUpdate::from(
             self.inner.lock().unwrap().select(start, end),
         ))
@@ -121,10 +111,7 @@ impl ComposerModel {
         new_text: String,
     ) -> Arc<ComposerUpdate> {
         Arc::new(ComposerUpdate::from(
-            self.inner
-                .lock()
-                .unwrap()
-                .replace_text(Utf16String::from_str(&new_text)),
+            self.inner.lock().unwrap().replace_text(&new_text),
         ))
     }
 
@@ -137,11 +124,10 @@ impl ComposerModel {
         let start = usize::try_from(start).unwrap();
         let end = usize::try_from(end).unwrap();
         Arc::new(ComposerUpdate::from(
-            self.inner.lock().unwrap().replace_text_in(
-                Utf16String::from_str(&new_text),
-                start,
-                end,
-            ),
+            self.inner
+                .lock()
+                .unwrap()
+                .replace_text_in(&new_text, start, end),
         ))
     }
 
@@ -151,10 +137,11 @@ impl ComposerModel {
         suggestion: SuggestionPattern,
         append_space: bool,
     ) -> Arc<ComposerUpdate> {
+        let suggestion = wysiwyg::SuggestionPattern::from(suggestion);
         Arc::new(ComposerUpdate::from(
             self.inner.lock().unwrap().replace_text_suggestion(
-                Utf16String::from_str(&new_text),
-                wysiwyg::SuggestionPattern::from(suggestion),
+                &new_text,
+                &suggestion,
                 append_space,
             ),
         ))
@@ -243,18 +230,9 @@ impl ComposerModel {
         url: String,
         attributes: Vec<Attribute>,
     ) -> Arc<ComposerUpdate> {
-        let url = Utf16String::from_str(&url);
-        let attrs = attributes
-            .iter()
-            .map(|attr| {
-                (
-                    Utf16String::from_str(&attr.key),
-                    Utf16String::from_str(&attr.value),
-                )
-            })
-            .collect();
+        let attrs = to_core_attrs(&attributes);
         Arc::new(ComposerUpdate::from(
-            self.inner.lock().unwrap().set_link(url, attrs),
+            self.inner.lock().unwrap().set_link(&url, &attrs),
         ))
     }
 
@@ -264,29 +242,20 @@ impl ComposerModel {
         text: String,
         attributes: Vec<Attribute>,
     ) -> Arc<ComposerUpdate> {
-        let url = Utf16String::from_str(&url);
-        let text = Utf16String::from_str(&html_escape::encode_safe(&text));
-        let attrs = attributes
-            .iter()
-            .map(|attr| {
-                (
-                    Utf16String::from_str(&attr.key),
-                    Utf16String::from_str(&attr.value),
-                )
-            })
-            .collect();
+        let escaped = html_escape::encode_safe(&text).to_string();
+        let attrs = to_core_attrs(&attributes);
         Arc::new(ComposerUpdate::from(
             self.inner
                 .lock()
                 .unwrap()
-                .set_link_with_text(url, text, attrs),
+                .set_link_with_text(&url, &escaped, &attrs),
         ))
     }
 
     /// Creates an at-room mention node and inserts it into the composer at the current selection
     pub fn insert_at_room_mention(self: &Arc<Self>) -> Arc<ComposerUpdate> {
         Arc::new(ComposerUpdate::from(
-            self.inner.lock().unwrap().insert_at_room_mention(vec![]),
+            self.inner.lock().unwrap().insert_at_room_mention(&[]),
         ))
     }
 
@@ -297,11 +266,9 @@ impl ComposerModel {
         text: String,
         _attributes: Vec<Attribute>, // TODO remove attributes
     ) -> Arc<ComposerUpdate> {
-        let url = Utf16String::from_str(&url);
-        let text = Utf16String::from_str(&html_escape::encode_safe(&text));
-        let attrs = vec![];
+        let escaped = html_escape::encode_safe(&text).to_string();
         Arc::new(ComposerUpdate::from(
-            self.inner.lock().unwrap().insert_mention(url, text, attrs),
+            self.inner.lock().unwrap().insert_mention(&url, &escaped, &[]),
         ))
     }
 
@@ -312,12 +279,11 @@ impl ComposerModel {
         suggestion: SuggestionPattern,
     ) -> Arc<ComposerUpdate> {
         let suggestion = wysiwyg::SuggestionPattern::from(suggestion);
-        let attrs = vec![];
         Arc::new(ComposerUpdate::from(
             self.inner
                 .lock()
                 .unwrap()
-                .insert_at_room_mention_at_suggestion(suggestion, attrs),
+                .insert_at_room_mention_at_suggestion(&suggestion, &[]),
         ))
     }
 
@@ -330,15 +296,13 @@ impl ComposerModel {
         suggestion: SuggestionPattern,
         _attributes: Vec<Attribute>, // TODO remove attributes
     ) -> Arc<ComposerUpdate> {
-        let url = Utf16String::from_str(&url);
-        let text = Utf16String::from_str(&html_escape::encode_safe(&text));
+        let escaped = html_escape::encode_safe(&text).to_string();
         let suggestion = wysiwyg::SuggestionPattern::from(suggestion);
-        let attrs = vec![];
         Arc::new(ComposerUpdate::from(
             self.inner
                 .lock()
                 .unwrap()
-                .insert_mention_at_suggestion(url, text, suggestion, attrs),
+                .insert_mention_at_suggestion(&url, &escaped, &suggestion, &[]),
         ))
     }
 
@@ -357,20 +321,23 @@ impl ComposerModel {
     }
 
     pub fn to_example_format(self: &Arc<Self>) -> String {
-        self.inner.lock().unwrap().to_example_format()
+        // Not available on AutomergeModel — return the HTML representation instead
+        self.inner.lock().unwrap().get_content_as_html()
     }
 
     pub fn to_tree(self: &Arc<Self>) -> String {
-        self.inner.lock().unwrap().to_tree().to_string()
+        self.inner.lock().unwrap().to_tree()
     }
 
     pub fn get_current_dom_state(self: &Arc<Self>) -> ComposerState {
-        self.inner
-            .lock()
-            .unwrap()
-            .get_current_state()
-            .clone()
-            .into()
+        let inner = self.inner.lock().unwrap();
+        let html = inner.get_content_as_html();
+        let (start, end) = inner.get_selection();
+        ComposerState {
+            html: html.encode_utf16().collect(),
+            start: u32::try_from(start).unwrap(),
+            end: u32::try_from(end).unwrap(),
+        }
     }
 
     pub fn action_states(
@@ -391,7 +358,7 @@ impl ComposerModel {
     /// Offsets are UTF-16 code units, consistent with select() and replace_text_in().
     pub fn get_block_projections(self: &Arc<Self>) -> Vec<crate::ffi_block_projection::FfiBlockProjection> {
         let inner = self.inner.lock().unwrap();
-        inner.state.dom.get_block_projections()
+        inner.get_block_projections()
             .iter()
             .map(crate::ffi_block_projection::FfiBlockProjection::from)
             .collect()

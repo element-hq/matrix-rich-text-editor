@@ -24,10 +24,10 @@ extension WysiwygComposerTests {
             .action { $0.replaceText(newText: "code") }
             .assertTree(
                 """
-
+                
                 └>code
                   └>\"code\"
-
+                
                 """
             )
     }
@@ -42,12 +42,12 @@ extension WysiwygComposerTests {
             .action { $0.replaceText(newText: "code") }
             .assertTree(
                 """
-
+                
                 ├>strong
                 │ └>"bold"
                 └>code
                   └>"code"
-
+                
                 """
             )
     }

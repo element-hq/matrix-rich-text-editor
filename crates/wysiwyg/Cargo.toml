@@ -14,6 +14,7 @@ rust-version = { workspace = true }
 default = ["sys"]
 js = ["dep:wasm-bindgen", "dep:web-sys"]
 sys = ["dep:html5ever"]
+automerge-backend = ["dep:automerge"]
 assert-invariants = []
 
 [dependencies]
@@ -33,6 +34,7 @@ url="2.3.1"
 email_address="0.2.4"
 regex="1.9.5"
 matrix_mentions = { path = "../matrix_mentions" }
+automerge = { path = "../../../automerge/rust/automerge", features = ["utf16-indexing"], optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 speculoos = "0.11.0"
