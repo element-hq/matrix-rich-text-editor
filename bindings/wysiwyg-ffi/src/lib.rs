@@ -16,6 +16,7 @@ uniffi_macros::include_scaffolding!("wysiwyg_composer");
 
 mod ffi_action_state;
 mod ffi_block_projection;
+mod ffi_collaboration_error;
 mod ffi_composer_action;
 mod ffi_composer_model;
 mod ffi_composer_state;
@@ -37,6 +38,7 @@ pub use crate::ffi_action_state::ActionState;
 pub use crate::ffi_block_projection::{
     FfiAttributeSet, FfiBlockKind, FfiBlockProjection, FfiInlineRun, FfiInlineRunKind,
 };
+pub use crate::ffi_collaboration_error::CollaborationError;
 pub use crate::ffi_composer_action::ComposerAction;
 pub use crate::ffi_composer_model::Attribute;
 pub use crate::ffi_composer_model::ComposerModel;

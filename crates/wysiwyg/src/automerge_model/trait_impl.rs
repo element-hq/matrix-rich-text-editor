@@ -296,6 +296,52 @@ impl ComposerModelInterface for AutomergeModel {
     }
 
     // -------------------------------------------------------------------
+    // Collaboration (CRDT sync)
+    // -------------------------------------------------------------------
+
+    fn save_document(&mut self) -> Vec<u8> {
+        self.save_document()
+    }
+
+    fn load_document(&mut self, data: &[u8]) -> Result<(), String> {
+        self.load_document(data)
+    }
+
+    fn save_incremental(&mut self) -> Vec<u8> {
+        self.save_incremental()
+    }
+
+    fn save_after(&mut self, heads: &[String]) -> Result<Vec<u8>, String> {
+        self.save_after(heads)
+    }
+
+    fn receive_changes(
+        &mut self,
+        data: &[u8],
+    ) -> Result<ComposerUpdate<String>, String> {
+        self.receive_changes(data)
+    }
+
+    fn merge_remote(
+        &mut self,
+        remote_bytes: &[u8],
+    ) -> Result<ComposerUpdate<String>, String> {
+        self.merge_remote(remote_bytes)
+    }
+
+    fn get_heads(&mut self) -> Vec<String> {
+        self.get_heads()
+    }
+
+    fn get_actor_id(&self) -> String {
+        self.get_actor_id()
+    }
+
+    fn set_actor_id(&mut self, actor_hex: &str) -> Result<(), String> {
+        self.set_actor_id(actor_hex)
+    }
+
+    // -------------------------------------------------------------------
     // Debug
     // -------------------------------------------------------------------
 

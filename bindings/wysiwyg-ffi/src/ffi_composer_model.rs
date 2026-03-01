@@ -5,6 +5,7 @@ use crate::ffi_composer_state::ComposerState;
 use crate::ffi_composer_update::ComposerUpdate;
 use crate::ffi_link_actions::LinkAction;
 use crate::ffi_mentions_state::MentionsState;
+use crate::ffi_collaboration_error::CollaborationError;
 use crate::into_ffi::IntoFfi;
 use crate::{ActionState, ComposerAction, SuggestionPattern};
 
@@ -362,6 +363,117 @@ impl ComposerModel {
             .iter()
             .map(crate::ffi_block_projection::FfiBlockProjection::from)
             .collect()
+    }
+
+    // ------------------------------------------------------------------
+    // Collaboration (CRDT sync)
+    // ------------------------------------------------------------------
+
+    /// Serialise the entire document to a compact binary blob.
+    ///
+    /// Store the returned bytes in Matrix room state or as a file.
+    /// Restore with `load_document()`.
+    pub fn save_document(self: &Arc<Self>) -> Vec<u8> {
+        self.inner.lock().unwrap().save_document()
+    }
+
+    /// Replace the current document state with one loaded from bytes
+    /// previously returned by `save_document()`.
+    pub fn load_document(
+        self: &Arc<Self>,
+        data: Vec<u8>,
+    ) -> Result<(), CollaborationError> {
+        self.inner
+            .lock()
+            .unwrap()
+            .load_document(&data)
+            .map_err(|e| CollaborationError::LoadError { reason: e })
+    }
+
+    /// Return the changes made since the last save.
+    ///
+    /// Send the returned bytes as a Matrix event payload.
+    /// Recipients apply them with `receive_changes()`.
+    /// Returns an empty `Vec` if nothing has changed.
+    pub fn save_incremental(self: &Arc<Self>) -> Vec<u8> {
+        self.inner.lock().unwrap().save_incremental()
+    }
+
+    /// Return the changes made since the given document heads.
+    ///
+    /// `heads` is a list of hex-encoded SHA-256 hashes as returned by
+    /// `get_heads()`.
+    pub fn save_after(
+        self: &Arc<Self>,
+        heads: Vec<String>,
+    ) -> Result<Vec<u8>, CollaborationError> {
+        self.inner
+            .lock()
+            .unwrap()
+            .save_after(&heads)
+            .map_err(|e| CollaborationError::InvalidHeads { reason: e })
+    }
+
+    /// Apply remote changes received from another participant.
+    ///
+    /// `data` can be from `save_document()`, `save_incremental()`, or
+    /// `save_after()`.  Returns a `ComposerUpdate` so the UI can re-render.
+    pub fn receive_changes(
+        self: &Arc<Self>,
+        data: Vec<u8>,
+    ) -> Result<Arc<ComposerUpdate>, CollaborationError> {
+        let update = self
+            .inner
+            .lock()
+            .unwrap()
+            .receive_changes(&data)
+            .map_err(|e| CollaborationError::ReceiveError { reason: e })?;
+        Ok(Arc::new(ComposerUpdate::from(update)))
+    }
+
+    /// Merge a complete remote document into this one.
+    ///
+    /// Useful for reconciling two diverged documents.
+    pub fn merge_remote(
+        self: &Arc<Self>,
+        remote_bytes: Vec<u8>,
+    ) -> Result<Arc<ComposerUpdate>, CollaborationError> {
+        let update = self
+            .inner
+            .lock()
+            .unwrap()
+            .merge_remote(&remote_bytes)
+            .map_err(|e| CollaborationError::MergeError { reason: e })?;
+        Ok(Arc::new(ComposerUpdate::from(update)))
+    }
+
+    /// Get the current document heads as hex-encoded SHA-256 hashes.
+    ///
+    /// Include these in your Matrix event so recipients can compute
+    /// the minimal delta with `save_after()`.
+    pub fn get_heads(self: &Arc<Self>) -> Vec<String> {
+        self.inner.lock().unwrap().get_heads()
+    }
+
+    /// Get the Automerge actor ID as a hex string.
+    pub fn get_actor_id(self: &Arc<Self>) -> String {
+        self.inner.lock().unwrap().get_actor_id()
+    }
+
+    /// Set the Automerge actor ID.
+    ///
+    /// Pass a hex-encoded byte string. A good choice is the user's
+    /// Matrix device ID or `{user_id}:{device_id}` encoded as hex.
+    /// Must be called **before** any mutations.
+    pub fn set_actor_id(
+        self: &Arc<Self>,
+        actor_hex: String,
+    ) -> Result<(), CollaborationError> {
+        self.inner
+            .lock()
+            .unwrap()
+            .set_actor_id(&actor_hex)
+            .map_err(|e| CollaborationError::InvalidActorId { reason: e })
     }
 
     /// Force a panic for test purposes

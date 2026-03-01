@@ -23,6 +23,7 @@ crate-type = ["cdylib", "staticlib"]
 # ../../examples/example-android/app/build.gradle
 html-escape = "0.2.11"
 matrix_mentions = { path = "../../crates/matrix_mentions" }
+thiserror = "2.0"
 uniffi = { workspace = true }
 uniffi_macros = { workspace = true }
 widestring = "1.0.2"
