@@ -18,7 +18,10 @@ import {
     getCurrentSelection,
     refreshComposerView,
     replaceEditor,
+    selectContent,
 } from '../dom';
+import { renderProjections, BlockProjection } from '../blockProjection';
+import { computePrefixSuffixDiff } from '../inlineReconciliation';
 import {
     type BlockType,
     type FormattingFunctions,
@@ -168,6 +171,7 @@ export function extractActionStates(
  * @param {HTMLElement | null} modelNode
  * @param {TestUtilities} testUtilities
  * @param {FormattingFunctions} formattingFunctions
+ * @param {string} committedText - last plain text committed to the editor via renderProjections
  * @param {InputEventProcessor} inputEventProcessor
  * @returns
  */
@@ -179,6 +183,7 @@ export function handleInput(
     testUtilities: TestUtilities,
     formattingFunctions: FormattingFunctions,
     suggestion: SuggestionPattern | null,
+    committedTextRef: { current: string },
     inputEventProcessor?: InputEventProcessor,
     emojiSuggestions?: Map<string, string>,
 ):
@@ -199,19 +204,32 @@ export function handleInput(
         emojiSuggestions,
     );
     if (update) {
-        const repl = update.text_update().replace_all;
+        const textUpdate = update.text_update();
+        const repl = textUpdate.replace_all;
+        const sel = textUpdate.select;
+
         if (repl) {
-            replaceEditor(
-                editor,
-                repl.replacement_html,
-                repl.start_utf16_codeunit,
-                repl.end_utf16_codeunit,
-            );
+            // Use projection-based rendering instead of innerHTML assignment.
+            const projections = (composerModel as any).get_block_projections?.() as BlockProjection[] | undefined;
+            if (projections) {
+                committedTextRef.current = renderProjections(projections, editor);
+                selectContent(editor, repl.start_utf16_codeunit, repl.end_utf16_codeunit);
+            } else {
+                // Fallback to legacy HTML path if projection API unavailable.
+                replaceEditor(
+                    editor,
+                    repl.replacement_html,
+                    repl.start_utf16_codeunit,
+                    repl.end_utf16_codeunit,
+                );
+            }
             testUtilities.setEditorHtml(repl.replacement_html);
+        } else if (sel) {
+            // Selection-only update: just move the cursor.
+            selectContent(editor, sel.start_utf16_codeunit, sel.end_utf16_codeunit);
         }
         editor.focus();
 
-        // Only when
         if (modelNode) {
             refreshComposerView(modelNode, composerModel);
         }
@@ -235,6 +253,56 @@ export function handleInput(
 
         return res;
     }
+}
+
+/**
+ * Reconcile the browser's current `editor.textContent` with the last
+ * committed text, then feed the minimal diff into `composerModel.replace_text_in()`.
+ *
+ * This is the equivalent of `WysiwygComposerViewModel.reconcileNative()` on iOS.
+ * It is called after the browser has applied a plain-text edit that wasn't
+ * intercepted by a structural handler (enter, backspace, formatting).
+ *
+ * Because `renderProjections()` guarantees 1:1 UTF-16 offsets between
+ * `editor.textContent` and the Rust model, the diff offsets can be sent
+ * directly to Rust without any HTML range translation.
+ *
+ * @returns updated committed text, or undefined if no change was detected
+ */
+export function reconcileNative(
+    editor: HTMLElement,
+    composerModel: ComposerModel,
+    committedTextRef: { current: string },
+): string | undefined {
+    const newText = editor.textContent ?? '';
+    const oldText = committedTextRef.current;
+
+    if (oldText === newText) return undefined;
+
+    const diff = computePrefixSuffixDiff(oldText, newText);
+
+    // Push the diff into Rust.
+    (composerModel as any).replace_text_in?.(
+        diff.replacement,
+        diff.replaceStart,
+        diff.replaceEnd,
+    );
+
+    // Re-render from the updated model.
+    const projections = (composerModel as any).get_block_projections?.() as BlockProjection[] | undefined;
+    if (projections) {
+        committedTextRef.current = renderProjections(projections, editor);
+    }
+
+    // Resync cursor — 1:1 UTF-16 offsets mean we can use the raw text offset.
+    const sel = document.getSelection();
+    if (sel && sel.rangeCount > 0) {
+        const [start, end] = getCurrentSelection(editor, sel);
+        const selUpdate = composerModel.select(start, end);
+        void selUpdate; // action states handled by the selectionchange listener
+    }
+
+    return committedTextRef.current;
 }
 
 /**

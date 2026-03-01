@@ -187,15 +187,33 @@ impl ComposerModel {
         )
     }
 
-    pub fn replace_html(
+    /// Replace the UTF-16 range `[start_utf16_codeunit, end_utf16_codeunit)` with
+    /// `new_text`.  Used by the web reconciliation path after a prefix/suffix diff.
+    pub fn replace_text_in(
         &mut self,
-        new_html: &str,
-        external_source: HtmlSource,
+        new_text: &str,
+        start_utf16_codeunit: u32,
+        end_utf16_codeunit: u32,
     ) -> ComposerUpdate {
-        ComposerUpdate::from(self.inner.replace_html(
-            Utf16String::from_str(new_html),
-            external_source.into(),
+        ComposerUpdate::from(self.inner.replace_text_in(
+            Utf16String::from_str(new_text),
+            usize::try_from(start_utf16_codeunit).unwrap(),
+            usize::try_from(end_utf16_codeunit).unwrap(),
         ))
+    }
+
+    /// Returns a flat list of block projections describing the current document
+    /// structure.  Each projection carries the block kind, UTF-16 offsets, and
+    /// the inline runs within that block.
+    ///
+    /// Serialised as a JS `Array` of plain objects for easy TypeScript consumption.
+    pub fn get_block_projections(&self) -> js_sys::Array {
+        let projections = self.inner.state.dom.get_block_projections();
+        let arr = js_sys::Array::new();
+        for p in &projections {
+            arr.push(&block_projection_to_js(p));
+        }
+        arr
     }
 
     pub fn replace_text_suggestion(
@@ -401,6 +419,111 @@ impl ComposerModel {
     pub fn remove_links(&mut self) -> ComposerUpdate {
         ComposerUpdate::from(self.inner.remove_links())
     }
+}
+
+// ─── BlockProjection serialisation helpers ───────────────────────────────────
+// We serialise the projection tree as plain JS objects (not wasm_bindgen
+// structs) because wasm_bindgen has limitations with nested generic types.
+// TypeScript consumers use the companion type declarations in
+// `platforms/web/lib/blockProjection.ts`.
+
+fn block_projection_to_js(p: &wysiwyg::BlockProjection) -> JsValue {
+    let obj = js_sys::Object::new();
+    js_set(&obj, "blockId", &handle_to_js_string(&p.block_id));
+    js_set(&obj, "kind", &block_kind_to_js(&p.kind));
+    js_set(&obj, "inQuote", &JsValue::from_bool(p.in_quote));
+    js_set(&obj, "startUtf16", &JsValue::from_f64(p.start_utf16 as f64));
+    js_set(&obj, "endUtf16", &JsValue::from_f64(p.end_utf16 as f64));
+    let runs = js_sys::Array::new();
+    for r in &p.inline_runs {
+        runs.push(&inline_run_to_js(r));
+    }
+    js_set(&obj, "inlineRuns", &runs);
+    obj.into()
+}
+
+fn block_kind_to_js(k: &wysiwyg::BlockKind) -> JsValue {
+    let obj = js_sys::Object::new();
+    match k {
+        wysiwyg::BlockKind::Paragraph => {
+            js_set(&obj, "type", &JsValue::from_str("paragraph"));
+        }
+        wysiwyg::BlockKind::Quote => {
+            js_set(&obj, "type", &JsValue::from_str("quote"));
+        }
+        wysiwyg::BlockKind::CodeBlock => {
+            js_set(&obj, "type", &JsValue::from_str("codeBlock"));
+        }
+        wysiwyg::BlockKind::ListItem { list_type, depth } => {
+            let type_str = match list_type {
+                wysiwyg::ListType::Ordered => "listItemOrdered",
+                wysiwyg::ListType::Unordered => "listItemUnordered",
+            };
+            js_set(&obj, "type", &JsValue::from_str(type_str));
+            js_set(&obj, "depth", &JsValue::from_f64(*depth as f64));
+        }
+        wysiwyg::BlockKind::Generic => {
+            js_set(&obj, "type", &JsValue::from_str("generic"));
+        }
+    }
+    obj.into()
+}
+
+fn inline_run_to_js(r: &wysiwyg::InlineRun) -> JsValue {
+    let obj = js_sys::Object::new();
+    js_set(&obj, "nodeId", &handle_to_js_string(&r.node_handle));
+    js_set(&obj, "startUtf16", &JsValue::from_f64(r.start_utf16 as f64));
+    js_set(&obj, "endUtf16", &JsValue::from_f64(r.end_utf16 as f64));
+    js_set(&obj, "kind", &inline_run_kind_to_js(&r.kind));
+    obj.into()
+}
+
+fn inline_run_kind_to_js(k: &wysiwyg::InlineRunKind) -> JsValue {
+    let obj = js_sys::Object::new();
+    match k {
+        wysiwyg::InlineRunKind::Text { text, attributes } => {
+            js_set(&obj, "type", &JsValue::from_str("text"));
+            js_set(&obj, "text", &JsValue::from_str(text));
+            js_set(&obj, "attributes", &attribute_set_to_js(attributes));
+        }
+        wysiwyg::InlineRunKind::Mention { url, display_text } => {
+            js_set(&obj, "type", &JsValue::from_str("mention"));
+            js_set(&obj, "url", &JsValue::from_str(url));
+            js_set(&obj, "displayText", &JsValue::from_str(display_text));
+        }
+        wysiwyg::InlineRunKind::LineBreak => {
+            js_set(&obj, "type", &JsValue::from_str("lineBreak"));
+        }
+    }
+    obj.into()
+}
+
+fn attribute_set_to_js(a: &wysiwyg::AttributeSet) -> JsValue {
+    let obj = js_sys::Object::new();
+    js_set(&obj, "bold", &JsValue::from_bool(a.bold));
+    js_set(&obj, "italic", &JsValue::from_bool(a.italic));
+    js_set(&obj, "strikeThrough", &JsValue::from_bool(a.strike_through));
+    js_set(&obj, "underline", &JsValue::from_bool(a.underline));
+    js_set(&obj, "inlineCode", &JsValue::from_bool(a.inline_code));
+    match &a.link_url {
+        Some(url) => js_set(&obj, "linkUrl", &JsValue::from_str(url)),
+        None => js_set(&obj, "linkUrl", &JsValue::null()),
+    }
+    obj.into()
+}
+
+fn handle_to_js_string(handle: &wysiwyg::DomHandle) -> JsValue {
+    let s: String = handle
+        .raw()
+        .iter()
+        .map(|i| i.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    JsValue::from_str(&s)
+}
+
+fn js_set(obj: &js_sys::Object, key: &str, value: &JsValue) {
+    js_sys::Reflect::set(obj, &JsValue::from_str(key), value).unwrap();
 }
 
 #[wasm_bindgen]

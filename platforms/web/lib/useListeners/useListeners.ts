@@ -13,7 +13,7 @@ import {
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { isClipboardEvent, isInputEvent } from './assert';
-import { handleInput, handleKeyDown, handleSelectionChange } from './event';
+import { handleInput, handleKeyDown, handleSelectionChange, reconcileNative } from './event';
 import {
     type FormattingFunctions,
     type AllActionStates,
@@ -51,7 +51,10 @@ export function useListeners(
         suggestion: null,
     });
 
-    const plainTextContentRef = useRef<string>(undefined);
+    const plainTextContentRef = useRef<string>();
+    // committedTextRef tracks the last plain text rendered into the editor via
+    // renderProjections(), used by reconcileNative() for prefix/suffix diffs.
+    const committedTextRef = useRef<string>('');
 
     const [areListenersReady, setAreListenersReady] = useState(false);
 
@@ -85,6 +88,7 @@ export function useListeners(
                     testUtilities,
                     formattingFunctions,
                     state.suggestion,
+                    committedTextRef,
                     inputEventProcessor,
                     emojiSuggestions,
                 );
@@ -125,7 +129,13 @@ export function useListeners(
         // Also skip this if we are composing IME such as inputting accents or CJK
         const onInput = (e: Event): void => {
             if (isInputEvent(e) && !e.isComposing) {
+                // If processInput did not intercept this event (no Rust update),
+                // use reconcileNative() to sync the plain-text diff to Rust.
+                // _handleInput calls processInput; if it returns no result,
+                // we fall through to reconcileNative.
                 _handleInput(e);
+                // reconcileNative is a no-op if committedTextRef already matches.
+                reconcileNative(editorNode, composerModel, committedTextRef);
             }
         };
 
@@ -236,6 +246,7 @@ export function useListeners(
         inputEventProcessor,
         onError,
         plainTextContentRef,
+        committedTextRef,
         state.suggestion,
     ]);
 
