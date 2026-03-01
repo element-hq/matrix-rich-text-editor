@@ -541,7 +541,6 @@ describe('edge cases', () => {
                 before two
               </li>
             </ul>
-            <br />
           </div>
         `);
     });

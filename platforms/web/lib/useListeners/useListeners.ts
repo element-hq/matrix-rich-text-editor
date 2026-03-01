@@ -78,7 +78,7 @@ export function useListeners(
             return;
         }
 
-        const _handleInput = (e: WysiwygInputEvent): void => {
+        const _handleInput = (e: WysiwygInputEvent): boolean => {
             try {
                 const res = handleInput(
                     e,
@@ -117,10 +117,12 @@ export function useListeners(
                     });
                     plainTextContentRef.current =
                         composerModel.get_content_as_plain_text();
+                    return true;
                 }
             } catch {
                 onError(plainTextContentRef.current);
             }
+            return false;
         };
 
         // React uses SyntheticEvent (https://reactjs.org/docs/events.html) and
@@ -129,13 +131,22 @@ export function useListeners(
         // Also skip this if we are composing IME such as inputting accents or CJK
         const onInput = (e: Event): void => {
             if (isInputEvent(e) && !e.isComposing) {
+                const handled = _handleInput(e);
                 // If processInput did not intercept this event (no Rust update),
                 // use reconcileNative() to sync the plain-text diff to Rust.
-                // _handleInput calls processInput; if it returns no result,
-                // we fall through to reconcileNative.
-                _handleInput(e);
-                // reconcileNative is a no-op if committedTextRef already matches.
-                reconcileNative(editorNode, composerModel, committedTextRef);
+                if (!handled) {
+                    const reconcileResult = reconcileNative(
+                        editorNode,
+                        composerModel,
+                        committedTextRef,
+                    );
+                    if (reconcileResult?.content !== undefined) {
+                        setState((prevState) => ({
+                            ...prevState,
+                            content: reconcileResult.content,
+                        }));
+                    }
+                }
             }
         };
 

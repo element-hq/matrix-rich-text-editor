@@ -214,7 +214,7 @@ function buildInlineNode(run: InlineRun): Node {
         const span = document.createElement('span');
         span.setAttribute('data-mention-type', 'user');
         span.setAttribute('href', k.url);
-        span.contentEditable = 'false';
+        span.setAttribute('contenteditable', 'false');
         span.textContent = k.displayText;
         return span;
     }
