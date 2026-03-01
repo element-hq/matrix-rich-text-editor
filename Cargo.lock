@@ -1853,6 +1853,7 @@ version = "2.41.1"
 dependencies = [
  "html-escape",
  "matrix_mentions",
+ "thiserror 2.0.18",
  "uniffi",
  "uniffi_build",
  "uniffi_macros",

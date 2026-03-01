@@ -12,26 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Automerge-backed rich text composer model.
-//!
-//! This module provides [`AutomergeModel`], an implementation of
-//! [`ComposerModelInterface`] backed by an Automerge CRDT document.
-//! Rich text is stored as an Automerge text object with Peritext-style
-//! marks and inline block markers.
+/// Errors that can occur during collaborative editing operations.
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum CollaborationError {
+    #[error("Failed to load document: {reason}")]
+    LoadError { reason: String },
 
-mod base;
-mod block_ops;
-mod block_projections;
-mod collaboration;
-mod content_access;
-mod formatting;
-mod links;
-mod mentions;
-mod selection;
-mod spans_html;
-mod state_query;
-mod text_ops;
-mod trait_impl;
-mod undo_redo;
+    #[error("Failed to receive changes: {reason}")]
+    ReceiveError { reason: String },
 
-pub use base::AutomergeModel;
+    #[error("Failed to merge remote document: {reason}")]
+    MergeError { reason: String },
+
+    #[error("Invalid heads: {reason}")]
+    InvalidHeads { reason: String },
+
+    #[error("Invalid actor ID: {reason}")]
+    InvalidActorId { reason: String },
+}

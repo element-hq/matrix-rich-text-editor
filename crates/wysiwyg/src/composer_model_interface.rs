@@ -269,6 +269,37 @@ pub trait ComposerModelInterface {
     fn action_states(&self) -> HashMap<ComposerAction, ActionState>;
 
     // -----------------------------------------------------------------------
+    // Collaboration (CRDT sync)
+    // -----------------------------------------------------------------------
+
+    /// Serialise the entire document to a compact binary blob.
+    fn save_document(&mut self) -> Vec<u8>;
+
+    /// Replace the current document with one loaded from the given bytes.
+    fn load_document(&mut self, data: &[u8]) -> Result<(), String>;
+
+    /// Return changes since the last save (delta for sending to peers).
+    fn save_incremental(&mut self) -> Vec<u8>;
+
+    /// Return changes since the given heads (hex-encoded change hashes).
+    fn save_after(&mut self, heads: &[String]) -> Result<Vec<u8>, String>;
+
+    /// Apply remote changes from a peer. Returns an update for re-rendering.
+    fn receive_changes(&mut self, data: &[u8]) -> Result<ComposerUpdate<String>, String>;
+
+    /// Merge a complete remote document into this one.
+    fn merge_remote(&mut self, remote_bytes: &[u8]) -> Result<ComposerUpdate<String>, String>;
+
+    /// Get the current document heads as hex-encoded SHA-256 hashes.
+    fn get_heads(&mut self) -> Vec<String>;
+
+    /// Get the Automerge actor ID as a hex string.
+    fn get_actor_id(&self) -> String;
+
+    /// Set the Automerge actor ID from a hex string.
+    fn set_actor_id(&mut self, actor_hex: &str) -> Result<(), String>;
+
+    // -----------------------------------------------------------------------
     // Debug / introspection
     // -----------------------------------------------------------------------
 
