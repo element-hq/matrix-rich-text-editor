@@ -26,7 +26,7 @@ matrix_mentions = { path = "../../crates/matrix_mentions" }
 uniffi = { workspace = true }
 uniffi_macros = { workspace = true }
 widestring = "1.0.2"
-wysiwyg = { path = "../../crates/wysiwyg" }
+wysiwyg = { path = "../../crates/wysiwyg", features = ["automerge-backend"] }
 
 [build-dependencies]
 uniffi_build = { workspace = true, features = ["builtin-bindgen"] }

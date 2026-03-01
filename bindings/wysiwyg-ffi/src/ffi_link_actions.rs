@@ -1,10 +1,3 @@
-// Copyright 2025 New Vector Ltd.
-//
-// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
-// Please see LICENSE in the repository root for full details.
-
-use widestring::Utf16String;
-
 #[derive(uniffi::Enum)]
 pub enum LinkAction {
     CreateWithText,
@@ -13,14 +6,12 @@ pub enum LinkAction {
     Disabled,
 }
 
-impl From<wysiwyg::LinkAction<Utf16String>> for LinkAction {
-    fn from(inner: wysiwyg::LinkAction<Utf16String>) -> Self {
+impl From<wysiwyg::LinkAction<String>> for LinkAction {
+    fn from(inner: wysiwyg::LinkAction<String>) -> Self {
         match inner {
             wysiwyg::LinkAction::CreateWithText => Self::CreateWithText,
             wysiwyg::LinkAction::Create => Self::Create,
-            wysiwyg::LinkAction::Edit(url) => Self::Edit {
-                url: url.to_string(),
-            },
+            wysiwyg::LinkAction::Edit(url) => Self::Edit { url },
             wysiwyg::LinkAction::Disabled => Self::Disabled,
         }
     }
@@ -32,8 +23,8 @@ pub enum LinkActionUpdate {
     Update { link_action: LinkAction },
 }
 
-impl From<wysiwyg::LinkActionUpdate<Utf16String>> for LinkActionUpdate {
-    fn from(inner: wysiwyg::LinkActionUpdate<Utf16String>) -> Self {
+impl From<wysiwyg::LinkActionUpdate<String>> for LinkActionUpdate {
+    fn from(inner: wysiwyg::LinkActionUpdate<String>) -> Self {
         match inner {
             wysiwyg::LinkActionUpdate::Keep => Self::Keep,
             wysiwyg::LinkActionUpdate::Update(action) => Self::Update {

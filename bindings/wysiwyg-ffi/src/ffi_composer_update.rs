@@ -1,10 +1,3 @@
-// Copyright 2025 New Vector Ltd.
-//
-// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
-// Please see LICENSE in the repository root for full details.
-
-use widestring::Utf16String;
-
 use crate::ffi_link_actions::LinkActionUpdate;
 use crate::ffi_menu_state::MenuState;
 use crate::ffi_text_update::TextUpdate;
@@ -12,11 +5,11 @@ use crate::MenuAction;
 
 #[derive(uniffi::Object)]
 pub struct ComposerUpdate {
-    inner: wysiwyg::ComposerUpdate<Utf16String>,
+    inner: wysiwyg::ComposerUpdate<String>,
 }
 
 impl ComposerUpdate {
-    pub fn from(inner: wysiwyg::ComposerUpdate<Utf16String>) -> Self {
+    pub fn from(inner: wysiwyg::ComposerUpdate<String>) -> Self {
         Self { inner }
     }
 }
