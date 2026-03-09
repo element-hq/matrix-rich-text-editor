@@ -7,18 +7,21 @@ on:
     branches:
       - 'main'
 
+permissions: {}
+
 jobs:
   tag_release:
     if: ${{ github.event.pull_request.merged == true && startsWith( github.head_ref, 'version-' ) }}
     runs-on: ubuntu-latest
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           token: ${{ secrets.PAT }}
+          persist-credentials: false
 
       - name: Get Version
-        uses: mad9000/actions-find-and-replace-string@5
+        uses: mad9000/actions-find-and-replace-string@bce4d50390d08b67e1822bd72fb54b3cf11b0ce9 # v5.0
         id: get-version
         with:
           source: ${{ github.head_ref }}
@@ -26,7 +29,7 @@ jobs:
           replace: ''
 
       - name: Add Tag
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
         with:
           github_token: ${{ secrets.PAT }}
           custom_tag: ${{steps.get-version.outputs.value}}
