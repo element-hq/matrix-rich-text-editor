@@ -21,15 +21,15 @@ jobs:
     if: |
       github.event_name == 'push' ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'iOS'))  
-    runs-on: macos-14
+    runs-on: macos-26
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
-    - name: Set Xcode 15.4
-      run: sudo xcode-select -switch /Applications/Xcode_15.4.app
+    - name: Set Xcode 26.1
+      run: sudo xcode-select -switch /Applications/Xcode_26.1.app
 
     - name: Install xcresultparser
       run: brew install a7ex/homebrew-formulae/xcresultparser
