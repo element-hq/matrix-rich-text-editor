@@ -37,7 +37,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@03e268b84870ac3cfa58a44d9b504511b732a857 # cargo-llvm-cov
+      uses: taiki-e/install-action@8a8ecf49de4feac160d13668bc406fe17413c1bf # cargo-llvm-cov
     - name: Generate code coverage
       run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
     - name: Upload coverage to Codecov
