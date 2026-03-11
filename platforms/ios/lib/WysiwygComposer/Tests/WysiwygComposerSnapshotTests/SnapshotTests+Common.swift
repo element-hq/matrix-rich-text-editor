@@ -11,7 +11,7 @@ import SnapshotTesting
 final class CommonSnapshotTests: SnapshotTests {
     func testClearState() throws {
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )
@@ -20,7 +20,7 @@ final class CommonSnapshotTests: SnapshotTests {
     func testPlainTextContent() throws {
         viewModel.setHtmlContent("Test")
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )
