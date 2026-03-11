@@ -78,7 +78,7 @@ jobs:
 
     - name: Collect coverage
       working-directory: platforms/ios/example
-      run: xcresultparser -q -o cobertura -t Wysiwyg -p $(pwd) ui-tests.xcresult > ui-tests.xml 
+      run: xcresultparser -q -o cobertura -p $(pwd) ui-tests.xcresult > ui-tests.xml
 
     - name: Upload ui test coverage to Codecov
       uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
