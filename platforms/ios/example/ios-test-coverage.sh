@@ -6,7 +6,7 @@ xcodebuild \
   -project Wysiwyg.xcodeproj \
   -scheme WysiwygComposerTests \
   -sdk iphonesimulator \
-  -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+  -destination 'platform=iOS Simulator,name=Snapshots,OS=26.1' \
   -derivedDataPath ./DerivedData \
   -resultBundlePath tests.xcresult \
   -enableCodeCoverage YES \
