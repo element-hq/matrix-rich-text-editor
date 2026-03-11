@@ -159,7 +159,7 @@ public class WysiwygTextView: UITextView {
                                                          action: #selector(keyCommandAction)) }
     }
     
-    // This needs to be handled here, if the selector was directly added to the WysiwygKeyCommand it would not work properly.
+    /// This needs to be handled here, if the selector was directly added to the WysiwygKeyCommand it would not work properly.
     @objc private func keyCommandAction(sender: UIKeyCommand) {
         wysiwygDelegate?.keyCommands?.first(where: { $0.input == sender.input && $0.modifierFlags == sender.modifierFlags })?.action()
     }

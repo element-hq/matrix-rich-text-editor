@@ -297,8 +297,7 @@ public extension WysiwygComposerViewModel {
     func updateCompressedHeightIfNeeded() {
         let idealTextHeight = textView
             .sizeThatFits(CGSize(width: textView.bounds.size.width,
-                                 height: CGFloat.greatestFiniteMagnitude)
-            )
+                                 height: CGFloat.greatestFiniteMagnitude))
             .height
 
         compressedHeight = min(maxCompressedHeight, max(minHeight, idealTextHeight))

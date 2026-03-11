@@ -10,7 +10,7 @@ import XCTest
 
 extension WysiwygUITests {
     /// Type a text and delete some different kind of text selections with the composer.
-    func testTypingAndDeleting() throws {
+    func testTypingAndDeleting() {
         // Type something into composer.
         textView.typeTextCharByChar("abc🎉🎉👩🏿‍🚀")
         assertTextViewContent("abc🎉🎉👩🏿‍🚀")
@@ -45,7 +45,7 @@ extension WysiwygUITests {
     ///
     /// Expected plain text content is "Some bold text" and
     /// HTML representation is "Some bold <strong>text</strong>"
-    func testTypingAndSending() throws {
+    func testTypingAndSending() {
         // Type something into composer.
         textView.typeTextCharByChar("Some bold text")
 
@@ -62,8 +62,8 @@ extension WysiwygUITests {
         XCTAssertEqual(staticText(.htmlContentText).label, "Some bold <strong>text</strong>")
     }
 
-    // Remember to disable hardware keyboard and use only software keyboard for this UITest
-    func testTypingFast() throws {
+    /// Remember to disable hardware keyboard and use only software keyboard for this UITest
+    func testTypingFast() {
         let text = "Some long text that I am going to type very fast"
         textView.tap()
         sleep(1)
@@ -74,7 +74,7 @@ extension WysiwygUITests {
         assertTextViewContent(text)
     }
 
-    func testLongPressDelete() throws {
+    func testLongPressDelete() {
         let multilineText =
             """
             test1

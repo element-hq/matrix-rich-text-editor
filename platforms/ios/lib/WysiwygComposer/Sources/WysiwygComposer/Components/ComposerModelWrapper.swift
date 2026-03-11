@@ -181,14 +181,12 @@ private extension ComposerModelWrapper {
     /// Execute some failable action on the model and restore provided fallback content if needed.
     func execute(_ action: @escaping (ComposerModel) throws -> ComposerUpdate) -> ComposerUpdate {
         do {
-            let update = try action(model)
-            return update
+            return try action(model)
         } catch {
             model = newComposerModel()
             if let fallbackContent = delegate?.fallbackContent() {
                 do {
-                    let update = try model.replaceText(newText: fallbackContent)
-                    return update
+                    return try model.replaceText(newText: fallbackContent)
                 } catch {
                     // If setting the fallback content fails, just reset to empty.
                     model = newComposerModel()

@@ -9,7 +9,7 @@
 import XCTest
 
 extension WysiwygUITests {
-    func testCodeBlock() throws {
+    func testCodeBlock() {
         // Type something into composer.
         textView.typeTextCharByChar("Some text")
         button(.codeBlockButton).tap()

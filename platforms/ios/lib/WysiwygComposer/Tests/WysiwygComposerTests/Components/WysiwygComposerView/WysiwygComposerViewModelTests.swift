@@ -19,7 +19,7 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         viewModel.clearContent()
     }
 
-    func testIsContentEmpty() throws {
+    func testIsContentEmpty() {
         XCTAssertTrue(viewModel.isContentEmpty)
 
         let expectFalse = expectContentEmpty(false)
@@ -65,20 +65,20 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isContentEmpty)
     }
 
-    func testSimpleTextInputIsAccepted() throws {
+    func testSimpleTextInputIsAccepted() {
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "A")
         XCTAssertTrue(shouldChange)
     }
 
-    func testSimpleTextInputIsNotAccepted() throws {
+    func testSimpleTextInputIsNotAccepted() {
         viewModel.shouldReplaceText = false
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "A")
         XCTAssertFalse(shouldChange)
     }
 
-    func testNewlineIsNotAccepted() throws {
+    func testNewlineIsNotAccepted() {
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "\n")
         XCTAssertFalse(shouldChange)
