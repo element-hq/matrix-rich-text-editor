@@ -41,7 +41,28 @@ extension WysiwygUITests {
 
         // Sometimes autocorrection can break capitalisation, so we need to make sure the first letter is lowercase
         app.keyboards.buttons["shift"].tap()
-        app.typeTextCharByCharUsingKeyboard("hello how")
+        app.typeTextCharByCharUsingKeyboard("hello how ")
+        // We assert both the tree and textview content because the text view is containing the predictive text at that moment
+        // Which in the ui test is seen as part of the static text
+        assertTextViewContent("hello how are you")
+        assertTreeEquals(
+            """
+            └>"hello how "
+            """
+        )
+        button(.sendButton).tap()
+        sleep(1)
+        assertContentText(plainText: "hello how ", htmlText: "hello how ")
+    }
+    
+    func testInlinePredictiveTextIsIgnoredWhenDeleting() {
+        sleep(1)
+        setupKeyboard(.englishQWERTY)
+
+        // Sometimes autocorrection can break capitalisation, so we need to make sure the first letter is lowercase
+        app.keyboards.buttons["shift"].tap()
+        app.typeTextCharByCharUsingKeyboard("hello how ")
+        app.keys["delete"].tap()
         // We assert both the tree and textview content because the text view is containing the predictive text at that moment
         // Which in the ui test is seen as part of the static text
         assertTextViewContent("hello how are you")
@@ -53,27 +74,6 @@ extension WysiwygUITests {
         button(.sendButton).tap()
         sleep(1)
         assertContentText(plainText: "hello how", htmlText: "hello how")
-    }
-    
-    func testInlinePredictiveTextIsIgnoredWhenDeleting() {
-        sleep(1)
-        setupKeyboard(.englishQWERTY)
-
-        // Sometimes autocorrection can break capitalisation, so we need to make sure the first letter is lowercase
-        app.keyboards.buttons["shift"].tap()
-        app.typeTextCharByCharUsingKeyboard("hello how")
-        app.keys["delete"].tap()
-        // We assert both the tree and textview content because the text view is containing the predictive text at that moment
-        // Which in the ui test is seen as part of the static text
-        assertTextViewContent("hello how are you")
-        assertTreeEquals(
-            """
-            └>"hello ho"
-            """
-        )
-        button(.sendButton).tap()
-        sleep(1)
-        assertContentText(plainText: "hello ho", htmlText: "hello ho")
     }
     
     func testDoubleSpaceIntoDot() {
@@ -169,17 +169,16 @@ extension WysiwygUITests {
     private func addKeyboardToSettings(keyboard: TestKeyboard) {
         let settingsApp = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
         settingsApp.launch()
-        
-        settingsApp.tables.cells.staticTexts["General"].tap()
+        settingsApp.collectionViews.cells.staticTexts["General"].tap()
         settingsApp.tables.cells.staticTexts["Keyboard"].tap()
         settingsApp.tables.cells.staticTexts["Keyboards"].tap()
         if settingsApp.tables.cells.staticTexts[keyboard.keyboardIdentifier].exists {
             return
         }
-        settingsApp.tables.cells.staticTexts["AddNewKeyboard"].tap()
+        settingsApp.tables.cells.buttons["AddNewKeyboard"].tap()
         settingsApp.tables.cells.staticTexts[keyboard.localeIdentifier].tap()
         if keyboard.hasSubSelection {
-            settingsApp.tables.cells.staticTexts[keyboard.keyboardIdentifier].tap()
+            settingsApp.tables.cells[keyboard.keyboardIdentifier].tap()
         }
         settingsApp.buttons["Done"].tap()
         sleep(1)

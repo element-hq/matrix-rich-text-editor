@@ -50,6 +50,8 @@ extension WysiwygUITests {
         textView.typeTextCharByChar("Some bold text")
 
         textView.doubleTap()
+        // This dismisses the edit menu which could interfere with the test.
+        textView.tap()
         // 1s is more than enough for the Rust side to get notified for the selection.
         sleep(1)
         button(.boldButton).tap()
