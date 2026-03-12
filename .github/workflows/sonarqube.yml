@@ -4,7 +4,9 @@ on:
     workflows: 
       - React build
     types:
-      - completed
+      - completed # zizmor: ignore[dangerous-triggers]
+
+permissions: {}
 
 concurrency:
   group: ${{ github.ref == 'refs/heads/main' && format('sonarqube-main-{0}', github.sha) || format('sonarqube-pr-{0}', github.ref)  }}
@@ -17,7 +19,7 @@ jobs:
     steps:
       # We create the status here and then update it to success/failure in the `report` stage
       # This provides an easy link to this workflow_run from the PR before Cypress is done.
-      - uses: Sibz/github-status-action@v1
+      - uses: guibranco/github-status-action-v2@631f55ea0251f0fb284525ad86c30e9f7a8dd284 # v1.1.14
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
           state: pending
@@ -27,7 +29,7 @@ jobs:
 
       - name: "🩻 SonarCloud Scan"
         id: sonarcloud
-        uses: matrix-org/sonarcloud-workflow-action@v4.0
+        uses: matrix-org/sonarcloud-workflow-action@820f7c2e9e94ba9e35add0f739691e5c7e23fa25 # 4.0
         with:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
           is_pr: ${{ github.event.workflow_run.event == 'pull_request' }}
@@ -39,7 +41,7 @@ jobs:
           coverage_workflow_name: react-build.yml
           coverage_extract_path: coverage
 
-      - uses: Sibz/github-status-action@v1
+      - uses: guibranco/github-status-action-v2@631f55ea0251f0fb284525ad86c30e9f7a8dd284 # v1.1.14
         if: always()
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}

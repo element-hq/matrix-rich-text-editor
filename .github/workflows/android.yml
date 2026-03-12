@@ -8,6 +8,8 @@ on:
     types: [ labeled, synchronize, opened, reopened ]
   workflow_dispatch:
 
+permissions: {}
+
 # Enrich gradle.properties for CI/CD
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
@@ -39,17 +41,18 @@ jobs:
           echo "Contents:"
           find $ANDROID_NDK_TOOLCHAIN_DIR -maxdepth 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '21'
 
       - name: Rust & Cargo cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-on-failure: true
 
@@ -57,7 +60,7 @@ jobs:
         run: make targets-android
 
       - name: Setup Gradle & Build test cases
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
           build-root-directory: platforms/android
           cache-read-only: false
@@ -69,7 +72,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Run all tests with coverage
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@b530d96654c385303d652368551fb075bc2f0b6b # v2.35.0
         with:
           working-directory: platforms/android
           api-level: ${{ matrix.api-level }}
@@ -85,7 +88,7 @@ jobs:
 
       - name : Upload test results
         if : ${{ always() }}
-        uses : actions/upload-artifact@v4
+        uses : actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with :
           name : android-test-results-${{ matrix.api-level }}
           path : |
@@ -94,7 +97,7 @@ jobs:
             ./**/build/reports/screenshots/**
 
       - name: Upload unit test coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           files: build/reports/jacoco/generateUnitTestCoverageReport/generateUnitTestCoverageReport.xml
           fail_ci_if_error: false
@@ -103,7 +106,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload instrumentation test coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           files: build/reports/jacoco/generateInstrumentationTestCoverageReport/generateInstrumentationTestCoverageReport.xml
           fail_ci_if_error: false

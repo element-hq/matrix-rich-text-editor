@@ -10,7 +10,7 @@
 import XCTest
 
 final class StringLatinLangugesTests: XCTestCase {
-    func testLatinLangugeCharacters() throws {
+    func testLatinLangugeCharacters() {
         XCTAssertTrue("hello".containsLatinAndCommonCharactersOnly)
         XCTAssertTrue("helló".containsLatinAndCommonCharactersOnly)
         XCTAssertTrue("helló, ".containsLatinAndCommonCharactersOnly)

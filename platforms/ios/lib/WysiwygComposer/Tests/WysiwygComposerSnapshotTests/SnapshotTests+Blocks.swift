@@ -12,7 +12,7 @@ final class BlocksSnapshotTests: SnapshotTests {
     func testInlineCodeContent() throws {
         viewModel.setHtmlContent("<code>test</code>")
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )
@@ -21,7 +21,7 @@ final class BlocksSnapshotTests: SnapshotTests {
     func testCodeBlockContent() throws {
         viewModel.setHtmlContent("<pre><code>if snapshot {\n\treturn true\n}</code></pre>")
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )
@@ -30,7 +30,7 @@ final class BlocksSnapshotTests: SnapshotTests {
     func testQuoteContent() throws {
         viewModel.setHtmlContent("<blockquote>Some quote with<br/><br/><br/><br/>line breaks inside</blockquote>")
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )
@@ -53,7 +53,7 @@ final class BlocksSnapshotTests: SnapshotTests {
             """
         )
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )

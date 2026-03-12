@@ -11,11 +11,13 @@ import XCTest
 extension WysiwygUITests {
     /// Type a text and make it bold in the composer.
     /// A screenshot is saved since string attributes can't be read from this context.
-    func testTypingAndBolding() throws {
+    func testTypingAndBolding() {
         // Type something into composer.
         textView.typeTextCharByChar("Some bold text")
 
         textView.doubleTap()
+        // This dismisses the edit menu which could interfere with the test.
+        textView.tap()
         // We can't detect data being properly reported back to the model but
         // 1s is more than enough for the Rust side to get notified for the selection.
         sleep(1)

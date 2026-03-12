@@ -10,7 +10,7 @@
 import XCTest
 
 extension WysiwygComposerViewModelTests {
-    func testAutocorrectionIsDisabled() throws {
+    func testAutocorrectionIsDisabled() {
         mockTrailingTyping("/")
         assertAutocorrectDisabled()
 
@@ -21,7 +21,7 @@ extension WysiwygComposerViewModelTests {
         assertAutocorrectDisabled()
     }
 
-    func testAutocorrectionIsEnabled() throws {
+    func testAutocorrectionIsEnabled() {
         mockTrailingTyping("Just some text")
         assertAutoCorrectEnabled()
 
@@ -29,12 +29,12 @@ extension WysiwygComposerViewModelTests {
         assertAutoCorrectEnabled()
     }
 
-    func testDoubleSlashKeepAutocorrectionEnabled() throws {
+    func testDoubleSlashKeepAutocorrectionEnabled() {
         mockTrailingTyping("//")
         assertAutoCorrectEnabled()
     }
 
-    func testAutocorrectionIsReEnabled() throws {
+    func testAutocorrectionIsReEnabled() {
         mockTrailingTyping("/")
         assertAutocorrectDisabled()
 

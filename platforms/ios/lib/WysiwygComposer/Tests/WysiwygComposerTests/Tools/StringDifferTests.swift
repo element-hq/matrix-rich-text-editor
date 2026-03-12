@@ -11,32 +11,32 @@
 import XCTest
 
 final class StringDifferTests: XCTestCase {
-    func testNoReplacement() throws {
+    func testNoReplacement() {
         let identicalText = "text"
         XCTAssertNil(StringDiffer.replacement(from: identicalText, to: identicalText))
     }
 
-    func testSimpleRemoval() throws {
+    func testSimpleRemoval() {
         XCTAssertEqual(StringDiffer.replacement(from: "text", to: "te"),
                        .init(location: 2, length: 2, text: "", hasMore: false))
     }
 
-    func testSimpleInsertion() throws {
+    func testSimpleInsertion() {
         XCTAssertEqual(StringDiffer.replacement(from: "te", to: "text"),
                        .init(location: 2, length: 0, text: "xt", hasMore: false))
     }
 
-    func testFullReplacement() throws {
+    func testFullReplacement() {
         XCTAssertEqual(StringDiffer.replacement(from: "wa", to: "わ"),
                        .init(location: 0, length: 2, text: "わ", hasMore: false))
     }
 
-    func testPartialReplacement() throws {
+    func testPartialReplacement() {
         XCTAssertEqual(StringDiffer.replacement(from: "わta", to: "わた"),
                        .init(location: 1, length: 2, text: "た", hasMore: false))
     }
 
-    func testDoubleReplacementIsHandledOneAtTime() throws {
+    func testDoubleReplacementIsHandledOneAtTime() {
         XCTAssertEqual(StringDiffer.replacement(from: "text", to: "fexf"),
                        .init(location: 0, length: 1, text: "f", hasMore: true))
         // Simulate the change
@@ -44,7 +44,7 @@ final class StringDifferTests: XCTestCase {
                        .init(location: 3, length: 1, text: "f", hasMore: false))
     }
 
-    func testNonMatchingRemovalAndInsertionsAreHandledOneAtTime() throws {
+    func testNonMatchingRemovalAndInsertionsAreHandledOneAtTime() {
         XCTAssertEqual(StringDiffer.replacement(from: "text", to: "extab"),
                        .init(location: 0, length: 1, text: "", hasMore: true))
         // Simulate the change
@@ -52,7 +52,7 @@ final class StringDifferTests: XCTestCase {
                        .init(location: 3, length: 0, text: "ab", hasMore: false))
     }
 
-    func testDifferentWhitespacesAreEquivalent() throws {
+    func testDifferentWhitespacesAreEquivalent() {
         let whitespaceCodeUnits = CharacterSet.whitespaces.codePoints()
         let whitespaceString = String(
             String(utf16CodeUnits: whitespaceCodeUnits, count: whitespaceCodeUnits.count)
@@ -63,17 +63,17 @@ final class StringDifferTests: XCTestCase {
                                               to: String(repeating: Character.nbsp, count: whitespaceString.utf16Length)))
     }
 
-    func testDiffingWithLeadingWhitespaces() throws {
+    func testDiffingWithLeadingWhitespaces() {
         XCTAssertEqual(StringDiffer.replacement(from: " text", to: " test"),
                        .init(location: 3, length: 1, text: "s", hasMore: false))
     }
 
-    func testDiffingWithMultipleLeadingWhitespaces() throws {
+    func testDiffingWithMultipleLeadingWhitespaces() {
         XCTAssertEqual(StringDiffer.replacement(from: " \u{00A0} text", to: " \u{00A0} test"),
                        .init(location: 5, length: 1, text: "s", hasMore: false))
     }
 
-    func testDoubleSpaceDotConversion() throws {
+    func testDoubleSpaceDotConversion() {
         XCTAssertEqual(StringDiffer.replacement(from: "a  ", to: "a."),
                        .init(location: 1, length: 2, text: ".", hasMore: false))
     }

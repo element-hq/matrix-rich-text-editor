@@ -4,7 +4,9 @@ on:
   push:
     tags:
       - '*'
-  workflow_dispatch:
+  workflow_dispatch: # zizmor: ignore[dangerous-triggers]
+
+permissions: {}
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError" -Dkotlin.daemon.jvm.options="-Xmx2560m" -Dkotlin.incremental=false
@@ -21,9 +23,10 @@ jobs:
     runs-on: macos-14
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install rust
         run: |
@@ -37,46 +40,50 @@ jobs:
         run: sudo xcode-select -switch /Applications/Xcode_15.4.app
 
       - name: Set SwiftPM Repo credentials
-        uses: de-vri-es/setup-git-credentials@v2
+        uses: de-vri-es/setup-git-credentials@5e1f18da68b7039c7f824408d170811aaec93ca8 # v2.1.2
         with:
           credentials: https://${{secrets.PAT_USER}}:${{secrets.PAT}}@github.com/
 
       - name: Get tag
         id: tag
-        uses: dawidd6/action-get-tag@v1
+        uses: dawidd6/action-get-tag@727a6f0a561be04e09013531e73a3983a65e3479 # v1.1.0
           
       - name: Release iOS
         working-directory: platforms/ios/tools/release
-        run: swift run release --version ${{ steps.tag.outputs.tag }}
+        run: swift run release --version ${STEPS_TAG_OUTPUTS_TAG}
         env:
           SWIFT_RELEASE_TOKEN: ${{ secrets.PAT }}
+          STEPS_TAG_OUTPUTS_TAG: ${{ steps.tag.outputs.tag }}
 
   android:
     name: Publish to maven
     runs-on: ubuntu-latest # No need for macos-latest if there are no UI tests
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: ☕️ Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '21'
 
       - name: 🔧 Rust & Cargo cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
         with:
           cache-on-failure: true
+          lookup-only: true
 
       - name: 🦀 Install Rust targets
         run: make targets-android
 
       - name: ⬆️ Publish to Sonatype
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
+          cache-disabled: true
           build-root-directory: platforms/android
           arguments: publishAndReleaseToMavenCentral
 
@@ -88,15 +95,18 @@ jobs:
       id-token: write
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: 🦀 Build Rust
         run: "make web"
 
       - name: 🔧 Yarn cache
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          cache: "yarn"
+          cache: ""
+          package-manager-cache: false
           cache-dependency-path: platforms/web/yarn.lock
           registry-url: "https://registry.npmjs.org"
 

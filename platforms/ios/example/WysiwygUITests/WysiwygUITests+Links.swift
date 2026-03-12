@@ -58,6 +58,9 @@ extension WysiwygUITests {
         )
 
         textView.doubleTap()
+        // This dismisses the edit menu which could interfere with the test.
+        textView.tap()
+        
         button(.linkButton).tap()
         XCTAssertFalse(textField(.linkTextTextField).exists)
         textField(.linkUrlTextField).typeTextCharByChar("url")

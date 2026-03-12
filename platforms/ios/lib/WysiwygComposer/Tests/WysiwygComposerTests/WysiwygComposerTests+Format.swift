@@ -11,7 +11,7 @@ import HTMLParser
 import XCTest
 
 extension WysiwygComposerTests {
-    func testFormatBold() throws {
+    func testFormatBold() {
         ComposerModelWrapper()
             .action { $0.replaceText(newText: "This is bold text") }
             .action { $0.select(startUtf16Codeunit: 8, endUtf16Codeunit: 12) }

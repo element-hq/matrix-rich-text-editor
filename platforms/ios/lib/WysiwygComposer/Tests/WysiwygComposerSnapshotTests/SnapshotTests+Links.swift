@@ -12,7 +12,7 @@ final class LinksSnapshotTests: SnapshotTests {
     func testLinkContent() throws {
         viewModel.setHtmlContent("<a href=\"https://element.io\">test</a>")
         assertSnapshot(
-            matching: hostingController,
+            of: hostingController,
             as: .image(on: .iPhone13),
             record: isRecord
         )

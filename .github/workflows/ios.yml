@@ -7,6 +7,8 @@ on:
     branches: [ "main" ]
     types: [ labeled, synchronize, opened, reopened ]
 
+permissions: {}
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -19,16 +21,21 @@ jobs:
     if: |
       github.event_name == 'push' ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'iOS'))  
-    runs-on: macos-14
+    runs-on: macos-26
 
     steps:
-    - uses: actions/checkout@v4
-    
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
+
+    - name: Set Xcode 26.1
+      run: sudo xcode-select -switch /Applications/Xcode_26.1.app
+
     - name: Install xcresultparser
       run: brew install a7ex/homebrew-formulae/xcresultparser
 
     - name: Rust & Cargo cache
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
       with:
         cache-on-failure: true
 
@@ -40,9 +47,6 @@ jobs:
     - name: Install targets
       run: make targets-ios
             
-    - name: Set Xcode 15.4
-      run: sudo xcode-select -switch /Applications/Xcode_15.4.app
-
     - name: Build framework & bindings
       run: make ios
 
@@ -57,10 +61,10 @@ jobs:
 
     - name: Collect coverage
       working-directory: platforms/ios/example
-      run: xcresultparser -q -o cobertura -t Wysiwyg -p $(pwd) tests.xcresult > tests.xml 
+      run: xcresultparser -q -o cobertura -t WysiwygComposerTests -p $(pwd) tests.xcresult > tests.xml
 
     - name: Upload unit test coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
         files: ./platforms/ios/example/tests.xml
         fail_ci_if_error: true
@@ -74,10 +78,10 @@ jobs:
 
     - name: Collect coverage
       working-directory: platforms/ios/example
-      run: xcresultparser -q -o cobertura -t Wysiwyg -p $(pwd) ui-tests.xcresult > ui-tests.xml 
+      run: xcresultparser -q -o cobertura -p $(pwd) ui-tests.xcresult > ui-tests.xml
 
     - name: Upload ui test coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
         files: ./platforms/ios/example/ui-tests.xml
         fail_ci_if_error: true
