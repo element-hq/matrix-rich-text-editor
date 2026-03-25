@@ -36,6 +36,18 @@ public final class HTMLParser {
         h1,h2,h3 {
             font-size: 1.2em;
         }
+        ul {
+            list-style-type: disc;
+        }
+        ul ul {
+            list-style-type: circle;
+        }
+        ul ul ul {
+            list-style-type: disc;
+        }
+        ul ul ul ul {
+            list-style-type: circle;
+        }
         """
     }
     

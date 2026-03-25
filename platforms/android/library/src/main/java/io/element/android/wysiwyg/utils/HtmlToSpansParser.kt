@@ -201,7 +201,10 @@ internal class HtmlToSpansParser(
 
         val listParent = element.parents().find { it.tagName() == "ul" || it.tagName() == "ol" }
         val span = when (listParent?.tagName()) {
-            "ul" -> UnorderedListSpan(gapWidth, bulletRadius)
+            "ul" -> {
+                val level = element.parents().count { it.tagName() == "ul" } - 1
+                UnorderedListSpan(gapWidth, bulletRadius, level)
+            }
             "ol" -> {
                 val typeface = Typeface.defaultFromStyle(Typeface.NORMAL)
                 val textSize = 16.dpToPx()
