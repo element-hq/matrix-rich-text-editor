@@ -3,6 +3,9 @@
 **/.vscode
 **/.idea
 **/.DS_Store
+# Yarn
+**/.yarn/install-state.gz
+
 # Generated
 /target/
 /bindings/wysiwyg-ffi/.cargo/

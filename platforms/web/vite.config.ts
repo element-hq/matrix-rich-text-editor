@@ -44,6 +44,7 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         setupFiles: 'test.setup.ts',
+        exclude: ['cypress/**', 'node_modules/**'],
         includeSource: ['lib/**/*.{ts,tsx}'],
         coverage: {
             provider: 'v8',

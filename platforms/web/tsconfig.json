@@ -10,7 +10,7 @@
         "strict": true,
         "forceConsistentCasingInFileNames": true,
         "module": "ESNext",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "resolveJsonModule": true,
         "isolatedModules": true,
         "noEmit": true,
@@ -28,7 +28,7 @@
         "strictPropertyInitialization": true,
         "noImplicitThis": true,
         "alwaysStrict": true,
-        "types": ["vitest/globals", "jest"]
+        "types": ["vitest/globals", "jest", "node"]
     },
     "include": ["src", "lib", "./test.setup.ts"],
     "references": [{ "path": "./tsconfig.node.json" }]

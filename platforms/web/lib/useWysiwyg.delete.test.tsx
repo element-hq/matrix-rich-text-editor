@@ -51,7 +51,9 @@ describe('delete content', () => {
         await fillContent();
 
         select(textbox, 2, 2);
-        await userEvent.type(textbox, '{backspace}');
+        // jsdom does not generate input events for contenteditable backspace;
+        // dispatch the input event directly as a real browser would.
+        fireEvent.input(textbox, { inputType: 'deleteContentBackward' });
 
         // Then
         await waitFor(() => {
@@ -68,7 +70,9 @@ describe('delete content', () => {
         await fillContent();
 
         select(textbox, 2, 5);
-        await userEvent.type(textbox, '{backspace}');
+        // jsdom does not generate input events for contenteditable backspace;
+        // dispatch the input event directly as a real browser would.
+        fireEvent.input(textbox, { inputType: 'deleteContentBackward' });
 
         // Then
         await waitFor(() => {
