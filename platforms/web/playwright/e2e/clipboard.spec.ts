@@ -55,6 +55,18 @@ async function selectRange(
     );
 }
 
+/**
+ * Collapse the selection to the end of the editor content.
+ * page.evaluate() can disrupt the editor's selection state on CI runners;
+ * call this after any evaluate that touches the clipboard to restore cursor position.
+ */
+async function collapseSelectionToEnd(page: Page): Promise<void> {
+    await page.locator(editorSelector).evaluate((el) => {
+        const sel = document.getSelection()!;
+        sel.collapse(el, el.childNodes.length);
+    });
+}
+
 test.describe('Clipboard', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
@@ -93,6 +105,7 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('BEFORE');
 
         await page.evaluate(() => navigator.clipboard.writeText('pasted'));
+        await collapseSelectionToEnd(page);
         await page.keyboard.press('ControlOrMeta+v');
         await expect(editor).toContainText('BEFOREpasted');
 
@@ -113,6 +126,7 @@ test.describe('Clipboard', () => {
             const item = new ClipboardItem({ 'text/html': blob });
             await navigator.clipboard.write([item]);
         });
+        await collapseSelectionToEnd(page);
         await page.keyboard.press('ControlOrMeta+v');
         await expect(editor).toContainText('BEFORElink');
 
