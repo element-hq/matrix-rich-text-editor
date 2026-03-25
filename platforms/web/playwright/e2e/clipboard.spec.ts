@@ -74,8 +74,8 @@ test.describe('Clipboard', () => {
         await editor.waitFor();
         await editor.click();
         await expect(editor).toBeFocused();
-        // Warm up the WASM input pipeline — wait for the model to process each event
-        await page.keyboard.type('x');
+        // Verify the WASM input pipeline is ready before running each test
+        await page.keyboard.insertText('x');
         await expect(editor).toContainText('x');
         await page.keyboard.press('Backspace');
         await expect(editor).not.toContainText('x');
@@ -83,7 +83,7 @@ test.describe('Clipboard', () => {
 
     test('cut removes text and places it on clipboard', async ({ page }) => {
         const editor = page.locator(editorSelector);
-        await page.keyboard.type('firstREMOVEME');
+        await page.keyboard.insertText('firstREMOVEME');
         await expect(editor).toContainText('firstREMOVEME');
 
         await selectRange(page, 5, 13);
@@ -94,14 +94,14 @@ test.describe('Clipboard', () => {
         );
         expect(clipboardText).toBe('REMOVEME');
 
-        await page.keyboard.type('last');
+        await page.keyboard.insertText('last');
         await expect(editor).toContainText('last');
         await expect(editor).not.toContainText('REMOVEME');
     });
 
     test('paste displays pasted text after typing', async ({ page }) => {
         const editor = page.locator(editorSelector);
-        await page.keyboard.type('BEFORE');
+        await page.keyboard.insertText('BEFORE');
         await expect(editor).toContainText('BEFORE');
 
         await page.evaluate(() => navigator.clipboard.writeText('pasted'));
@@ -110,13 +110,13 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('BEFOREpasted');
 
         await page.keyboard.press('End');
-        await page.keyboard.type('AFTER');
+        await page.keyboard.insertText('AFTER');
         await expect(editor).toContainText('BEFOREpastedAFTER');
     });
 
     test('paste displays pasted rich text after typing', async ({ page }) => {
         const editor = page.locator(editorSelector);
-        await page.keyboard.type('BEFORE');
+        await page.keyboard.insertText('BEFORE');
         await expect(editor).toContainText('BEFORE');
 
         await page.evaluate(async () => {
@@ -131,7 +131,7 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('BEFORElink');
 
         await page.keyboard.press('End');
-        await page.keyboard.type('AFTER');
+        await page.keyboard.insertText('AFTER');
         await expect(editor).toContainText('BEFORElinkAFTER');
     });
 });
