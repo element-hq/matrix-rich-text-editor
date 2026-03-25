@@ -26,3 +26,7 @@ matrix-rich-text-editor-swift
 
 # tmp folder
 /tmp
+
+# Playwright
+platforms/web/playwright/test-results/
+platforms/web/playwright/html-report/

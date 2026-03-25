@@ -70,9 +70,9 @@ jobs:
             platforms/web/coverage
             !platforms/web/coverage/lcov-report
             !platforms/web/coverage/tmp
+      - name: Install Playwright browsers
+        working-directory: platforms/web
+        run: npx playwright install --with-deps chromium
       - name: Browser Test
-        uses: cypress-io/github-action@bc22e01685c56e89e7813fd8e26f33dc47f87e15 # v7.1.5
-        with:
-          browser: electron
-          working-directory: platforms/web
-          start: yarn dev
+        working-directory: platforms/web
+        run: yarn test:e2e
