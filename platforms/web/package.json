@@ -77,7 +77,14 @@
         "vitest-sonar-reporter": "^3.0.0"
     },
     "dependencies": {
-        "@vector-im/matrix-wysiwyg-wasm": "link:../../bindings/wysiwyg-wasm"
+        "@element-hq/web-shared-components": "link:../../../element-web/packages/shared-components",
+        "@fontsource/inconsolata": "^5.2.8",
+        "@fontsource/inter": "^5.2.8",
+        "@vector-im/compound-design-tokens": "6.9.0",
+        "@vector-im/compound-web": "8.3.6",
+        "@vector-im/matrix-wysiwyg-wasm": "link:../../bindings/wysiwyg-wasm",
+        "classnames": "*",
+        "react-resizable-panels": "^4.6.5"
     },
     "bundledDependencies": [
         "@vector-im/matrix-wysiwyg-wasm"

@@ -13,6 +13,11 @@ import dts from 'vite-plugin-dts';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+    define: {
+        // counterpart (used by compound-web) reads process.env.NODE_ENV at runtime;
+        // Vite doesn't provide a process polyfill in the browser, so define it here.
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
+    },
     plugins: [
         react(),
         dts({
@@ -24,6 +29,7 @@ export default defineConfig({
                 'lib/constants.ts',
                 'lib/useListeners/types.ts',
                 'lib/useTestCases/types.ts',
+                'lib/WysiwygViewModel.ts',
             ],
             rollupTypes: true,
             copyDtsFiles: true,
@@ -37,7 +43,25 @@ export default defineConfig({
     server: {
         fs: {
             // Allow serving files from the git root to access the wasm in bindings dir
-            allow: ['../..'],
+            // Also allow the linked shared-components source outside this repo
+            allow: ['../..', '../../../../element-web/packages/shared-components'],
+        },
+    },
+    resolve: {
+        alias: {
+            '@element-hq/web-shared-components': resolve(
+                __dirname,
+                '../../../element-web/packages/shared-components/src/index.ts',
+            ),
+            // Ensure deps imported by the linked shared-components source resolve
+            // from this repo's node_modules, not from the element-web directory.
+            'react-resizable-panels': resolve(__dirname, 'node_modules/react-resizable-panels'),
+            // Deduplicate React — shared-components source (loaded via alias from
+            // element-web) must resolve the same React instance as the app.
+            'react': resolve(__dirname, 'node_modules/react'),
+            'react-dom': resolve(__dirname, 'node_modules/react-dom'),
+            'react/jsx-runtime': resolve(__dirname, 'node_modules/react/jsx-runtime'),
+            'react/jsx-dev-runtime': resolve(__dirname, 'node_modules/react/jsx-dev-runtime'),
         },
     },
     test: {
