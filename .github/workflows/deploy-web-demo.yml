@@ -42,7 +42,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn'
           cache-dependency-path: platforms/web/yarn.lock
-          enable-corepack: true
+      - name: Enable Corepack
+        run: corepack enable
       - name: Build WASM bindings
         run: make web
       - name: Build
