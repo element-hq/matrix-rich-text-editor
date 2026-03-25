@@ -99,23 +99,25 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: 🦀 Build Rust
-        run: "make web"
-
-      - name: 🔧 Yarn cache
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
+          node-version: 22
           cache: ""
           package-manager-cache: false
           cache-dependency-path: platforms/web/yarn.lock
           registry-url: "https://registry.npmjs.org"
+          enable-corepack: true
+
+      - name: 🦀 Build Rust
+        run: "make web"
 
       # Ensure npm 11.5.1 or later is installed
       - name: Update npm
         run: npm install -g npm@latest
 
       - name: 🔨 Install dependencies
-        run: "yarn install --pure-lockfile"
+        run: "yarn install --immutable"
         working-directory: platforms/web
 
       - name: 🪚 Build
