@@ -30,6 +30,6 @@
         "alwaysStrict": true,
         "types": ["vitest/globals", "jest", "node"]
     },
-    "include": ["src", "lib", "./test.setup.ts"],
+    "include": ["src", "lib", "./test.setup.ts", "playwright/e2e"],
     "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -16,7 +16,9 @@ export default defineConfig({
     // The WASM-backed contenteditable drops key events under heavy concurrent load,
     // and there are only 3 tests, so serial execution is the right trade-off.
     workers: 1,
-    reporter: process.env.CI ? [['blob'], ['github']] : [['html', { outputFolder: 'playwright/html-report' }]],
+    reporter: process.env.CI
+        ? [['blob'], ['github']]
+        : [['html', { outputFolder: 'playwright/html-report' }]],
     use: {
         baseURL: 'http://localhost:5173',
         video: 'retain-on-failure',

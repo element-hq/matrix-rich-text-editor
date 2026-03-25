@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const editorSelector = '.editor:not([disabled])[contenteditable="true"]';
 
@@ -13,16 +13,13 @@ const editorSelector = '.editor:not([disabled])[contenteditable="true"]';
  * Select a range of text within the editor by walking its text nodes.
  */
 async function selectRange(
-    page: import('@playwright/test').Page,
+    page: Page,
     start: number,
     end: number,
 ): Promise<void> {
     await page.locator(editorSelector).evaluate(
         (el, { start, end }) => {
-            const walker = document.createTreeWalker(
-                el,
-                NodeFilter.SHOW_TEXT,
-            );
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
             let offset = 0;
             let startNode: Node | null = null;
             let startOffset = 0;
@@ -46,7 +43,12 @@ async function selectRange(
 
             if (startNode && endNode) {
                 const sel = document.getSelection()!;
-                sel.setBaseAndExtent(startNode, startOffset, endNode, endOffset);
+                sel.setBaseAndExtent(
+                    startNode,
+                    startOffset,
+                    endNode,
+                    endOffset,
+                );
             }
         },
         { start, end },
@@ -90,9 +92,7 @@ test.describe('Clipboard', () => {
         await page.keyboard.type('BEFORE');
         await expect(editor).toContainText('BEFORE');
 
-        await page.evaluate(() =>
-            navigator.clipboard.writeText('pasted'),
-        );
+        await page.evaluate(() => navigator.clipboard.writeText('pasted'));
         await page.keyboard.press('ControlOrMeta+v');
         await expect(editor).toContainText('BEFOREpasted');
 
@@ -107,10 +107,9 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('BEFORE');
 
         await page.evaluate(async () => {
-            const blob = new Blob(
-                ["<a href='https://matrix.org'>link</a>"],
-                { type: 'text/html' },
-            );
+            const blob = new Blob(["<a href='https://matrix.org'>link</a>"], {
+                type: 'text/html',
+            });
             const item = new ClipboardItem({ 'text/html': blob });
             await navigator.clipboard.write([item]);
         });
