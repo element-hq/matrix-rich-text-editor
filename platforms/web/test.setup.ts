@@ -45,7 +45,7 @@ globalThis.ClipboardEvent = MyClipboardEvent as unknown as ClipboardEvent;
 // and restore the selection around the native call.
 // See: https://github.com/jsdom/jsdom/issues/3825
 const originalFocus = HTMLElement.prototype.focus;
-HTMLElement.prototype.focus = function (this: HTMLElement, ...args) {
+HTMLElement.prototype.focus = function (this: HTMLElement, ...args): void {
     const sel = document.getSelection();
     const range =
         sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
