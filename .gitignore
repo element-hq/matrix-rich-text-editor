@@ -3,6 +3,9 @@
 **/.vscode
 **/.idea
 **/.DS_Store
+# Yarn
+**/.yarn/install-state.gz
+
 # Generated
 /target/
 /bindings/wysiwyg-ffi/.cargo/
@@ -23,3 +26,7 @@ matrix-rich-text-editor-swift
 
 # tmp folder
 /tmp
+
+# Playwright
+platforms/web/playwright/test-results/
+platforms/web/playwright/html-report/

@@ -505,24 +505,30 @@ describe('edge cases', () => {
         await userEvent.click(screen.getByText('bold'));
 
         // press enter then add a list item
-        await userEvent.keyboard('{enter}');
+        // jsdom does not generate input events for contenteditable key
+        // presses; dispatch the input event directly as a real browser would.
+        fireEvent.input(textbox, { inputType: 'insertParagraph' });
         await userEvent.click(screen.getByText('unorderedList'));
         fireEvent.input(textbox, {
             data: 'two',
             inputType: 'insertText',
         });
 
-        // press left arrow three times to go to the beginning of the line
-        await userEvent.keyboard('{ArrowLeft}'.repeat(3));
-
-        // enter some more text, ensure it appears inside the list item
-        await userEvent.keyboard('before ');
+        // Move cursor to beginning of "two" and insert text.
+        // jsdom does not support arrow key navigation or text input in
+        // contenteditable, so use select() and fireEvent.input directly.
+        // See: https://github.com/testing-library/user-event/issues/1019
+        select(textbox, 4, 4);
+        fireEvent.input(textbox, {
+            data: 'before ',
+            inputType: 'insertText',
+        });
 
         // Then
         expect(textbox).toMatchInlineSnapshot(`
           <div
             contenteditable="true"
-            data-content="<p><strong>one</strong></p><ul><li>two</li></ul>"
+            data-content="<p><strong>one</strong></p><ul><li>before two</li></ul>"
             role="textbox"
           >
             <p>
