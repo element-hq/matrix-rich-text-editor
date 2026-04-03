@@ -88,10 +88,6 @@ kotlin {
 dependencies {
 
     implementation "net.java.dev.jna:jna:5.17.0@aar"
-
-    implementation libs.kotlin.coroutines.android
-    implementation libs.kotlin.coroutines
-
     implementation libs.timber
 
     // HTML Parsing
@@ -100,7 +96,6 @@ dependencies {
     implementation libs.androidx.core
     implementation libs.androidx.appcompat
     implementation libs.androidx.lifecycle.viewmodel
-    implementation libs.androidx.constraintlayout
     implementation platform(libs.androidx.compose.bom)
     implementation 'androidx.compose.runtime:runtime'
     testImplementation libs.test.junit
