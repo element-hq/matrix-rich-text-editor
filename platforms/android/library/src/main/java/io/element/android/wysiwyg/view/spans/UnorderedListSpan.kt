@@ -23,6 +23,8 @@ class UnorderedListSpan(
     @Px
     @IntRange(from = 0)
     private val bulletRadius: Int,
+    @IntRange(from = 0)
+    private val level: Int = 0,
 ) : LeadingMarginSpan, BlockSpan {
     override fun getLeadingMargin(first: Boolean): Int {
         return 2 * bulletRadius + gapWidth
@@ -39,7 +41,14 @@ class UnorderedListSpan(
         }
 
         val style = paint.style
-        paint.style = Paint.Style.FILL
+        val strokeWidth = paint.strokeWidth
+
+        if (level % 2 != 0) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = (bulletRadius / 4f).coerceAtLeast(1f)
+        } else {
+            paint.style = Paint.Style.FILL
+        }
 
         val bounds = Rect().also {
             paint.getTextBounds("1", 0, 1, it)
@@ -50,5 +59,6 @@ class UnorderedListSpan(
 
         canvas.drawCircle(xPosition, yPosition, bulletRadius.toFloat(), paint)
         paint.style = style
+        paint.strokeWidth = strokeWidth
     }
 }
