@@ -35,7 +35,7 @@ jobs:
       run: brew install a7ex/homebrew-formulae/xcresultparser
 
     - name: Rust & Cargo cache
-      uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+      uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       with:
         cache-on-failure: true
 
@@ -64,7 +64,7 @@ jobs:
       run: xcresultparser -q -o cobertura -t WysiwygComposerTests -p $(pwd) tests.xcresult > tests.xml
 
     - name: Upload unit test coverage to Codecov
-      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+      uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
       with:
         files: ./platforms/ios/example/tests.xml
         fail_ci_if_error: true
@@ -81,7 +81,7 @@ jobs:
       run: xcresultparser -q -o cobertura -p $(pwd) ui-tests.xcresult > ui-tests.xml
 
     - name: Upload ui test coverage to Codecov
-      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+      uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
       with:
         files: ./platforms/ios/example/ui-tests.xml
         fail_ci_if_error: true

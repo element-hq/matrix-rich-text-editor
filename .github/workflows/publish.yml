@@ -72,7 +72,7 @@ jobs:
           java-version: '21'
 
       - name: 🔧 Rust & Cargo cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           cache-on-failure: true
           lookup-only: true
@@ -81,7 +81,7 @@ jobs:
         run: make targets-android
 
       - name: ⬆️ Publish to Sonatype
-        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6.0.1
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           cache-disabled: true
           build-root-directory: platforms/android
