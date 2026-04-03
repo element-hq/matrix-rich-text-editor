@@ -41,6 +41,7 @@ dependencies {
     implementation libs.androidx.core
     implementation libs.androidx.appcompat
     implementation libs.androidx.constraintlayout
+    implementation libs.google.material
 
     implementation libs.timber
 }
