@@ -1,5 +1,9 @@
 # Changelog
 
+# [2.41.2]
+- [Android] Remove material dependency.
+- [Android] Improve rendering of sub list. #100
+
 # [2.41.1]
 - [Android] Fix rendering issue where line breaks could be duplicated.
 
