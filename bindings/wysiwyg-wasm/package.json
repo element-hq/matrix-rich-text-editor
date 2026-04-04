@@ -69,5 +69,6 @@
     "lint": "tsc --noEmit",
     "test": "jest --verbose",
     "doc": "typedoc --tsconfig ."
-  }
+  },
+  "packageManager": "yarn@4.13.0"
 }
