@@ -56,15 +56,32 @@ async function selectRange(
 }
 
 /**
- * Collapse the selection to the end of the editor content.
- * page.evaluate() can disrupt the editor's selection state on CI runners;
- * call this after any evaluate that touches the clipboard to restore cursor position.
+ * Write plain text to the clipboard then paste into the editor via Ctrl+V.
+ * Clicks the editor after the clipboard write to restore focus/selection state
+ * before triggering the paste.
  */
-async function collapseSelectionToEnd(page: Page): Promise<void> {
-    await page.locator(editorSelector).evaluate((el) => {
-        const sel = document.getSelection()!;
-        sel.collapse(el, el.childNodes.length);
-    });
+async function pastePlainText(page: Page, text: string): Promise<void> {
+    await page.evaluate(async (t) => navigator.clipboard.writeText(t), text);
+    await page.locator(editorSelector).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ControlOrMeta+v');
+}
+
+/**
+ * Write rich text to the clipboard then paste into the editor via Ctrl+V.
+ * Clicks the editor after the clipboard write to restore focus/selection state
+ * before triggering the paste.
+ */
+async function pasteRichText(page: Page, html: string): Promise<void> {
+    await page.evaluate(async (h) => {
+        const blob = new Blob([h], { type: 'text/html' });
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'text/html': blob }),
+        ]);
+    }, html);
+    await page.locator(editorSelector).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ControlOrMeta+v');
 }
 
 test.describe('Clipboard', () => {
@@ -104,9 +121,7 @@ test.describe('Clipboard', () => {
         await page.keyboard.insertText('BEFORE');
         await expect(editor).toContainText('BEFORE');
 
-        await page.evaluate(() => navigator.clipboard.writeText('pasted'));
-        await collapseSelectionToEnd(page);
-        await page.keyboard.press('ControlOrMeta+v');
+        await pastePlainText(page, 'pasted');
         await expect(editor).toContainText('BEFOREpasted');
 
         await page.keyboard.press('End');
@@ -119,15 +134,7 @@ test.describe('Clipboard', () => {
         await page.keyboard.insertText('BEFORE');
         await expect(editor).toContainText('BEFORE');
 
-        await page.evaluate(async () => {
-            const blob = new Blob(["<a href='https://matrix.org'>link</a>"], {
-                type: 'text/html',
-            });
-            const item = new ClipboardItem({ 'text/html': blob });
-            await navigator.clipboard.write([item]);
-        });
-        await collapseSelectionToEnd(page);
-        await page.keyboard.press('ControlOrMeta+v');
+        await pasteRichText(page, "<a href='https://matrix.org'>link</a>");
         await expect(editor).toContainText('BEFORElink');
 
         await page.keyboard.press('End');
