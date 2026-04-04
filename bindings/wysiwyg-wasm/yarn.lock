@@ -1579,7 +1579,7 @@ __metadata:
     jest: "npm:^30.0.0"
     typedoc: "npm:^0.28.0"
     typescript: "npm:^5.8.0"
-    wasm-pack: "npm:^0.13.1"
+    wasm-pack: "npm:^0.14.0"
   languageName: unknown
   linkType: soft
 
@@ -1775,14 +1775,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"binary-install@npm:^1.0.1":
-  version: 1.1.0
-  resolution: "binary-install@npm:1.1.0"
+"binary-install@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "binary-install@npm:1.1.2"
   dependencies:
     axios: "npm:^0.26.1"
     rimraf: "npm:^3.0.2"
     tar: "npm:^6.1.11"
-  checksum: 10c0/c0c94a81262c037a1a84f12ff9acfe667b7938b126e764b0f066d5be128d21e0bb8ac5700f4d89f8f7b860b660882deddeaca300dea0ff218d94676999a133a1
+  checksum: 10c0/7385d45c029abd7e0dc234679fb76725e5e59a349662192569e2c44752919ec7845d077cc77f93eb80b35329c5872b9da00ae92620673900ec1dcddf7151e3db
   languageName: node
   linkType: hard
 
@@ -4275,14 +4275,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wasm-pack@npm:^0.13.1":
-  version: 0.13.1
-  resolution: "wasm-pack@npm:0.13.1"
+"wasm-pack@npm:^0.14.0":
+  version: 0.14.0
+  resolution: "wasm-pack@npm:0.14.0"
   dependencies:
-    binary-install: "npm:^1.0.1"
+    binary-install: "npm:^1.1.2"
   bin:
     wasm-pack: run.js
-  checksum: 10c0/46fc5309f46377d6dd09890cd642640ddb40d654bfdae5c9be66b50bf5ea27b0953916dd14d718b13a3b3dbad1351d4007ef040ef3778053625130ccef6f7cd6
+  checksum: 10c0/3a2b042b1462fc7894144810394e84fe22b687b4bc56df46a94d5e1923b8705befa45ff43f1f7cec23e6856f37049b99a9a607a099e64e4cb33c0e36b440501e
   languageName: node
   linkType: hard
 
