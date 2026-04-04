@@ -75,7 +75,9 @@ async function pastePlainText(page: Page, text: string): Promise<void> {
 async function pasteRichText(page: Page, html: string): Promise<void> {
     await page.evaluate(async (h) => {
         const blob = new Blob([h], { type: 'text/html' });
-        await navigator.clipboard.write([new ClipboardItem({ 'text/html': blob })]);
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'text/html': blob }),
+        ]);
     }, html);
     await page.locator(editorSelector).click();
     await page.keyboard.press('End');
