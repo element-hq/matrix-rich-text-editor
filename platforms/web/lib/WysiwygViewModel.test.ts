@@ -1,6 +1,5 @@
 /*
-Copyright 2024 New Vector Ltd.
-Copyright 2022 The Matrix.org Foundation C.I.C.
+Copyright 2026 Element Creations Ltd.
 
 SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
@@ -35,12 +34,6 @@ async function makeReadyViewModel(
 function fireInput(editor: HTMLElement, inputType: string, data?: string): void {
     const event = new InputEvent('input', { inputType, data, bubbles: true });
     editor.dispatchEvent(event);
-}
-
-function fireWysiwygInput(editor: HTMLElement, blockType: string, data?: unknown): void {
-    editor.dispatchEvent(
-        new CustomEvent('wysiwygInput', { detail: { blockType, data } }),
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -120,24 +113,24 @@ describe('WysiwygViewModel', () => {
 
     describe('subscribe/notify', () => {
         it('calls the listener when the snapshot changes', async () => {
-            const { vm, editor } = await makeReadyViewModel();
+            const { vm } = await makeReadyViewModel();
             const listener = vi.fn();
             vm.subscribe(listener);
             listener.mockClear();
 
-            fireWysiwygInput(editor, 'formatBold');
+            vm.bold();
 
             expect(listener).toHaveBeenCalled();
         });
 
         it('returns an unsubscribe function that stops notifications', async () => {
-            const { vm, editor } = await makeReadyViewModel();
+            const { vm } = await makeReadyViewModel();
             const listener = vi.fn();
             const unsub = vm.subscribe(listener);
             unsub();
             listener.mockClear();
 
-            fireWysiwygInput(editor, 'formatBold');
+            vm.bold();
 
             expect(listener).not.toHaveBeenCalled();
         });
@@ -314,15 +307,15 @@ describe('WysiwygViewModel', () => {
 
     describe('lifecycle', () => {
         it('does not process events after detach', async () => {
-            const { vm, editor } = await makeReadyViewModel();
+            const { vm } = await makeReadyViewModel();
             const listener = vi.fn();
             vm.subscribe(listener);
             listener.mockClear();
 
             vm.detach();
 
-            fireWysiwygInput(editor, 'formatBold');
-            // No listener calls because the event listeners were removed
+            vm.bold();
+            // No listener calls because the editor ref is cleared
             expect(listener).not.toHaveBeenCalled();
         });
 

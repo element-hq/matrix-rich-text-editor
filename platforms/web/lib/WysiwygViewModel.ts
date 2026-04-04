@@ -1,6 +1,5 @@
 /*
-Copyright 2024 New Vector Ltd.
-Copyright 2022 The Matrix.org Foundation C.I.C.
+Copyright 2026 Element Creations Ltd.
 
 SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
@@ -34,7 +33,7 @@ import {
     type TraceAction,
     type WysiwygInputEvent,
 } from './types.js';
-import { type AllowedMentionAttributes, type FormatBlockEvent } from './useListeners/types.js';
+import { type AllowedMentionAttributes } from './useListeners/types.js';
 import { type TestUtilities } from './useTestCases/types.js';
 
 // ---------------------------------------------------------------------------
@@ -242,6 +241,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     public detach(): void {
         this._cleanup?.();
         this._cleanup = null;
+        this._editor = null;
     }
 
     /** Release all resources. The ViewModel should not be used after this. */
@@ -291,42 +291,42 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     // Formatting actions
     // -------------------------------------------------------------------------
 
-    public bold = (): void => this._sendActionEvent('formatBold');
-    public italic = (): void => this._sendActionEvent('formatItalic');
-    public strikeThrough = (): void => this._sendActionEvent('formatStrikeThrough');
-    public underline = (): void => this._sendActionEvent('formatUnderline');
-    public inlineCode = (): void => this._sendActionEvent('formatInlineCode');
-    public codeBlock = (): void => this._sendActionEvent('insertCodeBlock');
-    public quote = (): void => this._sendActionEvent('insertQuote');
-    public orderedList = (): void => this._sendActionEvent('insertOrderedList');
-    public unorderedList = (): void => this._sendActionEvent('insertUnorderedList');
-    public indent = (): void => this._sendActionEvent('formatIndent');
-    public unindent = (): void => this._sendActionEvent('formatOutdent');
-    public undo = (): void => this._sendActionEvent('historyUndo');
-    public redo = (): void => this._sendActionEvent('historyRedo');
-    public clear = (): void => this._sendActionEvent('clear');
-    public removeLinks = (): void => this._sendActionEvent('removeLinks');
+    public bold = (): void => this._handleAction('formatBold');
+    public italic = (): void => this._handleAction('formatItalic');
+    public strikeThrough = (): void => this._handleAction('formatStrikeThrough');
+    public underline = (): void => this._handleAction('formatUnderline');
+    public inlineCode = (): void => this._handleAction('formatInlineCode');
+    public codeBlock = (): void => this._handleAction('insertCodeBlock');
+    public quote = (): void => this._handleAction('insertQuote');
+    public orderedList = (): void => this._handleAction('insertOrderedList');
+    public unorderedList = (): void => this._handleAction('insertUnorderedList');
+    public indent = (): void => this._handleAction('formatIndent');
+    public unindent = (): void => this._handleAction('formatOutdent');
+    public undo = (): void => this._handleAction('historyUndo');
+    public redo = (): void => this._handleAction('historyRedo');
+    public clear = (): void => this._handleAction('clear');
+    public removeLinks = (): void => this._handleAction('removeLinks');
 
     public insertText = (text: string): void =>
-        this._sendActionEvent('insertText', text);
+        this._handleAction('insertText', text);
 
     public link = (url: string, text?: string): void =>
-        this._sendActionEvent('insertLink', { url, text });
+        this._handleAction('insertLink', { url, text });
 
     public mention = (
         url: string,
         text: string,
         attributes: AllowedMentionAttributes,
-    ): void => this._sendActionEvent('insertSuggestion', { url, text, attributes });
+    ): void => this._handleAction('insertSuggestion', { url, text, attributes });
 
     public mentionAtRoom = (attributes: AllowedMentionAttributes): void =>
-        this._sendActionEvent('insertAtRoomSuggestion', { attributes });
+        this._handleAction('insertAtRoomSuggestion', { attributes });
 
     public command = (text: string): void =>
-        this._sendActionEvent('insertCommand', text);
+        this._handleAction('insertCommand', text);
 
     public emoji = (text: string): void =>
-        this._sendActionEvent('insertEmoji', text);
+        this._handleAction('insertEmoji', text);
 
     /**
      * Replace the entire composer content with `text` (plain text replacement).
@@ -388,18 +388,19 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     // -------------------------------------------------------------------------
 
     /**
-     * Dispatch a `wysiwygInput` custom event to the editor element so it is
-     * caught by the `wysiwygInput` event listener in `_bindListeners`, which
-     * in turn calls `_handleInput`. This keeps all ComposerModel mutations on
-     * a single code path.
+     * Execute a formatting/editing action by constructing a synthetic
+     * WysiwygInputEvent and running it through the standard _handleInput
+     * pipeline. Called directly from public action methods — no DOM event
+     * round-trip.
      */
-    private _sendActionEvent(
+    private _handleAction(
         blockType: string,
         data?: unknown,
     ): void {
         if (!this._editor) return;
-        this._editor.dispatchEvent(
-            new CustomEvent('wysiwygInput', { detail: { blockType, data } }),
+        this._handleInput(
+            { inputType: blockType, data } as WysiwygInputEvent,
+            this._editor,
         );
     }
 
@@ -426,16 +427,6 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
                 this._handleInput(e as WysiwygInputEvent, editor);
             }
         };
-
-        const onWysiwygInput = ((e: FormatBlockEvent): void => {
-            this._handleInput(
-                {
-                    inputType: e.detail.blockType,
-                    data: e.detail.data,
-                } as WysiwygInputEvent,
-                editor,
-            );
-        }) as EventListener;
 
         const onKeyDown = (e: KeyboardEvent): void => {
             if (!this._composerModel) return;
@@ -481,7 +472,6 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
 
         editor.addEventListener('input', onInput);
         editor.addEventListener('paste', onPaste as EventListener);
-        editor.addEventListener('wysiwygInput', onWysiwygInput);
         editor.addEventListener('keydown', onKeyDown);
         editor.addEventListener('beforeinput', onBeforeInput as EventListener);
         editor.addEventListener('compositionend', onCompositionEnd);
@@ -490,7 +480,6 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         this._cleanup = (): void => {
             editor.removeEventListener('input', onInput);
             editor.removeEventListener('paste', onPaste as EventListener);
-            editor.removeEventListener('wysiwygInput', onWysiwygInput);
             editor.removeEventListener('keydown', onKeyDown);
             editor.removeEventListener('beforeinput', onBeforeInput as EventListener);
             editor.removeEventListener('compositionend', onCompositionEnd);
@@ -661,43 +650,35 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     }
 
     /**
-     * Build a minimal `FormattingFunctions` shim that routes calls back
-     * through `_sendActionEvent`. Used when passing formattingFunctions to
-     * `handleKeyDown` (which only needs the shim for inputEventProcessor calls)
+     * Build a `FormattingFunctions` shim that delegates to the ViewModel's
+     * public action methods. Used when passing formattingFunctions to
+     * `handleKeyDown` (which needs it for the `inputEventProcessor` callback)
      * and to `processInput` (which needs `formattingFunctions.getLink`).
      */
     private _makeFormattingFunctionShim() {
-        const send = (blockType: string, data?: unknown): void =>
-            this._sendActionEvent(blockType, data);
         return {
-            bold: () => send('formatBold'),
-            italic: () => send('formatItalic'),
-            strikeThrough: () => send('formatStrikeThrough'),
-            underline: () => send('formatUnderline'),
-            undo: () => send('historyUndo'),
-            redo: () => send('historyRedo'),
-            orderedList: () => send('insertOrderedList'),
-            unorderedList: () => send('insertUnorderedList'),
-            inlineCode: () => send('formatInlineCode'),
-            clear: () => send('clear'),
-            insertText: (text: string) => send('insertText', text),
-            link: (url: string, text?: string) =>
-                send('insertLink', { url, text }),
-            removeLinks: () => send('removeLinks'),
-            getLink: () => this.getLink(),
-            codeBlock: () => send('insertCodeBlock'),
-            quote: () => send('insertQuote'),
-            indent: () => send('formatIndent'),
-            unindent: () => send('formatOutdent'),
-            mention: (
-                url: string,
-                text: string,
-                attributes: AllowedMentionAttributes,
-            ) => send('insertSuggestion', { url, text, attributes }),
-            command: (text: string) => send('insertCommand', text),
-            emoji: (text: string) => send('insertEmoji', text),
-            mentionAtRoom: (attributes: AllowedMentionAttributes) =>
-                send('insertAtRoomSuggestion', { attributes }),
+            bold: this.bold,
+            italic: this.italic,
+            strikeThrough: this.strikeThrough,
+            underline: this.underline,
+            undo: this.undo,
+            redo: this.redo,
+            orderedList: this.orderedList,
+            unorderedList: this.unorderedList,
+            inlineCode: this.inlineCode,
+            clear: this.clear,
+            insertText: this.insertText,
+            link: this.link,
+            removeLinks: this.removeLinks,
+            getLink: this.getLink,
+            codeBlock: this.codeBlock,
+            quote: this.quote,
+            indent: this.indent,
+            unindent: this.unindent,
+            mention: this.mention,
+            command: this.command,
+            emoji: this.emoji,
+            mentionAtRoom: this.mentionAtRoom,
         };
     }
 }
