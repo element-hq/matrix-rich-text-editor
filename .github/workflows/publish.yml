@@ -80,12 +80,14 @@ jobs:
       - name: 🦀 Install Rust targets
         run: make targets-android
 
-      - name: ⬆️ Publish to Sonatype
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           cache-disabled: true
-          build-root-directory: platforms/android
-          arguments: publishAndReleaseToMavenCentral
+
+      - name: ⬆️ Publish to Sonatype
+        working-directory: platforms/android
+        run: ./gradlew publishAndReleaseToMavenCentral
 
   npm:
     name: Publish to npm
