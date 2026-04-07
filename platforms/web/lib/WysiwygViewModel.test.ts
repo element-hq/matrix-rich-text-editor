@@ -31,11 +31,6 @@ async function makeReadyViewModel(
     return { vm, editor };
 }
 
-function fireInput(editor: HTMLElement, inputType: string, data?: string): void {
-    const event = new InputEvent('input', { inputType, data, bubbles: true });
-    editor.dispatchEvent(event);
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -73,27 +68,39 @@ describe('WysiwygViewModel', () => {
         it('creates a new_composer_model for empty editor', async () => {
             await makeReadyViewModel();
             expect(mockRustModel.new_composer_model).toHaveBeenCalledTimes(1);
-            expect(mockRustModel.new_composer_model_from_html).not.toHaveBeenCalled();
+            expect(
+                mockRustModel.new_composer_model_from_html,
+            ).not.toHaveBeenCalled();
         });
 
         it('creates a new_composer_model_from_html when initialContent is provided', async () => {
-            await makeReadyViewModel({ initialContent: '<strong>Hello</strong>' });
-            expect(mockRustModel.new_composer_model_from_html).toHaveBeenCalledTimes(1);
+            await makeReadyViewModel({
+                initialContent: '<strong>Hello</strong>',
+            });
+            expect(
+                mockRustModel.new_composer_model_from_html,
+            ).toHaveBeenCalledTimes(1);
             expect(mockRustModel.new_composer_model).not.toHaveBeenCalled();
         });
 
         it('falls back to empty model on invalid initial HTML', async () => {
             // Force new_composer_model_from_html to throw so the fallback path is exercised
-            vi.mocked(mockRustModel.new_composer_model_from_html).mockImplementationOnce(() => {
+            vi.mocked(
+                mockRustModel.new_composer_model_from_html,
+            ).mockImplementationOnce(() => {
                 throw new Error('parse failure');
             });
-            const { vm } = await makeReadyViewModel({ initialContent: '<<<bad>>>' });
+            const { vm } = await makeReadyViewModel({
+                initialContent: '<<<bad>>>',
+            });
             expect(vm.getSnapshot().isReady).toBe(true);
             expect(mockRustModel.new_composer_model).toHaveBeenCalledTimes(1);
         });
 
         it('exposes initial content snapshot', async () => {
-            const { vm } = await makeReadyViewModel({ initialContent: '<strong>Hello</strong>' });
+            const { vm } = await makeReadyViewModel({
+                initialContent: '<strong>Hello</strong>',
+            });
             const snap = vm.getSnapshot();
             expect(snap.content).toBeTruthy();
             expect(snap.messageContent).toBeTruthy();
@@ -197,7 +204,9 @@ describe('WysiwygViewModel', () => {
         it('sets strikeThrough action state', async () => {
             const { vm } = await makeReadyViewModel();
             vm.setContentFromHtml('<del>text</del>');
-            expect(vm.getSnapshot().actionStates.strikeThrough).toBe('reversed');
+            expect(vm.getSnapshot().actionStates.strikeThrough).toBe(
+                'reversed',
+            );
         });
 
         it('sets inlineCode action state', async () => {
@@ -284,7 +293,9 @@ describe('WysiwygViewModel', () => {
 
     describe('replaceText', () => {
         it('replaces editor content with plain text', async () => {
-            const { vm } = await makeReadyViewModel({ initialContent: '<strong>Old</strong>' });
+            const { vm } = await makeReadyViewModel({
+                initialContent: '<strong>Old</strong>',
+            });
             vm.replaceText('New content');
             expect(vm.getSnapshot().content).toContain('New content');
         });

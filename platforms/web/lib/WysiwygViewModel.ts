@@ -14,27 +14,97 @@ import {
     new_composer_model_from_html,
 } from '@vector-im/matrix-wysiwyg-wasm';
 
-import {
-    BaseViewModel,
-    type ComposerToolbarViewModel,
-    type ComposerViewModel,
-    type ComposerSuggestion,
-} from '@element-hq/web-shared-components';
+import { BaseViewModel } from '@element-hq/web-shared-components';
+
+// Defined locally — will be re-exported from shared-components in a future
+// version, but for now we keep the RTE standalone.
+export interface ComposerSuggestion {
+    type: 'mention' | 'command' | 'custom';
+    keyChar: string;
+    text: string;
+    isOpen: boolean;
+}
 import { initOnce } from './useComposerModel.js';
-import { replaceEditor } from './dom.js';
+import { getCurrentSelection, selectContent } from './dom.js';
 import { processInput } from './composer.js';
 import { mapSuggestion } from './suggestion.js';
-import { createDefaultActionStates, mapToAllActionStates } from './useListeners/utils.js';
+import {
+    createDefaultActionStates,
+    mapToAllActionStates,
+} from './useListeners/utils.js';
 import { isClipboardEvent, isInputEvent } from './useListeners/assert.js';
-import { handleKeyDown, handleSelectionChange, extractActionStates } from './useListeners/event.js';
+import { handleKeyDown, extractActionStates } from './useListeners/event.js';
 import {
     type AllActionStates,
+    type FormattingFunctions,
     type InputEventProcessor,
     type TraceAction,
     type WysiwygInputEvent,
 } from './types.js';
 import { type AllowedMentionAttributes } from './useListeners/types.js';
 import { type TestUtilities } from './useTestCases/types.js';
+
+// ---------------------------------------------------------------------------
+// Event Trace Logger
+// ---------------------------------------------------------------------------
+
+export interface TraceEntry {
+    /** Monotonic high-resolution timestamp (ms) */
+    t: number;
+    /** Event category */
+    cat: string;
+    /** Human-readable detail */
+    msg: string;
+    /** Optional structured data */
+    data?: Record<string, unknown>;
+}
+
+/**
+ * Ring-buffer trace logger for debugging event ordering.
+ * Exposed via `window.__RTE_TRACE` for Playwright inspection.
+ */
+export class TraceLog {
+    private _entries: TraceEntry[] = [];
+    private _maxEntries: number;
+    private _t0: number;
+
+    public constructor(maxEntries = 500) {
+        this._maxEntries = maxEntries;
+        this._t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+    }
+
+    /** Record a trace event. */
+    public log(cat: string, msg: string, data?: Record<string, unknown>): void {
+        const t =
+            typeof performance !== 'undefined'
+                ? +(performance.now() - this._t0).toFixed(3)
+                : 0;
+        this._entries.push({ t, cat, msg, data });
+        if (this._entries.length > this._maxEntries) {
+            this._entries.shift();
+        }
+    }
+
+    /** Return all entries (oldest first). */
+    public entries(): TraceEntry[] {
+        return this._entries;
+    }
+
+    /** Return entries as a formatted multi-line string for easy reading. */
+    public dump(): string {
+        return this._entries
+            .map((e) => {
+                const d = e.data ? ' ' + JSON.stringify(e.data) : '';
+                return `[${e.t.toFixed(1)}ms] [${e.cat}] ${e.msg}${d}`;
+            })
+            .join('\n');
+    }
+
+    /** Clear all entries. */
+    public clear(): void {
+        this._entries = [];
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Snapshot
@@ -87,8 +157,8 @@ const noopTrace: TraceAction = (update: ComposerUpdate | null) => update;
 const noopTestUtilities = {
     traceAction: noopTrace,
     getSelectionAccordingToActions: (): [number, number] => [-1, -1],
-    onResetTestCase: () => undefined,
-    setEditorHtml: (_content: string) => undefined,
+    onResetTestCase: (): void => undefined,
+    setEditorHtml: (_content: string): void => undefined,
 };
 
 // ---------------------------------------------------------------------------
@@ -110,15 +180,31 @@ const noopTestUtilities = {
  *   4. Use action methods (bold, italic, …) to mutate state.
  *   5. `vm.detach()` + `vm.dispose()` on unmount.
  */
-export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, WysiwygViewModelOptions>
-    implements ComposerViewModel, ComposerToolbarViewModel
-{
+export class WysiwygViewModel extends BaseViewModel<
+    WysiwygViewModelSnapshot,
+    WysiwygViewModelOptions
+> {
     private _composerModel: ComposerModel | null = null;
     private _suggestion: SuggestionPattern | null = null;
     private _plainTextContent = '';
     private _editor: HTMLElement | null = null;
     private _cleanup: (() => void) | null = null;
     private _testUtilities: TestUtilities = noopTestUtilities;
+
+    // ── Render guard ──
+    // True while the ViewModel is mutating the DOM (innerHTML + selection).
+    // Prevents selectionchange from feeding stale DOM state back into the model.
+    private _isRendering = false;
+    // After a render, the expected DOM selection. The first selectionchange
+    // that matches this after the guard clears is an echo, not a user action.
+    private _expectedSelection: [number, number] | null = null;
+    // Monotonic counter incremented each time init() is called.
+    // Used to discard stale async init completions (e.g. React StrictMode
+    // double-invokes effects, causing two concurrent init() calls).
+    private _initVersion = 0;
+
+    // ── Event trace log ──
+    public readonly trace = new TraceLog();
 
     /** Expose the underlying WASM model for debug tooling (demo app, tests). */
     public get composerModel(): ComposerModel | null {
@@ -174,7 +260,20 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
      * Safe to call multiple times (idempotent via `initOnce`).
      */
     public async init(): Promise<void> {
+        const myVersion = ++this._initVersion;
+        this.trace.log('init', `starting init() v${myVersion}`);
         await initOnce();
+
+        // After the async boundary, check whether a newer init() was started
+        // (e.g. React StrictMode double-invokes effects).  If so, this one
+        // is stale — let the newer call set up the model.
+        if (myVersion !== this._initVersion) {
+            this.trace.log(
+                'init',
+                `stale init v${myVersion} (current v${this._initVersion}) — skipped`,
+            );
+            return;
+        }
 
         const { initialContent, emojiSuggestions } = this.props;
         let model: ComposerModel;
@@ -188,7 +287,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
                 );
                 if (this._editor) {
                     const html = model.get_content_as_html();
-                    replaceEditor(this._editor, html, 0, html.length);
+                    this._renderToDOM(this._editor, html, 0, html.length);
                 }
             } catch {
                 // HTML parse failure — fall back to empty composer
@@ -206,6 +305,10 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
 
         this._composerModel = model;
         this._plainTextContent = model.get_content_as_plain_text();
+        this.trace.log('init', 'model created', {
+            html: model.get_content_as_html(),
+            sel: [model.selection_start(), model.selection_end()],
+        });
 
         this._setCore({
             content: model.get_content_as_html(),
@@ -221,6 +324,10 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
      * Called internally on WASM panic recovery.
      */
     public async reinit(plainTextContent?: string): Promise<void> {
+        this.trace.log(
+            'reinit',
+            `plainTextContent=${plainTextContent?.slice(0, 50)}`,
+        );
         this.detach();
         // Do NOT set this._composerModel = null here — TypeScript would narrow it to null
         // and lose the type after the async init() call below.
@@ -232,7 +339,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         if (plainTextContent && this._composerModel && this._editor) {
             this._composerModel.replace_text(plainTextContent);
             const html = this._composerModel.get_content_as_html();
-            replaceEditor(this._editor, html, 0, html.length);
+            this._renderToDOM(this._editor, html, 0, html.length);
             this._syncSnapshotFromModel();
         }
     }
@@ -293,18 +400,23 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
 
     public bold = (): void => this._handleAction('formatBold');
     public italic = (): void => this._handleAction('formatItalic');
-    public strikeThrough = (): void => this._handleAction('formatStrikeThrough');
+    public strikeThrough = (): void =>
+        this._handleAction('formatStrikeThrough');
     public underline = (): void => this._handleAction('formatUnderline');
     public inlineCode = (): void => this._handleAction('formatInlineCode');
     public codeBlock = (): void => this._handleAction('insertCodeBlock');
     public quote = (): void => this._handleAction('insertQuote');
     public orderedList = (): void => this._handleAction('insertOrderedList');
-    public unorderedList = (): void => this._handleAction('insertUnorderedList');
+    public unorderedList = (): void =>
+        this._handleAction('insertUnorderedList');
     public indent = (): void => this._handleAction('formatIndent');
     public unindent = (): void => this._handleAction('formatOutdent');
     public undo = (): void => this._handleAction('historyUndo');
     public redo = (): void => this._handleAction('historyRedo');
-    public clear = (): void => this._handleAction('clear');
+    public clear = (): void => {
+        this.trace.log('clear', 'clear() called');
+        this._handleAction('clear');
+    };
     public removeLinks = (): void => this._handleAction('removeLinks');
 
     public insertText = (text: string): void =>
@@ -317,7 +429,8 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         url: string,
         text: string,
         attributes: AllowedMentionAttributes,
-    ): void => this._handleAction('insertSuggestion', { url, text, attributes });
+    ): void =>
+        this._handleAction('insertSuggestion', { url, text, attributes });
 
     public mentionAtRoom = (attributes: AllowedMentionAttributes): void =>
         this._handleAction('insertAtRoomSuggestion', { attributes });
@@ -340,8 +453,15 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         this._mergeCore({
             content: res.content,
             messageContent: this._composerModel.get_content_as_message_html(),
-            actionStates: res.actionStates ?? this.snapshot.current.actionStates,
-            suggestion: mapped ? { ...mapped, type: mapped.type as ComposerSuggestion['type'], isOpen: true } : null,
+            actionStates:
+                res.actionStates ?? this.snapshot.current.actionStates,
+            suggestion: mapped
+                ? {
+                      ...mapped,
+                      type: mapped.type as ComposerSuggestion['type'],
+                      isOpen: true,
+                  }
+                : null,
         });
     };
 
@@ -353,7 +473,9 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         const update = this._composerModel.select(start, end);
         const menuStateUpdate = update.menu_state().update();
         if (menuStateUpdate) {
-            this._mergeCore({ actionStates: extractActionStates(menuStateUpdate) });
+            this._mergeCore({
+                actionStates: extractActionStates(menuStateUpdate),
+            });
         }
     };
 
@@ -364,7 +486,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         if (!this._composerModel || !this._editor) return;
         this._composerModel.set_content_from_html(html);
         const newHtml = this._composerModel.get_content_as_html();
-        replaceEditor(this._editor, newHtml, 0, newHtml.length);
+        this._renderToDOM(this._editor, newHtml, 0, newHtml.length);
         this._syncSnapshotFromModel();
     };
 
@@ -375,7 +497,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         if (!this._composerModel || !this._editor) return;
         this._composerModel.set_content_from_markdown(markdown);
         const newHtml = this._composerModel.get_content_as_html();
-        replaceEditor(this._editor, newHtml, 0, newHtml.length);
+        this._renderToDOM(this._editor, newHtml, 0, newHtml.length);
         this._syncSnapshotFromModel();
     };
 
@@ -393,10 +515,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
      * pipeline. Called directly from public action methods — no DOM event
      * round-trip.
      */
-    private _handleAction(
-        blockType: string,
-        data?: unknown,
-    ): void {
+    private _handleAction(blockType: string, data?: unknown): void {
         if (!this._editor) return;
         this._handleInput(
             { inputType: blockType, data } as WysiwygInputEvent,
@@ -411,7 +530,12 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     private _bindListeners(editor: HTMLElement): void {
         const onInput = (e: Event): void => {
             if (isInputEvent(e) && !e.isComposing) {
-                this._handleInput(e as WysiwygInputEvent, editor);
+                const ie = e as InputEvent;
+                this.trace.log('input', `inputType=${ie.inputType}`, {
+                    data: ie.data,
+                    isRendering: this._isRendering,
+                });
+                this._handleInput(ie as WysiwygInputEvent, editor);
             }
         };
 
@@ -422,6 +546,20 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
                 (e as InputEvent).dataTransfer !== null;
 
             if (isClipboardEvent(e) || isSpecialSafariCase) {
+                const cd = (e as ClipboardEvent).clipboardData;
+                this.trace.log('paste', `type=${e.type}`, {
+                    hasHtml: !!cd?.getData('text/html'),
+                    plainText: cd?.getData('text/plain')?.slice(0, 50),
+                    htmlText: cd?.getData('text/html')?.slice(0, 100),
+                    isRendering: this._isRendering,
+                    modelSel: this._composerModel
+                        ? [
+                              this._composerModel.selection_start(),
+                              this._composerModel.selection_end(),
+                          ]
+                        : null,
+                    modelHtml: this._composerModel?.get_content_as_html(),
+                });
                 e.preventDefault();
                 e.stopPropagation();
                 this._handleInput(e as WysiwygInputEvent, editor);
@@ -430,6 +568,17 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
 
         const onKeyDown = (e: KeyboardEvent): void => {
             if (!this._composerModel) return;
+            this.trace.log('keydown', `key=${e.key}`, {
+                ctrl: e.ctrlKey,
+                meta: e.metaKey,
+                shift: e.shiftKey,
+                isRendering: this._isRendering,
+                modelHtml: this._composerModel.get_content_as_html(),
+                modelSel: [
+                    this._composerModel.selection_start(),
+                    this._composerModel.selection_end(),
+                ],
+            });
             handleKeyDown(
                 e,
                 editor,
@@ -441,10 +590,18 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
 
         const onBeforeInput = (e: InputEvent | ClipboardEvent): void => {
             if (isInputEvent(e) && (e as InputEvent).isComposing) return;
+            this.trace.log(
+                'beforeinput',
+                `inputType=${isInputEvent(e) ? (e as InputEvent).inputType : 'clipboard'}`,
+                {
+                    isRendering: this._isRendering,
+                },
+            );
             onPaste(e as ClipboardEvent | InputEvent);
         };
 
         const onCompositionEnd = (e: CompositionEvent): void => {
+            this.trace.log('compositionend', `data=${e.data}`);
             const inputEvent = new InputEvent('input', {
                 data: e.data,
                 inputType: 'insertCompositionText',
@@ -453,21 +610,39 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         };
 
         const onSelectionChange = (): void => {
-            if (!this._composerModel) return;
+            // Always log, even if we're going to skip it
+            const sel = document.getSelection();
+            let domSel: [number, number] | null = null;
             try {
-                const actionStates = handleSelectionChange(
-                    editor,
-                    this._composerModel,
-                    this._testUtilities,
-                );
-                if (actionStates) {
-                    this._mergeCore({ actionStates });
+                if (sel && editor.contains(sel.anchorNode)) {
+                    domSel = getCurrentSelection(editor, sel) as [
+                        number,
+                        number,
+                    ];
                 }
-                this._plainTextContent =
-                    this._composerModel.get_content_as_plain_text();
             } catch {
-                // Selection errors are non-fatal — ignore
+                /* ignore */
             }
+            this.trace.log(
+                'selectionchange',
+                this._isRendering ? 'BLOCKED(rendering)' : 'processing',
+                {
+                    domSel,
+                    isRendering: this._isRendering,
+                    expectedSel: this._expectedSelection,
+                    modelSel: this._composerModel
+                        ? [
+                              this._composerModel.selection_start(),
+                              this._composerModel.selection_end(),
+                          ]
+                        : null,
+                    editorHtml: editor.innerHTML?.slice(0, 200),
+                    activeElement: document.activeElement?.tagName,
+                    selInEditor: sel ? editor.contains(sel.anchorNode) : false,
+                },
+            );
+            if (this._isRendering) return;
+            this._handleUserSelectionChange();
         };
 
         editor.addEventListener('input', onInput);
@@ -477,13 +652,58 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
         editor.addEventListener('compositionend', onCompositionEnd);
         document.addEventListener('selectionchange', onSelectionChange);
 
+        // Debug-only listeners for full event visibility
+        const onFocus = (): void => {
+            this.trace.log('focus', 'editor focused', {
+                modelHtml: this._composerModel?.get_content_as_html(),
+                modelSel: this._composerModel
+                    ? [
+                          this._composerModel.selection_start(),
+                          this._composerModel.selection_end(),
+                      ]
+                    : null,
+            });
+        };
+        const onBlur = (): void => {
+            this.trace.log('blur', 'editor blurred', {
+                modelHtml: this._composerModel?.get_content_as_html(),
+                modelSel: this._composerModel
+                    ? [
+                          this._composerModel.selection_start(),
+                          this._composerModel.selection_end(),
+                      ]
+                    : null,
+            });
+        };
+        const onClick = (): void => {
+            this.trace.log('click', 'editor clicked', {
+                modelHtml: this._composerModel?.get_content_as_html(),
+                modelSel: this._composerModel
+                    ? [
+                          this._composerModel.selection_start(),
+                          this._composerModel.selection_end(),
+                      ]
+                    : null,
+                editorHtml: editor.innerHTML?.slice(0, 200),
+            });
+        };
+        editor.addEventListener('focus', onFocus);
+        editor.addEventListener('blur', onBlur);
+        editor.addEventListener('click', onClick);
+
         this._cleanup = (): void => {
             editor.removeEventListener('input', onInput);
             editor.removeEventListener('paste', onPaste as EventListener);
             editor.removeEventListener('keydown', onKeyDown);
-            editor.removeEventListener('beforeinput', onBeforeInput as EventListener);
+            editor.removeEventListener(
+                'beforeinput',
+                onBeforeInput as EventListener,
+            );
             editor.removeEventListener('compositionend', onCompositionEnd);
             document.removeEventListener('selectionchange', onSelectionChange);
+            editor.removeEventListener('focus', onFocus);
+            editor.removeEventListener('blur', onBlur);
+            editor.removeEventListener('click', onClick);
         };
     }
 
@@ -493,6 +713,14 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
      */
     private _handleInput(e: WysiwygInputEvent, editor: HTMLElement): void {
         if (!this._composerModel) return;
+        const inputType = (e as { inputType?: string }).inputType ?? 'unknown';
+        this.trace.log('handleInput', `inputType=${inputType}`, {
+            modelSelBefore: [
+                this._composerModel.selection_start(),
+                this._composerModel.selection_end(),
+            ],
+            modelHtmlBefore: this._composerModel.get_content_as_html(),
+        });
         try {
             const res = this._processWysiwygInput(e, editor);
             if (res) {
@@ -505,17 +733,41 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
                 this._suggestion = res.suggestion;
                 const mapped = mapSuggestion(this._suggestion);
 
+                this.trace.log('handleInput.result', `inputType=${inputType}`, {
+                    newContent: content?.slice(0, 200),
+                    modelSelAfter: [
+                        this._composerModel.selection_start(),
+                        this._composerModel.selection_end(),
+                    ],
+                    editorHtmlAfter: editor.innerHTML?.slice(0, 200),
+                });
+
                 this._mergeCore({
                     content,
                     messageContent:
                         this._composerModel.get_content_as_message_html(),
                     actionStates,
-                    suggestion: mapped ? { ...mapped, type: mapped.type as ComposerSuggestion['type'], isOpen: true } : null,
+                    suggestion: mapped
+                        ? {
+                              ...mapped,
+                              type: mapped.type as ComposerSuggestion['type'],
+                              isOpen: true,
+                          }
+                        : null,
                 });
                 this._plainTextContent =
                     this._composerModel.get_content_as_plain_text();
+            } else {
+                this.trace.log(
+                    'handleInput.noop',
+                    `inputType=${inputType} returned undefined`,
+                );
             }
-        } catch {
+        } catch (err) {
+            this.trace.log(
+                'handleInput.error',
+                `inputType=${inputType} ERROR: ${err}`,
+            );
             // Attempt recovery with last known plain text
             void this.reinit(this._plainTextContent);
         }
@@ -528,11 +780,13 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     private _processWysiwygInput(
         e: WysiwygInputEvent,
         editor: HTMLElement,
-    ): {
-        content?: string;
-        actionStates: AllActionStates | null;
-        suggestion: SuggestionPattern | null;
-    } | undefined {
+    ):
+        | {
+              content?: string;
+              actionStates: AllActionStates | null;
+              suggestion: SuggestionPattern | null;
+          }
+        | undefined {
         const update = processInput(
             e,
             this._composerModel!,
@@ -562,18 +816,27 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     } {
         const repl = update.text_update().replace_all;
         if (repl) {
-            replaceEditor(
+            this.trace.log(
+                'applyUpdate',
+                `replace_all sel=[${repl.start_utf16_codeunit},${repl.end_utf16_codeunit}]`,
+                {
+                    html: repl.replacement_html.slice(0, 200),
+                },
+            );
+            this._renderToDOM(
                 editor,
                 repl.replacement_html,
                 repl.start_utf16_codeunit,
                 repl.end_utf16_codeunit,
             );
-            editor.focus();
+        } else {
+            this.trace.log('applyUpdate', 'no replace_all (keep DOM)');
         }
 
         const menuStateUpdate = update.menu_state().update();
-        const menuActionUpdate =
-            update.menu_action().suggestion()?.suggestion_pattern;
+        const menuActionUpdate = update
+            .menu_action()
+            .suggestion()?.suggestion_pattern;
 
         const actionStates = menuStateUpdate
             ? extractActionStates(menuStateUpdate)
@@ -585,6 +848,125 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
             actionStates,
             suggestion,
         };
+    }
+
+    /**
+     * Render model state to the DOM inside a guarded window.
+     * All selectionchange events during this window are ignored.
+     */
+    private _renderToDOM(
+        editor: HTMLElement,
+        html: string,
+        start: number,
+        end: number,
+    ): void {
+        this.trace.log('renderToDOM.enter', `sel=[${start},${end}]`, {
+            html: html.slice(0, 200),
+            wasRendering: this._isRendering,
+            prevExpected: this._expectedSelection,
+        });
+        this._isRendering = true;
+        this._expectedSelection = [start, end];
+
+        editor.innerHTML = html + '<br />';
+        selectContent(editor, start, end);
+
+        const needsFocus = document.activeElement !== editor;
+        if (needsFocus) {
+            editor.focus();
+        }
+
+        this.trace.log(
+            'renderToDOM.done',
+            `sel=[${start},${end}] needsFocus=${needsFocus}`,
+            {
+                editorHtml: editor.innerHTML.slice(0, 200),
+            },
+        );
+
+        // Clear the guard after the browser has flushed pending selection events.
+        // rAF fires after microtasks but before the next frame's event processing,
+        // covering all observed selectionchange delivery timing in Chrome.
+        requestAnimationFrame(() => {
+            this.trace.log('renderToDOM.rAF', 'clearing _isRendering', {
+                expectedSel: this._expectedSelection,
+            });
+            this._isRendering = false;
+        });
+    }
+
+    /**
+     * Handle a selectionchange event that passed the render guard.
+     * Applies echo detection and dedup before forwarding to the model.
+     */
+    private _handleUserSelectionChange(): void {
+        if (!this._composerModel || !this._editor) return;
+        try {
+            const [start, end] = getCurrentSelection(
+                this._editor,
+                document.getSelection(),
+            );
+
+            // Echo detection: first selectionchange after a render that matches
+            // what we set is not a user action.
+            if (this._expectedSelection) {
+                const [expStart, expEnd] = this._expectedSelection;
+                if (start === expStart && end === expEnd) {
+                    this.trace.log(
+                        'selChange.echoHit',
+                        `sel=[${start},${end}] matches expected — skipped`,
+                    );
+                    this._expectedSelection = null;
+                    return;
+                }
+                this.trace.log(
+                    'selChange.echoMiss',
+                    `sel=[${start},${end}] expected=[${expStart},${expEnd}] — NOT an echo`,
+                );
+                this._expectedSelection = null;
+            }
+
+            // Dedup: ignore if model already has this selection
+            const prevStart = this._composerModel.selection_start();
+            const prevEnd = this._composerModel.selection_end();
+            if (start === prevStart && end === prevEnd) {
+                this.trace.log(
+                    'selChange.dedup',
+                    `sel=[${start},${end}] matches model — skipped`,
+                );
+                return;
+            }
+
+            // Also ignore reversed duplicates (backwards selections)
+            if (start === prevEnd && end === prevStart) {
+                this.trace.log(
+                    'selChange.dedupRev',
+                    `sel=[${start},${end}] reverse matches model — skipped`,
+                );
+                return;
+            }
+
+            this.trace.log(
+                'selChange.SELECT',
+                `sel=[${start},${end}] model was=[${prevStart},${prevEnd}]`,
+                {
+                    editorHtml: this._editor.innerHTML?.slice(0, 200),
+                },
+            );
+            const update = this._composerModel.select(start, end);
+            this._testUtilities.traceAction(null, 'select', start, end);
+
+            const menuStateUpdate = update.menu_state().update();
+            if (menuStateUpdate) {
+                this._mergeCore({
+                    actionStates: extractActionStates(menuStateUpdate),
+                });
+            }
+            this._plainTextContent =
+                this._composerModel.get_content_as_plain_text();
+        } catch {
+            // Selection errors are non-fatal — ignore
+        }
     }
 
     /**
@@ -608,9 +990,18 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
      * Core snapshot fields (the WASM-centric fields). This type is the
      * subset that the rest of the class mutates directly.
      */
-    private _coreFields(partial: Partial<Pick<WysiwygViewModelSnapshot,
-        'content' | 'messageContent' | 'actionStates' | 'suggestion' | 'isReady'
-    >>): Partial<WysiwygViewModelSnapshot> {
+    private _coreFields(
+        partial: Partial<
+            Pick<
+                WysiwygViewModelSnapshot,
+                | 'content'
+                | 'messageContent'
+                | 'actionStates'
+                | 'suggestion'
+                | 'isReady'
+            >
+        >,
+    ): Partial<WysiwygViewModelSnapshot> {
         // After merging the core partial into the current snapshot, derive
         // the ComposerView / ComposerToolbar fields from the result.
         const cur = this.snapshot.current;
@@ -630,9 +1021,16 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     /**
      * Replace the entire core snapshot and derive view fields.
      */
-    private _setCore(core: Pick<WysiwygViewModelSnapshot,
-        'content' | 'messageContent' | 'actionStates' | 'suggestion' | 'isReady'
-    >): void {
+    private _setCore(
+        core: Pick<
+            WysiwygViewModelSnapshot,
+            | 'content'
+            | 'messageContent'
+            | 'actionStates'
+            | 'suggestion'
+            | 'isReady'
+        >,
+    ): void {
         const cur = this.snapshot.current;
         this.snapshot.set({
             ...cur,
@@ -643,9 +1041,18 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
     /**
      * Merge a partial core snapshot update and derive view fields.
      */
-    private _mergeCore(partial: Partial<Pick<WysiwygViewModelSnapshot,
-        'content' | 'messageContent' | 'actionStates' | 'suggestion' | 'isReady'
-    >>): void {
+    private _mergeCore(
+        partial: Partial<
+            Pick<
+                WysiwygViewModelSnapshot,
+                | 'content'
+                | 'messageContent'
+                | 'actionStates'
+                | 'suggestion'
+                | 'isReady'
+            >
+        >,
+    ): void {
         this.snapshot.merge(this._coreFields(partial));
     }
 
@@ -655,7 +1062,7 @@ export class WysiwygViewModel extends BaseViewModel<WysiwygViewModelSnapshot, Wy
      * `handleKeyDown` (which needs it for the `inputEventProcessor` callback)
      * and to `processInput` (which needs `formattingFunctions.getLink`).
      */
-    private _makeFormattingFunctionShim() {
+    private _makeFormattingFunctionShim(): FormattingFunctions {
         return {
             bold: this.bold,
             italic: this.italic,

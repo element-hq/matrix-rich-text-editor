@@ -25,7 +25,10 @@ export { richToPlain, plainToRich } from './conversion';
 
 // ViewModel API (framework-agnostic — no React dependency)
 export { WysiwygViewModel } from './WysiwygViewModel';
-export type { WysiwygViewModelSnapshot, WysiwygViewModelOptions } from './WysiwygViewModel';
+export type {
+    WysiwygViewModelSnapshot,
+    WysiwygViewModelOptions,
+} from './WysiwygViewModel';
 
 function useEditorFocus(
     editorRef: RefObject<HTMLElement | null>,

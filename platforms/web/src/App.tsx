@@ -16,9 +16,14 @@ Please see LICENSE in the repository root for full details.
  * `children` to `ComposerView` — the WASM model is attached via `vm.attach()`.
  */
 
-import { type ReactElement, useState, useMemo, useRef, useEffect } from 'react';
-import { ComposerView, ComposerToolbarView, useViewModel } from '@element-hq/web-shared-components';
-import { TooltipProvider } from '@vector-im/compound-web';
+import {
+    type ReactElement,
+    useState,
+    useMemo,
+    useRef,
+    useEffect,
+    useSyncExternalStore,
+} from 'react';
 
 // Compound design tokens (CSS custom properties: --cpd-color-*, --cpd-space-*, etc.)
 import '@vector-im/compound-design-tokens/assets/web/css/compound-design-tokens.css';
@@ -45,14 +50,20 @@ function App(): ReactElement {
     const vm = useMemo(() => {
         return new WysiwygViewModel({
             emojiSuggestions,
-            inputEventProcessor: (e: WysiwygEvent, wysiwyg, _editor) => {
+            inputEventProcessor: (
+                e: WysiwygEvent,
+                wysiwyg,
+                _editor,
+            ): WysiwygEvent | null => {
                 if (e instanceof ClipboardEvent) return e;
                 if (
                     !(e instanceof KeyboardEvent) &&
                     ((enterToSend && e.inputType === 'insertParagraph') ||
                         e.inputType === 'sendMessage')
                 ) {
-                    console.log(`SENDING MESSAGE HTML: ${wysiwyg.messageContent()}`);
+                    console.log(
+                        `SENDING MESSAGE HTML: ${wysiwyg.messageContent()}`,
+                    );
                     wysiwyg.actions.clear();
                     return null;
                 }
@@ -70,16 +81,21 @@ function App(): ReactElement {
         if (!el) return;
         vm.attach(el);
         vm.init().catch(console.error);
-        return () => {
+        // Expose trace log for Playwright inspection
+        (window as unknown as Record<string, unknown>).__RTE_TRACE = vm.trace;
+        return (): void => {
             vm.detach();
         };
     }, [vm]);
 
     // Dispose the ViewModel on unmount
-    useEffect(() => () => vm.dispose(), [vm]);
+    useEffect((): (() => void) => () => vm.dispose(), [vm]);
 
     // Wire the useTestCases hook into the ViewModel for test case tracing
-    const { testRef, utilities: testUtilities } = useTestCases(editorRef, vm.composerModel);
+    const { testRef, utilities: testUtilities } = useTestCases(
+        editorRef,
+        vm.composerModel,
+    );
     useEffect(() => {
         vm.setTestUtilities(testUtilities);
     }, [vm, testUtilities]);
@@ -89,7 +105,11 @@ function App(): ReactElement {
     };
 
     // Subscribe to the VM snapshot for the debug panel
-    const snapshot = useViewModel(vm);
+    const snapshot = useSyncExternalStore(
+        vm.subscribe,
+        vm.getSnapshot,
+        vm.getSnapshot,
+    );
 
     // Update the Model DOM tree whenever the snapshot changes
     useEffect(() => {
@@ -99,44 +119,97 @@ function App(): ReactElement {
     });
 
     return (
-        <TooltipProvider>
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            background: 'var(--cpd-color-bg-subtle-secondary)',
-        }}>
-            {/* Debug area — takes all available space above the composer */}
-            <div style={{
-                flex: '1 1 0',
-                minHeight: 0,
-                padding: 'var(--cpd-space-4x)',
+        <div
+            style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 'var(--cpd-space-3x)',
-                color: 'var(--cpd-color-text-primary)',
-            }}>
+                height: '100%',
+                background: 'var(--cpd-color-bg-subtle-secondary)',
+            }}
+        >
+            {/* Debug area — takes all available space above the composer */}
+            <div
+                style={{
+                    flex: '1 1 0',
+                    minHeight: 0,
+                    padding: 'var(--cpd-space-4x)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--cpd-space-3x)',
+                    color: 'var(--cpd-color-text-primary)',
+                }}
+            >
                 {/* Model and Test case share space equally */}
-                <div style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <div
+                    style={{
+                        flex: '1 1 0',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
                     <h2 style={debugHeadingStyle}>Model:</h2>
-                    <div className="dom" ref={modelRef} style={{ flex: '1 1 0', minHeight: 0, overflow: 'auto' }} />
+                    <div
+                        className="dom"
+                        ref={modelRef}
+                        style={{
+                            flex: '1 1 0',
+                            minHeight: 0,
+                            overflow: 'auto',
+                        }}
+                    />
                 </div>
 
-                <div style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <div
+                    style={{
+                        flex: '1 1 0',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
                     <h2 style={debugHeadingStyle}>
                         Test case:{' '}
-                        <button type="button" onClick={testUtilities.onResetTestCase}>
+                        <button
+                            type="button"
+                            onClick={testUtilities.onResetTestCase}
+                        >
                             Start from here
                         </button>
                     </h2>
-                    <div className="testCase" ref={testRef} style={{ flex: '1 1 0', minHeight: 0, overflow: 'auto' }} />
+                    <div
+                        className="testCase"
+                        ref={testRef}
+                        style={{
+                            flex: '1 1 0',
+                            minHeight: 0,
+                            overflow: 'auto',
+                        }}
+                    />
                 </div>
 
                 {/* Message Content — fixed height at the bottom of the debug area */}
-                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={debugHeadingStyle}>Message Content (Matrix HTML):</h2>
-                    <div className="testCase" style={{ maxHeight: '80px', overflow: 'auto' }}>
-                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                <div
+                    style={{
+                        flexShrink: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
+                    <h2 style={debugHeadingStyle}>
+                        Message Content (Matrix HTML):
+                    </h2>
+                    <div
+                        className="testCase"
+                        style={{ maxHeight: '80px', overflow: 'auto' }}
+                    >
+                        <pre
+                            style={{
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                            }}
+                        >
                             {snapshot.messageContent ?? '(empty)'}
                         </pre>
                     </div>
@@ -144,56 +217,59 @@ function App(): ReactElement {
             </div>
 
             {/* Composer area — pinned to the bottom */}
-            <div style={{
-                position: 'relative',
-                flexShrink: 0,
-                background: 'var(--cpd-color-bg-canvas-default)',
-                borderTop: '1px solid var(--cpd-color-border-interactive-secondary)',
-                padding: 'var(--cpd-space-3x)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--cpd-space-2x)',
-            }}>
-                {/* Formatting toolbar from shared-components */}
-                <ComposerToolbarView vm={vm} />
-
-                {/* Composer pill shell from shared-components */}
-                <ComposerView vm={vm}>
-                    <div
-                        ref={editorRef}
-                        contentEditable
-                        role="textbox"
-                        aria-label="Message"
-                        aria-multiline="true"
-                        className="rte-content"
-                        style={{
-                            outline: 'none',
-                            width: '100%',
-                            minHeight: '1.5em',
-                            font: 'var(--cpd-font-body-md-regular)',
-                        }}
-                    />
-                </ComposerView>
-
-                <div style={{
+            <div
+                style={{
+                    position: 'relative',
+                    flexShrink: 0,
+                    background: 'var(--cpd-color-bg-canvas-default)',
+                    borderTop:
+                        '1px solid var(--cpd-color-border-interactive-secondary)',
+                    padding: 'var(--cpd-space-3x)',
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: 'var(--cpd-space-2x)',
-                    font: 'var(--cpd-font-body-sm-regular)',
-                    color: 'var(--cpd-color-text-secondary)',
-                    padding: '0 var(--cpd-space-2x)',
-                }}>
+                }}
+            >
+                <div
+                    ref={editorRef}
+                    contentEditable
+                    role="textbox"
+                    aria-label="Message"
+                    aria-multiline="true"
+                    className="editor"
+                    style={{
+                        outline: 'none',
+                        width: '100%',
+                        minHeight: '1.5em',
+                        font: 'var(--cpd-font-body-md-regular)',
+                        border: '1px solid var(--cpd-color-border-interactive-secondary)',
+                        borderRadius: 'var(--cpd-space-3x)',
+                        padding: 'var(--cpd-space-2x) var(--cpd-space-3x)',
+                    }}
+                />
+
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--cpd-space-2x)',
+                        font: 'var(--cpd-font-body-sm-regular)',
+                        color: 'var(--cpd-color-text-secondary)',
+                        padding: '0 var(--cpd-space-2x)',
+                    }}
+                >
                     <input
                         type="checkbox"
                         id="enterToSend"
                         checked={enterToSend}
                         onChange={onEnterToSendChanged}
                     />
-                    <label htmlFor="enterToSend">Enter to "send" (if unchecked, use Ctrl+Enter)</label>
+                    <label htmlFor="enterToSend">
+                        Enter to "send" (if unchecked, use Ctrl+Enter)
+                    </label>
                 </div>
             </div>
         </div>
-        </TooltipProvider>
     );
 }
 

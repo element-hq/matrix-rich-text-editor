@@ -10,6 +10,26 @@ import { test, expect, type Page } from '@playwright/test';
 const editorSelector = '.editor:not([disabled])[contenteditable="true"]';
 
 /**
+ * Helper: dump the RTE event trace log from the page.
+ * Returns the formatted trace string, or a fallback message.
+ */
+async function dumpTrace(page: Page): Promise<string> {
+    try {
+        return await page.evaluate(() => {
+            const trace = (window as unknown as Record<string, unknown>)
+                .__RTE_TRACE as
+                | { dump?: () => string; entries?: () => unknown[] }
+                | undefined;
+            if (trace?.dump) return trace.dump();
+            if (trace?.entries) return JSON.stringify(trace.entries(), null, 2);
+            return '(no trace available)';
+        });
+    } catch {
+        return '(page closed or trace unavailable)';
+    }
+}
+
+/**
  * Select a range of text within the editor by walking its text nodes.
  */
 async function selectRange(
@@ -96,6 +116,27 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('x');
         await page.keyboard.press('Backspace');
         await expect(editor).not.toContainText('x');
+        // Clear the trace so each test's output is isolated
+        await page.evaluate(() => {
+            const trace = (window as unknown as Record<string, unknown>)
+                .__RTE_TRACE as { clear?: () => void } | undefined;
+            trace?.clear?.();
+        });
+    });
+
+    test.afterEach(async ({ page }, testInfo) => {
+        if (testInfo.status !== testInfo.expectedStatus) {
+            const trace = await dumpTrace(page);
+            // Attach as a test artifact so it appears in the Playwright report
+            await testInfo.attach('rte-trace.txt', {
+                body: trace,
+                contentType: 'text/plain',
+            });
+            // Also print to stdout for quick Docker iteration
+            console.log(
+                `\n=== RTE TRACE (${testInfo.title}) ===\n${trace}\n=== END TRACE ===\n`,
+            );
+        }
     });
 
     test('cut removes text and places it on clipboard', async ({ page }) => {
