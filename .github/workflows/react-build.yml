@@ -70,7 +70,18 @@ jobs:
             platforms/web/coverage
             !platforms/web/coverage/lcov-report
             !platforms/web/coverage/tmp
+      - name: Get installed Playwright version
+        id: playwright
+        working-directory: platforms/web
+        run: echo "version=$(npx --silent -- playwright --version | awk '{print $2}')" >> $GITHUB_OUTPUT
+      - name: Cache playwright binaries
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: platforms/web
         run: npx playwright install --with-deps chromium
       - name: Browser Test
