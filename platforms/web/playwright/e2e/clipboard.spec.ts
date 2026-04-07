@@ -56,28 +56,51 @@ async function selectRange(
 }
 
 /**
- * Write plain text to the clipboard then paste into the editor via Ctrl+V.
+ * Dump the WASM model trace (.testCase div) to the test console for CI debugging.
  */
-async function pastePlainText(page: Page, text: string): Promise<void> {
-    await page.evaluate(async (t) => navigator.clipboard.writeText(t), text);
-    await page.locator(editorSelector).click();
-    await page.keyboard.press('End');
-    await page.keyboard.press('ControlOrMeta+v');
+async function dumpModelTrace(page: Page, label: string): Promise<void> {
+    const trace = await page.locator('.testCase').textContent().catch(() => null);
+    // Use console.error so it shows in the test attachment even when the test passes
+    console.error(`[${label}] WASM trace:\n${trace ?? '(not found)'}`);
 }
 
 /**
- * Write rich text to the clipboard then paste into the editor via Ctrl+V.
+ * Paste plain text into the editor by dispatching a ClipboardEvent directly.
+ * This avoids writing to the system clipboard and pressing Ctrl+V, which can
+ * race with the WASM selectionchange handler in headless CI Chrome.
+ */
+async function pastePlainText(page: Page, text: string): Promise<void> {
+    await page.locator(editorSelector).evaluate((el, t) => {
+        const dt = new DataTransfer();
+        dt.setData('text/plain', t);
+        el.dispatchEvent(
+            new ClipboardEvent('paste', {
+                clipboardData: dt,
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
+    }, text);
+}
+
+/**
+ * Paste rich text into the editor by dispatching a ClipboardEvent directly.
+ * This avoids writing to the system clipboard and pressing Ctrl+V, which can
+ * race with the WASM selectionchange handler in headless CI Chrome.
  */
 async function pasteRichText(page: Page, html: string): Promise<void> {
-    await page.evaluate(async (h) => {
-        const blob = new Blob([h], { type: 'text/html' });
-        await navigator.clipboard.write([
-            new ClipboardItem({ 'text/html': blob }),
-        ]);
+    await page.locator(editorSelector).evaluate((el, h) => {
+        const dt = new DataTransfer();
+        dt.setData('text/html', h);
+        dt.setData('text/plain', '');
+        el.dispatchEvent(
+            new ClipboardEvent('paste', {
+                clipboardData: dt,
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
     }, html);
-    await page.locator(editorSelector).click();
-    await page.keyboard.press('End');
-    await page.keyboard.press('ControlOrMeta+v');
 }
 
 test.describe('Clipboard', () => {
@@ -118,9 +141,11 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('BEFORE');
 
         await pastePlainText(page, 'pasted');
+        await dumpModelTrace(page, 'after plain paste');
         await expect(editor).toContainText('BEFOREpasted');
 
         await page.keyboard.insertText('AFTER');
+        await dumpModelTrace(page, 'after AFTER insert');
         await expect(editor).toContainText('BEFOREpastedAFTER');
     });
 
@@ -130,9 +155,11 @@ test.describe('Clipboard', () => {
         await expect(editor).toContainText('BEFORE');
 
         await pasteRichText(page, "<a href='https://matrix.org'>link</a>");
+        await dumpModelTrace(page, 'after rich paste');
         await expect(editor).toContainText('BEFORElink');
 
         await page.keyboard.insertText('AFTER');
+        await dumpModelTrace(page, 'after AFTER insert (rich)');
         await expect(editor).toContainText('BEFORElinkAFTER');
     });
 });

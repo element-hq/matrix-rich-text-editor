@@ -75,7 +75,10 @@ export function useListeners(
             return;
         }
 
+        let handlingInput = false;
+
         const _handleInput = (e: WysiwygInputEvent): void => {
+            handlingInput = true;
             try {
                 const res = handleInput(
                     e,
@@ -116,6 +119,14 @@ export function useListeners(
                 }
             } catch {
                 onError(plainTextContentRef.current);
+            } finally {
+                // Defer clearing the flag so any selectionchange events fired
+                // synchronously by replaceEditor/focus (within this call stack)
+                // are suppressed before we allow selectionchange to update the
+                // WASM model again.
+                queueMicrotask(() => {
+                    handlingInput = false;
+                });
             }
         };
 
@@ -172,6 +183,7 @@ export function useListeners(
         editorNode.addEventListener('keydown', onKeyDown);
 
         const onSelectionChange = (): void => {
+            if (handlingInput) return;
             try {
                 const actionStates = handleSelectionChange(
                     editorNode,
