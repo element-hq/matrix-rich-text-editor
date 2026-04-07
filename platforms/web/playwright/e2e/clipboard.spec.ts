@@ -56,36 +56,44 @@ async function selectRange(
 }
 
 /**
- * Write plain text to the clipboard then paste into the editor via Ctrl+V.
- * The clipboard write and cursor repositioning are done in a single evaluate
- * call so there is no round-trip window in which focus/selection can be lost.
+ * Paste plain text into the editor by dispatching a ClipboardEvent directly.
+ * This avoids writing to the clipboard and pressing Ctrl+V, which requires
+ * focus to be in the right state and can race with the WASM selectionchange
+ * handler in CI.
  */
 async function pastePlainText(page: Page, text: string): Promise<void> {
-    // Use el.focus() after the clipboard write: page.evaluate() steals browser
-    // focus, so we restore it before triggering the paste keystroke.
-    await page.locator(editorSelector).evaluate(async (el, t) => {
-        await navigator.clipboard.writeText(t);
-        el.focus();
+    await page.locator(editorSelector).evaluate((el, t) => {
+        const dt = new DataTransfer();
+        dt.setData('text/plain', t);
+        el.dispatchEvent(
+            new ClipboardEvent('paste', {
+                clipboardData: dt,
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
     }, text);
-    await page.keyboard.press('ControlOrMeta+v');
 }
 
 /**
- * Write rich text to the clipboard then paste into the editor via Ctrl+V.
- * The clipboard write and cursor repositioning are done in a single evaluate
- * call so there is no round-trip window in which focus/selection can be lost.
+ * Paste rich text into the editor by dispatching a ClipboardEvent directly.
+ * This avoids writing to the clipboard and pressing Ctrl+V, which requires
+ * focus to be in the right state and can race with the WASM selectionchange
+ * handler in CI.
  */
 async function pasteRichText(page: Page, html: string): Promise<void> {
-    // Use el.focus() after the clipboard write: page.evaluate() steals browser
-    // focus, so we restore it before triggering the paste keystroke.
-    await page.locator(editorSelector).evaluate(async (el, h) => {
-        const blob = new Blob([h], { type: 'text/html' });
-        await navigator.clipboard.write([
-            new ClipboardItem({ 'text/html': blob }),
-        ]);
-        el.focus();
+    await page.locator(editorSelector).evaluate((el, h) => {
+        const dt = new DataTransfer();
+        dt.setData('text/html', h);
+        dt.setData('text/plain', '');
+        el.dispatchEvent(
+            new ClipboardEvent('paste', {
+                clipboardData: dt,
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
     }, html);
-    await page.keyboard.press('ControlOrMeta+v');
 }
 
 test.describe('Clipboard', () => {
