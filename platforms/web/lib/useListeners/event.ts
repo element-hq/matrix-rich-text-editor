@@ -200,11 +200,6 @@ export function handleInput(
     );
     if (update) {
         const repl = update.text_update().replace_all;
-        // Focus before replaceEditor so that selectContent (called inside
-        // replaceEditor) runs last and correctly positions the cursor.
-        // If focus() were called after replaceEditor, headless Chrome fires a
-        // selectionchange that can select-all, corrupting the WASM cursor.
-        editor.focus();
         if (repl) {
             replaceEditor(
                 editor,
@@ -213,6 +208,13 @@ export function handleInput(
                 repl.end_utf16_codeunit,
             );
             testUtilities.setEditorHtml(repl.replacement_html);
+        }
+        // Only call focus() if the editor doesn't already have focus.
+        // An unconditional focus() fires a selectionchange in headless Chrome
+        // even when nothing changes, which overwrites the cursor position set
+        // by selectContent() inside replaceEditor() above.
+        if (document.activeElement !== editor) {
+            editor.focus();
         }
 
         // Only when
