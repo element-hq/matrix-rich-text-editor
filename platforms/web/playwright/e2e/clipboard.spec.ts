@@ -56,44 +56,28 @@ async function selectRange(
 }
 
 /**
- * Paste plain text into the editor by dispatching a ClipboardEvent directly.
- * This avoids writing to the clipboard and pressing Ctrl+V, which requires
- * focus to be in the right state and can race with the WASM selectionchange
- * handler in CI.
+ * Write plain text to the clipboard then paste into the editor via Ctrl+V.
  */
 async function pastePlainText(page: Page, text: string): Promise<void> {
-    await page.locator(editorSelector).evaluate((el, t) => {
-        const dt = new DataTransfer();
-        dt.setData('text/plain', t);
-        el.dispatchEvent(
-            new ClipboardEvent('paste', {
-                clipboardData: dt,
-                bubbles: true,
-                cancelable: true,
-            }),
-        );
-    }, text);
+    await page.evaluate(async (t) => navigator.clipboard.writeText(t), text);
+    await page.locator(editorSelector).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ControlOrMeta+v');
 }
 
 /**
- * Paste rich text into the editor by dispatching a ClipboardEvent directly.
- * This avoids writing to the clipboard and pressing Ctrl+V, which requires
- * focus to be in the right state and can race with the WASM selectionchange
- * handler in CI.
+ * Write rich text to the clipboard then paste into the editor via Ctrl+V.
  */
 async function pasteRichText(page: Page, html: string): Promise<void> {
-    await page.locator(editorSelector).evaluate((el, h) => {
-        const dt = new DataTransfer();
-        dt.setData('text/html', h);
-        dt.setData('text/plain', '');
-        el.dispatchEvent(
-            new ClipboardEvent('paste', {
-                clipboardData: dt,
-                bubbles: true,
-                cancelable: true,
-            }),
-        );
+    await page.evaluate(async (h) => {
+        const blob = new Blob([h], { type: 'text/html' });
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'text/html': blob }),
+        ]);
     }, html);
+    await page.locator(editorSelector).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ControlOrMeta+v');
 }
 
 test.describe('Clipboard', () => {
