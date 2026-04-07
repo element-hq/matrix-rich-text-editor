@@ -62,7 +62,6 @@ jobs:
       - name: Setup Gradle & Build test cases
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          build-root-directory: platforms/android
           cache-read-only: false
 
       - name: Enable KVM group perms
