@@ -36,8 +36,8 @@ jobs:
       - name: Install targets
         run: make targets-ios
           
-      - name: Set Xcode 15.4
-        run: sudo xcode-select -switch /Applications/Xcode_15.4.app
+      - name: Set Xcode 26.1
+        run: sudo xcode-select -switch /Applications/Xcode_26.1.app
 
       - name: Set SwiftPM Repo credentials
         uses: de-vri-es/setup-git-credentials@5e1f18da68b7039c7f824408d170811aaec93ca8 # v2.1.2
