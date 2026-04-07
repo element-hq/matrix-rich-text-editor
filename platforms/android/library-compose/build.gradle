@@ -81,6 +81,7 @@ dependencies {
     implementation libs.timber
     implementation libs.androidx.appcompat
     implementation 'androidx.compose.material3:material3'
+    releaseImplementation 'androidx.compose.ui:ui-tooling-preview'
     debugImplementation "androidx.compose.ui:ui-tooling"
 
     testImplementation libs.test.junit
