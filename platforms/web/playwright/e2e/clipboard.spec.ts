@@ -62,7 +62,9 @@ async function selectRange(
  */
 async function pastePlainText(page: Page, text: string): Promise<void> {
     await page.evaluate(async (t) => navigator.clipboard.writeText(t), text);
-    await page.locator(editorSelector).click();
+    // Use focus() not click(): click() can select-all on a contenteditable after
+    // page.evaluate() steals focus, causing paste to replace existing content.
+    await page.locator(editorSelector).focus();
     await page.keyboard.press('End');
     await page.keyboard.press('ControlOrMeta+v');
 }
@@ -79,7 +81,9 @@ async function pasteRichText(page: Page, html: string): Promise<void> {
             new ClipboardItem({ 'text/html': blob }),
         ]);
     }, html);
-    await page.locator(editorSelector).click();
+    // Use focus() not click(): click() can select-all on a contenteditable after
+    // page.evaluate() steals focus, causing paste to replace existing content.
+    await page.locator(editorSelector).focus();
     await page.keyboard.press('End');
     await page.keyboard.press('ControlOrMeta+v');
 }
