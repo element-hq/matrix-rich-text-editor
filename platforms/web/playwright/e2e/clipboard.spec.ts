@@ -59,7 +59,10 @@ async function selectRange(
  * Dump the WASM model trace (.testCase div) to the test console for CI debugging.
  */
 async function dumpModelTrace(page: Page, label: string): Promise<void> {
-    const trace = await page.locator('.testCase').textContent().catch(() => null);
+    const trace = await page
+        .locator('.testCase')
+        .textContent()
+        .catch(() => null);
     // Use console.error so it shows in the test attachment even when the test passes
     console.error(`[${label}] WASM trace:\n${trace ?? '(not found)'}`);
 }
