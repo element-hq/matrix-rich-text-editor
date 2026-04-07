@@ -57,34 +57,34 @@ async function selectRange(
 
 /**
  * Write plain text to the clipboard then paste into the editor via Ctrl+V.
- * Clicks the editor after the clipboard write to restore focus/selection state
- * before triggering the paste.
+ * The clipboard write and cursor repositioning are done in a single evaluate
+ * call so there is no round-trip window in which focus/selection can be lost.
  */
 async function pastePlainText(page: Page, text: string): Promise<void> {
-    await page.evaluate(async (t) => navigator.clipboard.writeText(t), text);
-    // Use focus() not click(): click() can select-all on a contenteditable after
-    // page.evaluate() steals focus, causing paste to replace existing content.
-    await page.locator(editorSelector).focus();
-    await page.keyboard.press('End');
+    // Use el.focus() after the clipboard write: page.evaluate() steals browser
+    // focus, so we restore it before triggering the paste keystroke.
+    await page.locator(editorSelector).evaluate(async (el, t) => {
+        await navigator.clipboard.writeText(t);
+        el.focus();
+    }, text);
     await page.keyboard.press('ControlOrMeta+v');
 }
 
 /**
  * Write rich text to the clipboard then paste into the editor via Ctrl+V.
- * Clicks the editor after the clipboard write to restore focus/selection state
- * before triggering the paste.
+ * The clipboard write and cursor repositioning are done in a single evaluate
+ * call so there is no round-trip window in which focus/selection can be lost.
  */
 async function pasteRichText(page: Page, html: string): Promise<void> {
-    await page.evaluate(async (h) => {
+    // Use el.focus() after the clipboard write: page.evaluate() steals browser
+    // focus, so we restore it before triggering the paste keystroke.
+    await page.locator(editorSelector).evaluate(async (el, h) => {
         const blob = new Blob([h], { type: 'text/html' });
         await navigator.clipboard.write([
             new ClipboardItem({ 'text/html': blob }),
         ]);
+        el.focus();
     }, html);
-    // Use focus() not click(): click() can select-all on a contenteditable after
-    // page.evaluate() steals focus, causing paste to replace existing content.
-    await page.locator(editorSelector).focus();
-    await page.keyboard.press('End');
     await page.keyboard.press('ControlOrMeta+v');
 }
 
@@ -128,7 +128,6 @@ test.describe('Clipboard', () => {
         await pastePlainText(page, 'pasted');
         await expect(editor).toContainText('BEFOREpasted');
 
-        await page.keyboard.press('End');
         await page.keyboard.insertText('AFTER');
         await expect(editor).toContainText('BEFOREpastedAFTER');
     });
@@ -141,7 +140,6 @@ test.describe('Clipboard', () => {
         await pasteRichText(page, "<a href='https://matrix.org'>link</a>");
         await expect(editor).toContainText('BEFORElink');
 
-        await page.keyboard.press('End');
         await page.keyboard.insertText('AFTER');
         await expect(editor).toContainText('BEFORElinkAFTER');
     });
