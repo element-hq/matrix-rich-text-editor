@@ -120,10 +120,12 @@ export function useListeners(
             } catch {
                 onError(plainTextContentRef.current);
             } finally {
-                // Defer clearing the flag so any selectionchange events fired
-                // synchronously by replaceEditor/focus (within this call stack)
-                // are suppressed before we allow selectionchange to update the
-                // WASM model again.
+                // Defer clearing the flag so native selectionchange events
+                // fired asynchronously by headless Chrome after replaceEditor
+                // (e.g. from innerHTML reset) are suppressed before we allow
+                // selectionchange to update the WASM model again.
+                // We use queueMicrotask so the flag is cleared before any
+                // subsequent task runs, but after all synchronous handlers.
                 queueMicrotask(() => {
                     handlingInput = false;
                 });
@@ -182,8 +184,11 @@ export function useListeners(
         };
         editorNode.addEventListener('keydown', onKeyDown);
 
-        const onSelectionChange = (): void => {
-            if (handlingInput) return;
+        const onSelectionChange = (e: Event): void => {
+            // Always allow manually-dispatched (isTrusted=false) events through
+            // so test utilities can reposition the cursor between fireEvent
+            // calls even while handlingInput is still true.
+            if (handlingInput && e.isTrusted) return;
             try {
                 const actionStates = handleSelectionChange(
                     editorNode,
