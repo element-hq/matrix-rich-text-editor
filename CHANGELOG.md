@@ -1,5 +1,10 @@
 # Changelog
 
+# [2.41.3]
+- [Android] Fix some inline tags being processed as block tags and adding extra line breaks #118
+- [Android] Update dependencies #113
+- [Web] Update dependencies #109
+
 # [2.41.2]
 - [Android] Remove material dependency.
 - [Android] Improve rendering of sub list. #100
