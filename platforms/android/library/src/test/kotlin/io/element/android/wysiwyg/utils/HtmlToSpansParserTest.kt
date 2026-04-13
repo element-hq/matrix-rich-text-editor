@@ -308,6 +308,29 @@ class HtmlToSpansParserTest {
         )
     }
 
+    @Test
+    fun testLineBreakNotAddedAfterStrikethroughOrCodeTags() {
+        val htmlStrikethrough = "Testing <del>strikethrough</del>$NBSP"
+        val spannedStrikeThrough = convertHtml(
+            html = htmlStrikethrough,
+            isEditor = false,
+        )
+        assertThat(
+            spannedStrikeThrough.toString(),
+            equalTo("Testing strikethrough$NBSP")
+        )
+
+        val htmlCode = "Testing <code>inline code</code>$NBSP"
+        val spannedStrikeCode = convertHtml(
+            html = htmlCode,
+            isEditor = false,
+        )
+        assertThat(
+            spannedStrikeCode.toString(),
+            equalTo("Testing inline code$NBSP")
+        )
+    }
+
     private fun convertHtml(
         html: String,
         isEditor: Boolean = true,
