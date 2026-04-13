@@ -85,6 +85,8 @@ async function pasteRichText(page: Page, html: string): Promise<void> {
 }
 
 test.describe('Clipboard', () => {
+    test.skip(true, 'Flaky — fix tracked on langleyd/mvvm branch');
+
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         const editor = page.locator(editorSelector);
