@@ -80,6 +80,7 @@ dependencies {
 
     implementation libs.timber
     implementation libs.androidx.appcompat
+    implementation platform(libs.androidx.compose.bom)
     implementation 'androidx.compose.material3:material3'
     releaseImplementation 'androidx.compose.ui:ui-tooling-preview'
     debugImplementation "androidx.compose.ui:ui-tooling"
