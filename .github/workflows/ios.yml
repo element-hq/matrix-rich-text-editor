@@ -64,7 +64,7 @@ jobs:
       run: xcresultparser -q -o cobertura -t WysiwygComposerTests -p $(pwd) tests.xcresult > tests.xml
 
     - name: Upload unit test coverage to Codecov
-      uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
       with:
         files: ./platforms/ios/example/tests.xml
         fail_ci_if_error: true
@@ -81,7 +81,7 @@ jobs:
       run: xcresultparser -q -o cobertura -p $(pwd) ui-tests.xcresult > ui-tests.xml
 
     - name: Upload ui test coverage to Codecov
-      uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
       with:
         files: ./platforms/ios/example/ui-tests.xml
         fail_ci_if_error: true
