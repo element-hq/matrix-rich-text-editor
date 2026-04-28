@@ -17,32 +17,17 @@ import {
 
 import { replaceEditor } from './dom';
 
-let initStarted = false;
-let initFinished = false;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Initialise the WASM module, or do nothing if it is already initialised.
+ * Safe to call concurrently — all callers share the same underlying promise.
  */
 export async function initOnce(): Promise<void> {
-    if (initFinished) {
-        return Promise.resolve();
+    if (!initPromise) {
+        initPromise = initAsync();
     }
-    if (initStarted) {
-        // Wait until the other init call has finished
-        return new Promise<void>((resolve) => {
-            function tryResolve(): void {
-                if (initFinished) {
-                    resolve();
-                }
-                setTimeout(tryResolve, 200);
-            }
-            tryResolve();
-        });
-    }
-
-    initStarted = true;
-    await initAsync();
-    initFinished = true;
+    return initPromise;
 }
 
 export function useComposerModel(
