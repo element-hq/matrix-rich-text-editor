@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Get Version
-        uses: mad9000/actions-find-and-replace-string@bce4d50390d08b67e1822bd72fb54b3cf11b0ce9 # v5.0
+        uses: mad9000/actions-find-and-replace-string@789e104bfa5a1e90579e74de187e696450611aa2 # 6
         id: get-version
         with:
           source: ${{ github.head_ref }}
