@@ -1100,9 +1100,9 @@ where
         where
             S: UnicodeString,
         {
-            // An inline code usually is usually delimited by an
-            // opening and a closing single backtick. However, if
-            // the inline code string contains a backtick, it is
+            // An inline code is usually delimited by an opening
+            // and a closing single backtick. However, if the
+            // inline code string contains a backtick, it is
             // preferable to use an opening and a closing double
             // backticks to delimit the inline code string.
             //
