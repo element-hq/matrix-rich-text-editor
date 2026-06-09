@@ -8,7 +8,7 @@
 
 import UIKit
 
-public extension NSAttributedString {
+public nonisolated extension NSAttributedString {
     /// Enumerate attribute for given key and conveniently ignore any attribute that doesn't match given generic type.
     ///
     /// - Parameters:
