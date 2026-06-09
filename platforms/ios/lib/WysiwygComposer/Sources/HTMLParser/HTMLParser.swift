@@ -90,7 +90,11 @@ public final class HTMLParser {
             throw BuildHtmlAttributedError.dataError(encoding: encoding)
         }
 
-        builder.willFlushCallback = { element in
+        // DTCoreText invokes `willFlushCallback` from its own `DTHTMLAttributedStringBuilder` serial
+        // queue, so the closure must not be inferred as `@MainActor` (which is the file's default
+        // isolation). The explicit `@Sendable` + `nonisolated` annotation keeps the callback
+        // off the main actor and avoids a Swift 6 isolation assertion crash.
+        builder.willFlushCallback = { @Sendable element in
             guard let element else { return }
             element.sanitize()
         }
