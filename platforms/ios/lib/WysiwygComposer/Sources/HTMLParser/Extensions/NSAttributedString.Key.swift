@@ -9,7 +9,7 @@
 import DTCoreText
 import Foundation
 
-extension NSAttributedString.Key {
+nonisolated extension NSAttributedString.Key {
     // MARK: - DTCoreText Internal Keys
 
     static let DTTextBlocks: NSAttributedString.Key = .init(rawValue: DTTextBlocksAttribute)

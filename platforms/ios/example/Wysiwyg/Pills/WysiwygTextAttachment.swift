@@ -34,10 +34,15 @@ class WysiwygTextAttachment: NSTextAttachment {
 
     // MARK: - Init
 
-    override init(data contentData: Data?, ofType uti: String?) {
+    /// NSTextAttachment's initializers are nonisolated, so the overrides must match. TextKit
+    /// creates attachments on the main thread, so we bridge to the main actor for the bounds update.
+    override nonisolated init(data contentData: Data?, ofType uti: String?) {
         super.init(data: contentData, ofType: uti)
 
-        updateBounds()
+        nonisolated(unsafe) let attachment = self
+        MainActor.assumeIsolated {
+            attachment.updateBounds()
+        }
     }
 
     /// Create a Mention Pill text attachment for given display name.
@@ -59,10 +64,13 @@ class WysiwygTextAttachment: NSTextAttachment {
         self.init(data: encodedData, ofType: WysiwygAttachmentViewProvider.pillUTType)
     }
 
-    required init?(coder: NSCoder) {
+    required nonisolated init?(coder: NSCoder) {
         super.init(coder: coder)
 
-        updateBounds()
+        nonisolated(unsafe) let attachment = self
+        MainActor.assumeIsolated {
+            attachment.updateBounds()
+        }
     }
 }
 

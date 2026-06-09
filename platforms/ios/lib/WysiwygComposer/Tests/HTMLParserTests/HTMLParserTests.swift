@@ -9,6 +9,7 @@
 @testable import HTMLParser
 import XCTest
 
+@MainActor
 final class HTMLParserTests: XCTestCase {
     func testBuildAttributedFromHtml() throws {
         let html = "<p>Some <strong>bold and <em>italic</em> text</strong></p>"
