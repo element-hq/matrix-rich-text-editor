@@ -8,16 +8,15 @@
 
 import XCTest
 
+@MainActor
 class WysiwygUITests: XCTestCase {
-    let app = XCUIApplication(bundleIdentifier: "org.matrix.Wysiwyg")
+    var app = XCUIApplication(bundleIdentifier: "org.matrix.Wysiwyg")
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = false
         app.launch()
         try focusComposerAndClearTutorialIfNeeded()
     }
-
-    override func tearDownWithError() throws { }
 
     func testMinMaxResizing() {
         sleep(1)

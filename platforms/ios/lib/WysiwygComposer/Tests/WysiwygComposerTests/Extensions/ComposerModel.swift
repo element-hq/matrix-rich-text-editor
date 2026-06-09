@@ -6,8 +6,8 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 extension ComposerModelWrapper {
     /// Execute given action that returns a `ComposerUpdate` on self.
@@ -39,7 +39,7 @@ extension ComposerModelWrapper {
     /// - Returns: self (discardable)
     @discardableResult
     func assertHtml(_ html: String) -> ComposerModelWrapper {
-        XCTAssertEqual(getContentAsHtml(), html)
+        #expect(getContentAsHtml() == html)
         return self
     }
 
@@ -50,7 +50,7 @@ extension ComposerModelWrapper {
     /// - Returns: self (discardable)
     @discardableResult
     func assertTree(_ tree: String) -> ComposerModelWrapper {
-        XCTAssertEqual(toTree(), tree)
+        #expect(toTree() == tree)
         return self
     }
 
@@ -63,8 +63,8 @@ extension ComposerModelWrapper {
     @discardableResult
     func assertSelection(start: UInt32, end: UInt32) -> ComposerModelWrapper {
         let state = getCurrentDomState()
-        XCTAssertEqual(state.start, start)
-        XCTAssertEqual(state.end, end)
+        #expect(state.start == start)
+        #expect(state.end == end)
         return self
     }
 
@@ -75,7 +75,7 @@ extension ComposerModelWrapper {
     /// - Returns: self (discardable)
     @discardableResult
     func assertLinkAction(_ linkAction: LinkAction) -> ComposerModelWrapper {
-        XCTAssertEqual(getLinkAction(), linkAction)
+        #expect(getLinkAction() == linkAction)
         return self
     }
 }

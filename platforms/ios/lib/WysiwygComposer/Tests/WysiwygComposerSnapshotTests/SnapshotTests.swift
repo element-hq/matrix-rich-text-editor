@@ -6,34 +6,32 @@
 // Please see LICENSE in the repository root for full details.
 //
 
-import SnapshotTesting
 import SwiftUI
+import UIKit
 @testable import WysiwygComposer
-import XCTest
 
-class SnapshotTests: XCTestCase {
-    let isRecord = false
-    
-    var viewModel = WysiwygComposerViewModel()
-    var hostingController: UIViewController!
-    
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+/// Shared scaffolding for the snapshot test suites.
+///
+/// Swift Testing suites are structs (no inheritance), so the common composer setup that the
+/// XCTest base class used to provide is built here and composed into each suite via `init()`.
+@MainActor
+enum SnapshotScene {
+    /// Whether snapshots should be (re)recorded rather than compared.
+    static let isRecord = false
+
+    /// Builds a fresh view model hosted in a controller, mirroring the previous `setUpWithError`.
+    static func make() -> (viewModel: WysiwygComposerViewModel, hostingController: UIViewController) {
+        let viewModel = WysiwygComposerViewModel()
         let composerView = WysiwygComposerView(placeholder: "Placeholder",
                                                viewModel: viewModel,
                                                itemProviderHelper: nil,
                                                keyCommands: nil,
                                                pasteHandler: nil)
-        hostingController = UIHostingController(rootView: VStack {
+        let hostingController = UIHostingController(rootView: VStack {
             // Set the composer's text view at the top of the controller.
             composerView
             Spacer()
         })
-    }
-    
-    override func tearDownWithError() throws {
-        try super.tearDownWithError()
-        viewModel.clearContent()
-        hostingController = nil
+        return (viewModel, hostingController)
     }
 }

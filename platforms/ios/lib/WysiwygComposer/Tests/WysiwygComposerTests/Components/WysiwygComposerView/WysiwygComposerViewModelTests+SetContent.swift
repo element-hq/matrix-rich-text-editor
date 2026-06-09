@@ -7,8 +7,8 @@
 //
 
 import Combine
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 private enum Constants {
     static let sampleHtml = "some <strong>bold</strong> text"
@@ -19,63 +19,40 @@ private enum Constants {
 }
 
 extension WysiwygComposerViewModelTests {
-    func testSetHtmlContent() {
+    @Test func setHtmlContent() {
         viewModel.setHtmlContent(Constants.sampleHtml)
-        XCTAssertEqual(viewModel.content.html, Constants.sampleHtml)
-        XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown)
+        #expect(viewModel.content.html == Constants.sampleHtml)
+        #expect(viewModel.content.markdown == Constants.sampleMarkdown)
 
         viewModel.setHtmlContent(Constants.sampleHtml2)
-        XCTAssertEqual(viewModel.content.html, Constants.sampleHtml2)
-        XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown2)
+        #expect(viewModel.content.html == Constants.sampleHtml2)
+        #expect(viewModel.content.markdown == Constants.sampleMarkdown2)
     }
 
-    func testSetMarkdownContent() {
+    @Test func setMarkdownContent() {
         viewModel.setMarkdownContent(Constants.sampleMarkdown)
-        XCTAssertEqual(viewModel.content.html, Constants.sampleHtml)
-        XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown)
+        #expect(viewModel.content.html == Constants.sampleHtml)
+        #expect(viewModel.content.markdown == Constants.sampleMarkdown)
 
         viewModel.setMarkdownContent(Constants.sampleMarkdown2)
-        XCTAssertEqual(viewModel.content.html, Constants.sampleHtml2)
-        XCTAssertEqual(viewModel.content.markdown, Constants.sampleMarkdown2)
+        #expect(viewModel.content.html == Constants.sampleHtml2)
+        #expect(viewModel.content.markdown == Constants.sampleMarkdown2)
     }
 
-    func testSetHtmlContentTriggersPublish() {
-        let expectation = expectAttributedContentPublish(Constants.samplePlainText)
-        viewModel.setHtmlContent(Constants.sampleHtml)
-        waitExpectation(expectation: expectation, timeout: 2.0)
+    @Test func setHtmlContentTriggersPublish() async {
+        // The plain text is asserted, as it's way easier to build than the attributed string.
+        let publisher = viewModel.$attributedContent.removeDuplicates { $0.text == $1.text }.dropFirst()
+        let content = await nextValue(of: publisher) {
+            viewModel.setHtmlContent(Constants.sampleHtml)
+        }
+        #expect(content.plainText == Constants.samplePlainText)
     }
 
-    func testSetMarkdownContentTriggersPublish() {
-        let expectation = expectAttributedContentPublish(Constants.samplePlainText)
-        viewModel.setMarkdownContent(Constants.sampleMarkdown)
-        waitExpectation(expectation: expectation, timeout: 2.0)
-    }
-}
-
-private extension WysiwygComposerViewModelTests {
-    /// Create an expectation for an attributed content to be published by the view model.
-    ///
-    /// - Parameters:
-    ///   - expectedPlainText: Expected plain text.
-    ///   - description: Description for expectation.
-    /// - Returns: Expectation to be fulfilled. Can be used with `waitExpectation`.
-    /// - Note: the plain text is asserted, as its way easier to build than attributed string.
-    func expectAttributedContentPublish(_ expectedPlainText: String,
-                                        description: String = "Await attributed content") -> WysiwygTestExpectation {
-        let expectAttributedContent = expectation(description: description)
-        let cancellable = viewModel.$attributedContent
-            // Ignore on subscribe publish.
-            .removeDuplicates(by: {
-                $0.text == $1.text
-            })
-            .dropFirst()
-            .sink(receiveValue: { attributedContent in
-                XCTAssertEqual(
-                    attributedContent.plainText,
-                    expectedPlainText
-                )
-                expectAttributedContent.fulfill()
-            })
-        return WysiwygTestExpectation(value: expectAttributedContent, cancellable: cancellable)
+    @Test func setMarkdownContentTriggersPublish() async {
+        let publisher = viewModel.$attributedContent.removeDuplicates { $0.text == $1.text }.dropFirst()
+        let content = await nextValue(of: publisher) {
+            viewModel.setMarkdownContent(Constants.sampleMarkdown)
+        }
+        #expect(content.plainText == Constants.samplePlainText)
     }
 }

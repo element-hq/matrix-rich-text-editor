@@ -7,9 +7,21 @@
 //
 
 import SnapshotTesting
+import Testing
+import UIKit
+@testable import WysiwygComposer
 
-final class LinksSnapshotTests: SnapshotTests {
-    func testLinkContent() throws {
+@MainActor
+struct LinksSnapshotTests {
+    let isRecord = SnapshotScene.isRecord
+    let viewModel: WysiwygComposerViewModel
+    let hostingController: UIViewController
+
+    init() {
+        (viewModel, hostingController) = SnapshotScene.make()
+    }
+
+    @Test func linkContent() {
         viewModel.setHtmlContent("<a href=\"https://element.io\">test</a>")
         assertSnapshot(
             of: hostingController,

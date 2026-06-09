@@ -6,22 +6,23 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 private enum Constants {
     static let fallbackContent = "Fallback content"
 }
 
-final class WysiwygComposerTests: XCTestCase {
-    func testComposerEmptyState() {
+@MainActor
+struct WysiwygComposerTests {
+    @Test func composerEmptyState() {
         ComposerModelWrapper()
             .assertHtml("")
-            .execute { XCTAssertEqual($0.getContentAsMarkdown(), "") }
+            .execute { #expect($0.getContentAsMarkdown() == "") }
             .assertSelection(start: 0, end: 0)
     }
 
-    func testComposerCrashRecovery() {
+    @Test func composerCrashRecovery() {
         class SomeDelegate: ComposerModelWrapperDelegate {
             func fallbackContent() -> String {
                 Constants.fallbackContent

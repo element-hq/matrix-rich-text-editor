@@ -6,90 +6,90 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 extension WysiwygComposerViewModelTests {
-    func testSetAtRooMentionsState() {
+    @Test func setAtRooMentionsState() {
         viewModel.setAtRoomMention()
-        XCTAssertEqual(viewModel.getMentionsState(), MentionsState(userIds: [], roomIds: [], roomAliases: [], hasAtRoomMention: true))
+        #expect(viewModel.getMentionsState() == MentionsState(userIds: [], roomIds: [], roomAliases: [], hasAtRoomMention: true))
     }
-    
-    func testAtRooMentionsStateBySettingContent() {
+
+    @Test func atRooMentionsStateBySettingContent() {
         viewModel.setHtmlContent("@room")
-        XCTAssertEqual(viewModel.getMentionsState(), MentionsState(userIds: [], roomIds: [], roomAliases: [], hasAtRoomMention: true))
+        #expect(viewModel.getMentionsState() == MentionsState(userIds: [], roomIds: [], roomAliases: [], hasAtRoomMention: true))
     }
-    
-    func testMentionsStatBySettingUserMention() {
+
+    @Test func mentionsStatBySettingUserMention() {
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
-        XCTAssertEqual(viewModel.getMentionsState(),
-                       MentionsState(userIds: ["@alice:matrix.org"], roomIds: [], roomAliases: [], hasAtRoomMention: false))
+        #expect(viewModel.getMentionsState()
+            == MentionsState(userIds: ["@alice:matrix.org"], roomIds: [], roomAliases: [], hasAtRoomMention: false))
     }
-    
-    func testMentionsStateBySettingUserMentionFromContent() {
+
+    @Test func mentionsStateBySettingUserMentionFromContent() {
         let result = MentionsState(userIds: ["@alice:matrix.org"], roomIds: [], roomAliases: [], hasAtRoomMention: false)
         viewModel.setHtmlContent("<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a>")
-        XCTAssertEqual(viewModel.getMentionsState(), result)
-        
+        #expect(viewModel.getMentionsState() == result)
+
         viewModel.setMarkdownContent("[Alice](https://matrix.to/#/@alice:matrix.org)")
-        XCTAssertEqual(viewModel.getMentionsState(), result)
+        #expect(viewModel.getMentionsState() == result)
     }
-    
-    func testMentionsStatBySettingRoomAliasMention() {
+
+    @Test func mentionsStatBySettingRoomAliasMention() {
         viewModel.setMention(url: "https://matrix.to/#/#room:matrix.org", name: "Room", mentionType: .room)
-        XCTAssertEqual(viewModel.getMentionsState(),
-                       MentionsState(userIds: [], roomIds: [], roomAliases: ["#room:matrix.org"], hasAtRoomMention: false))
+        #expect(viewModel.getMentionsState()
+            == MentionsState(userIds: [], roomIds: [], roomAliases: ["#room:matrix.org"], hasAtRoomMention: false))
     }
-    
-    func testMentionsStateBySettingRoomAliasMentionFromContent() {
+
+    @Test func mentionsStateBySettingRoomAliasMentionFromContent() {
         let result = MentionsState(userIds: [], roomIds: [], roomAliases: ["#room:matrix.org"], hasAtRoomMention: false)
         viewModel.setHtmlContent("<a href=\"https://matrix.to/#/#room:matrix.org\">Room</a>")
-        XCTAssertEqual(viewModel.getMentionsState(), result)
-        
+        #expect(viewModel.getMentionsState() == result)
+
         viewModel.setMarkdownContent("[Room](https://matrix.to/#/#room:matrix.org)")
-        XCTAssertEqual(viewModel.getMentionsState(), result)
+        #expect(viewModel.getMentionsState() == result)
     }
-        
-    func testMentionsStatBySettingRoomIDMention() {
+
+    @Test func mentionsStatBySettingRoomIDMention() {
         viewModel.setMention(url: "https://matrix.to/#/!room:matrix.org", name: "Room", mentionType: .room)
-        XCTAssertEqual(viewModel.getMentionsState(),
-                       MentionsState(userIds: [],
-                                     roomIds: ["!room:matrix.org"],
-                                     roomAliases: [],
-                                     hasAtRoomMention: false))
+        #expect(viewModel.getMentionsState()
+            == MentionsState(userIds: [],
+                             roomIds: ["!room:matrix.org"],
+                             roomAliases: [],
+                             hasAtRoomMention: false))
     }
-    
-    func testMentionsStateBySettingRoomIDMentionFromContent() {
+
+    @Test func mentionsStateBySettingRoomIDMentionFromContent() {
         let result = MentionsState(userIds: [], roomIds: ["!room:matrix.org"], roomAliases: [], hasAtRoomMention: false)
         viewModel.setHtmlContent("<a href=\"https://matrix.to/#/!room:matrix.org\">Room</a>")
-        XCTAssertEqual(viewModel.getMentionsState(), result)
-        
+        #expect(viewModel.getMentionsState() == result)
+
         viewModel.setMarkdownContent("[Room](https://matrix.to/#/!room:matrix.org)")
-        XCTAssertEqual(viewModel.getMentionsState(), result)
+        #expect(viewModel.getMentionsState() == result)
     }
-    
-    func testMultipleMentionsBySettingThemIndividually() {
+
+    @Test func multipleMentionsBySettingThemIndividually() {
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
         viewModel.setMention(url: "https://matrix.to/#/@bob:matrix.org", name: "Bob", mentionType: .user)
         viewModel.setAtRoomMention()
-        
+
         let mentionsState = viewModel.getMentionsState()
-        XCTAssertEqual(mentionsState.userIds.count, 2)
-        XCTAssertEqual(Set(mentionsState.userIds), ["@alice:matrix.org", "@bob:matrix.org"])
-        XCTAssertTrue(mentionsState.hasAtRoomMention)
-        XCTAssertTrue(mentionsState.roomIds.isEmpty)
-        XCTAssertTrue(mentionsState.roomAliases.isEmpty)
+        #expect(mentionsState.userIds.count == 2)
+        #expect(Set(mentionsState.userIds) == ["@alice:matrix.org", "@bob:matrix.org"])
+        #expect(mentionsState.hasAtRoomMention)
+        #expect(mentionsState.roomIds.isEmpty)
+        #expect(mentionsState.roomAliases.isEmpty)
     }
-    
-    func testMultipleDuplicateMentionsBySettingThemIndividually() {
+
+    @Test func multipleDuplicateMentionsBySettingThemIndividually() {
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
-        
-        XCTAssertEqual(viewModel.getMentionsState(),
-                       MentionsState(userIds: ["@alice:matrix.org"], roomIds: [], roomAliases: [], hasAtRoomMention: false))
+
+        #expect(viewModel.getMentionsState()
+            == MentionsState(userIds: ["@alice:matrix.org"], roomIds: [], roomAliases: [], hasAtRoomMention: false))
     }
-    
-    func testMultipleMentionsBySettingThemWithHtmlContent() {
+
+    @Test func multipleMentionsBySettingThemWithHtmlContent() {
         viewModel.setHtmlContent(
             """
             <p><a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a>, \
@@ -100,13 +100,13 @@ extension WysiwygComposerViewModelTests {
             """
         )
         let mentionState = viewModel.getMentionsState()
-        XCTAssertEqual(Set(mentionState.userIds), ["@alice:matrix.org", "@bob:matrix.org"])
-        XCTAssertEqual(mentionState.roomAliases, ["#room:matrix.org"])
-        XCTAssertEqual(mentionState.roomIds, ["!room:matrix.org"])
-        XCTAssertTrue(mentionState.hasAtRoomMention)
+        #expect(Set(mentionState.userIds) == ["@alice:matrix.org", "@bob:matrix.org"])
+        #expect(mentionState.roomAliases == ["#room:matrix.org"])
+        #expect(mentionState.roomIds == ["!room:matrix.org"])
+        #expect(mentionState.hasAtRoomMention)
     }
-    
-    func testMultipleMentionsBySettingThemWithMarkdownContent() {
+
+    @Test func multipleMentionsBySettingThemWithMarkdownContent() {
         viewModel.setMarkdownContent(
             """
             [Room](https://matrix.to/#/!room:matrix.org), \
@@ -117,9 +117,9 @@ extension WysiwygComposerViewModelTests {
             """
         )
         let mentionState = viewModel.getMentionsState()
-        XCTAssertEqual(Set(mentionState.userIds), ["@alice:matrix.org", "@bob:matrix.org"])
-        XCTAssertEqual(mentionState.roomAliases, ["#room:matrix.org"])
-        XCTAssertEqual(mentionState.roomIds, ["!room:matrix.org"])
-        XCTAssertTrue(mentionState.hasAtRoomMention)
+        #expect(Set(mentionState.userIds) == ["@alice:matrix.org", "@bob:matrix.org"])
+        #expect(mentionState.roomAliases == ["#room:matrix.org"])
+        #expect(mentionState.roomIds == ["!room:matrix.org"])
+        #expect(mentionState.hasAtRoomMention)
     }
 }

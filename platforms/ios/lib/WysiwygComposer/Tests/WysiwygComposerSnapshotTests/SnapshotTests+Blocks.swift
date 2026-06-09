@@ -7,9 +7,21 @@
 //
 
 import SnapshotTesting
+import Testing
+import UIKit
+@testable import WysiwygComposer
 
-final class BlocksSnapshotTests: SnapshotTests {
-    func testInlineCodeContent() throws {
+@MainActor
+struct BlocksSnapshotTests {
+    let isRecord = SnapshotScene.isRecord
+    let viewModel: WysiwygComposerViewModel
+    let hostingController: UIViewController
+
+    init() {
+        (viewModel, hostingController) = SnapshotScene.make()
+    }
+
+    @Test func inlineCodeContent() {
         viewModel.setHtmlContent("<code>test</code>")
         assertSnapshot(
             of: hostingController,
@@ -18,7 +30,7 @@ final class BlocksSnapshotTests: SnapshotTests {
         )
     }
 
-    func testCodeBlockContent() throws {
+    @Test func codeBlockContent() {
         viewModel.setHtmlContent("<pre><code>if snapshot {\n\treturn true\n}</code></pre>")
         assertSnapshot(
             of: hostingController,
@@ -27,7 +39,7 @@ final class BlocksSnapshotTests: SnapshotTests {
         )
     }
 
-    func testQuoteContent() throws {
+    @Test func quoteContent() {
         viewModel.setHtmlContent("<blockquote>Some quote with<br/><br/><br/><br/>line breaks inside</blockquote>")
         assertSnapshot(
             of: hostingController,
@@ -36,7 +48,7 @@ final class BlocksSnapshotTests: SnapshotTests {
         )
     }
 
-    func testMultipleBlocksContent() throws {
+    @Test func multipleBlocksContent() {
         viewModel.setHtmlContent(
             """
             <blockquote>Some<br/>\

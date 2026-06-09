@@ -6,24 +6,24 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
-final class StringLatinLangugesTests: XCTestCase {
-    func testLatinLangugeCharacters() {
-        XCTAssertTrue("hello".containsLatinAndCommonCharactersOnly)
-        XCTAssertTrue("helló".containsLatinAndCommonCharactersOnly)
-        XCTAssertTrue("helló, ".containsLatinAndCommonCharactersOnly)
-        XCTAssertTrue("helló, ".containsLatinAndCommonCharactersOnly)
-        XCTAssertTrue("😄🛴🤯❤️".containsLatinAndCommonCharactersOnly)
+struct StringLatinLangugesTests {
+    @Test func latinLangugeCharacters() {
+        #expect("hello".containsLatinAndCommonCharactersOnly)
+        #expect("helló".containsLatinAndCommonCharactersOnly)
+        #expect("helló, ".containsLatinAndCommonCharactersOnly)
+        #expect("helló, ".containsLatinAndCommonCharactersOnly)
+        #expect("😄🛴🤯❤️".containsLatinAndCommonCharactersOnly)
         // Test the object replacement character as defined in String+Character extension.
-        XCTAssertTrue(String.object.containsLatinAndCommonCharactersOnly)
-        XCTAssertTrue("!@££$%^&*()".containsLatinAndCommonCharactersOnly)
-        
-        XCTAssertFalse("你好".containsLatinAndCommonCharactersOnly)
-        XCTAssertFalse("感^".containsLatinAndCommonCharactersOnly)
-        XCTAssertFalse("Меня зовут Маша".containsLatinAndCommonCharactersOnly)
-        XCTAssertFalse("ฉันชอบกินข้าวผัด แต่เธอชอบกินผัดไทย".containsLatinAndCommonCharactersOnly)
-        XCTAssertFalse("ni3好^".containsLatinAndCommonCharactersOnly)
+        #expect(String.object.containsLatinAndCommonCharactersOnly)
+        #expect("!@££$%^&*()".containsLatinAndCommonCharactersOnly)
+
+        #expect(!"你好".containsLatinAndCommonCharactersOnly)
+        #expect(!"感^".containsLatinAndCommonCharactersOnly)
+        #expect(!"Меня зовут Маша".containsLatinAndCommonCharactersOnly)
+        #expect(!"ฉันชอบกินข้าวผัด แต่เธอชอบกินผัดไทย".containsLatinAndCommonCharactersOnly)
+        #expect(!"ni3好^".containsLatinAndCommonCharactersOnly)
     }
 }

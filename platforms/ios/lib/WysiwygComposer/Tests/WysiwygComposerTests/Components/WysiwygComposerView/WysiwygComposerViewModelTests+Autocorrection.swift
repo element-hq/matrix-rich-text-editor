@@ -6,11 +6,12 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
+import UIKit
 @testable import WysiwygComposer
-import XCTest
 
 extension WysiwygComposerViewModelTests {
-    func testAutocorrectionIsDisabled() {
+    @Test func autocorrectionIsDisabled() {
         mockTrailingTyping("/")
         assertAutocorrectDisabled()
 
@@ -21,7 +22,7 @@ extension WysiwygComposerViewModelTests {
         assertAutocorrectDisabled()
     }
 
-    func testAutocorrectionIsEnabled() {
+    @Test func autocorrectionIsEnabled() {
         mockTrailingTyping("Just some text")
         assertAutoCorrectEnabled()
 
@@ -29,12 +30,12 @@ extension WysiwygComposerViewModelTests {
         assertAutoCorrectEnabled()
     }
 
-    func testDoubleSlashKeepAutocorrectionEnabled() {
+    @Test func doubleSlashKeepAutocorrectionEnabled() {
         mockTrailingTyping("//")
         assertAutoCorrectEnabled()
     }
 
-    func testAutocorrectionIsReEnabled() {
+    @Test func autocorrectionIsReEnabled() {
         mockTrailingTyping("/")
         assertAutocorrectDisabled()
 
@@ -50,7 +51,7 @@ extension WysiwygComposerViewModelTests {
         assertAutoCorrectEnabled()
     }
 
-    func testAutocorrectionAfterSetHtmlContent() {
+    @Test func autocorrectionAfterSetHtmlContent() {
         viewModel.setHtmlContent("/join #some_room:matrix.org")
         assertAutocorrectDisabled()
 
@@ -61,7 +62,7 @@ extension WysiwygComposerViewModelTests {
     // Note: disable for now as this is broken by escaping the slash character
     // it could be fixed in `toggleAutocorrectionIfNeeded` text view function
     // but it would have a performance impact
-//    func testAutocorrectionAfterSetHtmlContentInPlainTextMode() {
+//    @Test func autocorrectionAfterSetHtmlContentInPlainTextMode() {
 //        viewModel.plainTextMode = true
 //
 //        viewModel.setHtmlContent("/join #some_room:matrix.org")
@@ -71,7 +72,7 @@ extension WysiwygComposerViewModelTests {
 //        assertAutoCorrectEnabled()
 //    }
 
-    func testAutocorrectionAfterSetMarkdownContent() {
+    @Test func autocorrectionAfterSetMarkdownContent() {
         viewModel.setMarkdownContent("/join #some_room:matrix.org")
         assertAutocorrectDisabled()
 
@@ -82,7 +83,7 @@ extension WysiwygComposerViewModelTests {
     // Note: disable for now as this is broken by escaping the slash character
     // it could be fixed in `toggleAutocorrectionIfNeeded` text view function
     // but it would have a performance impact
-//    func testAutocorrectionAfterSetMarkdownContentInPlainTextMode() {
+//    @Test func autocorrectionAfterSetMarkdownContentInPlainTextMode() {
 //        viewModel.plainTextMode = true
 //
 //        viewModel.setMarkdownContent("/join #some_room:matrix.org")
@@ -95,10 +96,10 @@ extension WysiwygComposerViewModelTests {
 
 private extension WysiwygComposerViewModelTests {
     func assertAutoCorrectEnabled() {
-        XCTAssertEqual(viewModel.textView.autocorrectionType, .yes)
+        #expect(viewModel.textView.autocorrectionType == .yes)
     }
 
     func assertAutocorrectDisabled() {
-        XCTAssertEqual(viewModel.textView.autocorrectionType, .no)
+        #expect(viewModel.textView.autocorrectionType == .no)
     }
 }

@@ -6,11 +6,11 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 extension WysiwygComposerTests {
-    func testSetBaseStringWithEmoji() {
+    @Test func setBaseStringWithEmoji() {
         ComposerModelWrapper()
             .action { $0.replaceText(newText: TestConstants.testStringWithEmojis) }
             // Text is preserved, including emojis.
@@ -19,7 +19,7 @@ extension WysiwygComposerTests {
             .assertSelection(start: 14, end: 14)
     }
 
-    func testBackspacingEmoji() {
+    @Test func backspacingEmoji() {
         ComposerModelWrapper()
             .action { $0.replaceText(newText: TestConstants.testStringWithEmojis) }
             .action { $0.select(startUtf16Codeunit: 7, endUtf16Codeunit: 14) }

@@ -6,11 +6,11 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 extension WysiwygComposerTests {
-    func testLists() {
+    @Test func lists() {
         ComposerModelWrapper()
             .action { $0.apply(.orderedList) }
             .action { $0.replaceText(newText: "Item 1") }

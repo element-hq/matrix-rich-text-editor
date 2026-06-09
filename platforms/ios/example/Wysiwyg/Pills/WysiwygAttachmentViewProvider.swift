@@ -23,18 +23,34 @@ import WysiwygComposer
 
     // MARK: - Override
 
-    override init(textAttachment: NSTextAttachment,
-                  parentView: UIView?,
-                  textLayoutManager: NSTextLayoutManager?,
-                  location: NSTextLocation) {
+    /// NSTextAttachmentViewProvider is not @MainActor in the SDK, so these overrides must be
+    /// nonisolated. TextKit only ever drives them on the main thread, so we bridge with
+    /// MainActor.assumeIsolated. `nonisolated(unsafe)` on the local self/parentView references
+    /// satisfies region isolation for that single-threaded hop (an assertion, not a shared race).
+    override nonisolated init(textAttachment: NSTextAttachment,
+                              parentView: UIView?,
+                              textLayoutManager: NSTextLayoutManager?,
+                              location: NSTextLocation) {
         super.init(textAttachment: textAttachment, parentView: parentView, textLayoutManager: textLayoutManager, location: location)
 
-        textView = parentView?.superview as? WysiwygTextView
+        nonisolated(unsafe) let provider = self
+        nonisolated(unsafe) let parentView = parentView
+        MainActor.assumeIsolated {
+            provider.textView = parentView?.superview as? WysiwygTextView
+        }
     }
 
-    override func loadView() {
+    override nonisolated func loadView() {
         super.loadView()
 
+        nonisolated(unsafe) let provider = self
+        MainActor.assumeIsolated {
+            provider.buildAndRegisterPillView()
+        }
+    }
+
+    @MainActor
+    private func buildAndRegisterPillView() {
         guard let textAttachment = textAttachment as? WysiwygTextAttachment else {
             return
         }

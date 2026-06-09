@@ -7,9 +7,21 @@
 //
 
 import SnapshotTesting
+import Testing
+import UIKit
+@testable import WysiwygComposer
 
-final class CommonSnapshotTests: SnapshotTests {
-    func testClearState() throws {
+@MainActor
+struct CommonSnapshotTests {
+    let isRecord = SnapshotScene.isRecord
+    let viewModel: WysiwygComposerViewModel
+    let hostingController: UIViewController
+
+    init() {
+        (viewModel, hostingController) = SnapshotScene.make()
+    }
+
+    @Test func clearState() {
         assertSnapshot(
             of: hostingController,
             as: .image(on: .iPhone13),
@@ -17,7 +29,7 @@ final class CommonSnapshotTests: SnapshotTests {
         )
     }
 
-    func testPlainTextContent() throws {
+    @Test func plainTextContent() {
         viewModel.setHtmlContent("Test")
         assertSnapshot(
             of: hostingController,
