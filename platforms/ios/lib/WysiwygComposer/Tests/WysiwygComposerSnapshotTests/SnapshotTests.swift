@@ -11,6 +11,7 @@ import SwiftUI
 @testable import WysiwygComposer
 import XCTest
 
+@MainActor
 class SnapshotTests: XCTestCase {
     let isRecord = false
     

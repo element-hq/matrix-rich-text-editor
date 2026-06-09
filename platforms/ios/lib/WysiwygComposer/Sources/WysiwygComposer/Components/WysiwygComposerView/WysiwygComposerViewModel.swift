@@ -173,10 +173,6 @@ public class WysiwygComposerViewModel: WysiwygComposerViewModelProtocol, Observa
             }
             .store(in: &cancellables)
     }
-
-    deinit {
-        mentionReplacer = nil
-    }
 }
 
 // MARK: - Public

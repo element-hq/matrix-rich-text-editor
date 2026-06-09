@@ -13,6 +13,7 @@ private enum Constants {
     static let fallbackContent = "Fallback content"
 }
 
+@MainActor
 final class WysiwygComposerTests: XCTestCase {
     func testComposerEmptyState() {
         ComposerModelWrapper()

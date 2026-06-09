@@ -10,7 +10,7 @@ import DTCoreText
 
 /// Defines a placeholder to be inserted during HTML parsing in order to have a valid
 /// position for e.g. an empty paragraph.
-final class PlaceholderTextHTMLElement: DTTextHTMLElement {
+final nonisolated class PlaceholderTextHTMLElement: DTTextHTMLElement {
     /// Init.
     ///
     /// - Parameters:
@@ -33,7 +33,7 @@ final class PlaceholderTextHTMLElement: DTTextHTMLElement {
     }
 }
 
-final class MentionTextNodeHTMLElement: DTTextHTMLElement {
+final nonisolated class MentionTextNodeHTMLElement: DTTextHTMLElement {
     init(from textNode: DTTextHTMLElement) {
         super.init()
         setText(textNode.text())
