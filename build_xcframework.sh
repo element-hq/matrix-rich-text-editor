@@ -10,7 +10,9 @@ SIM_LIB_PATH=target/ios-simulator/libuniffi_wysiwyg_composer.a
 IOS_PATH=platforms/ios
 
 SWIFT_PACKAGE_PATH="${IOS_PATH}/lib/WysiwygComposer"
-SWIFT_BINDINGS_FILE_PATH="${SWIFT_PACKAGE_PATH}/Sources/WysiwygComposer/WysiwygComposer.swift"
+# The generated Swift bindings live in their own target so they can opt out of default
+# MainActor isolation (see Package.swift). Keep this path in sync with that target's folder.
+SWIFT_BINDINGS_FILE_PATH="${SWIFT_PACKAGE_PATH}/Sources/WysiwygComposerBindings/WysiwygComposer.swift"
 
 XCFRAMEWORK_PATH="${SWIFT_PACKAGE_PATH}/WysiwygComposerFFI.xcframework"
 
@@ -40,8 +42,9 @@ cargo uniffi-bindgen generate --library $ARM64_LIB_PATH -l swift --out-dir $GENE
 
 # Move Swift file to expected location
 #
-# Note: we use sed to tweak the generated Swift bindings and catch Rust panics, 
+# Note: we use sed to tweak the generated Swift bindings and catch Rust panics,
 # this should be removed when the Rust code is 100% safe (see `ComposerModelWrapper.swift`).
+mkdir -p "$(dirname "$SWIFT_BINDINGS_FILE_PATH")"
 mv "${GENERATION_PATH}/WysiwygComposer.swift" $SWIFT_BINDINGS_FILE_PATH
 sed -i "" -e '1h;2,$H;$!d;g' -e 's/) -> ComposerUpdate {\n        return try! FfiConverterTypeComposerUpdate.lift(\n            try!/) throws -> ComposerUpdate {\n        return try FfiConverterTypeComposerUpdate.lift(\n            try/g' $SWIFT_BINDINGS_FILE_PATH
 sed -i "" -e '1h;2,$H;$!d;g' -e 's/) -> ComposerUpdate/) throws -> ComposerUpdate/g' $SWIFT_BINDINGS_FILE_PATH

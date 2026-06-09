@@ -15,7 +15,7 @@ opt_in_rules:
 
 # paths to ignore during linting. Takes precedence over `included`.
 excluded:
-  - Sources/WysiwygComposer/WysiwygComposer.swift
+  - Sources/WysiwygComposerBindings/WysiwygComposer.swift
 
 line_length:
   warning: 140
