@@ -11,7 +11,7 @@ import UIKit
 // MARK: - Public
 
 /// Defines a custom background style for an attributed string element.
-public struct BlockStyle: Equatable {
+public nonisolated struct BlockStyle: Equatable {
     /// Defines the padding to apply on a block element that is displayed with a custom style.
     public struct Padding: Equatable {
         /// Horizontal padding to apply.

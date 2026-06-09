@@ -8,8 +8,9 @@
 
 import DTCoreText
 
-extension DTHTMLElement {
+nonisolated extension DTHTMLElement {
     /// Sanitize the DTHTMLElement right before it's written inside the resulting attributed string.
+    /// Invoked from DTCoreText's `DTHTMLAttributedStringBuilder` serial queue, so must stay off the main actor.
     func sanitize() {
         guard let childNodes = childNodes as? [DTHTMLElement] else { return }
 
@@ -71,7 +72,7 @@ private enum DTHTMLElementTag: String {
     case a
 }
 
-private extension DTHTMLElement {
+private nonisolated extension DTHTMLElement {
     var tag: DTHTMLElementTag? {
         guard let name else { return nil }
 

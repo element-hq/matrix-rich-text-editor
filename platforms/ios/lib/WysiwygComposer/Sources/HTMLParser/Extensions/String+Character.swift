@@ -6,7 +6,7 @@
 // Please see LICENSE in the repository root for full details.
 //
 
-public extension String {
+public nonisolated extension String {
     /// String containing a single NBSP character (`\u{00A0}`)
     static let nbsp = "\u{00A0}"
     /// String containing a single ZWSP character (`\u{200B}`)
@@ -23,7 +23,7 @@ public extension String {
     static let object = "\u{FFFC}"
 }
 
-public extension Character {
+public nonisolated extension Character {
     /// NBSP character (`\u{00A0}`)
     static let nbsp = Character(.nbsp)
     /// ZWSP character (`\u{200B}`)
