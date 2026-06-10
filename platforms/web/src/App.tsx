@@ -1,268 +1,263 @@
 /*
-Copyright 2024 New Vector Ltd.
+Copyright 2026 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
 SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { type MouseEventHandler, type ReactElement, useState } from 'react';
+/**
+ * Demo app — Phase 2 integration.
+ *
+ * Uses `WysiwygViewModel` (Phase 1) and wires it directly to the shared
+ * `ComposerView` + `ComposerToolbarView` from `@element-hq/web-shared-components`.
+ *
+ * The contenteditable div is still owned by this component and passed as
+ * `children` to `ComposerView` — the WASM model is attached via `vm.attach()`.
+ */
 
-import { useWysiwyg } from '../lib/useWysiwyg';
-import boldImage from './images/bold.svg';
-import undoImage from './images/undo.svg';
-import redoImage from './images/redo.svg';
-import italicImage from './images/italic.svg';
-import underlineImage from './images/underline.svg';
-import strikeTroughImage from './images/strike_through.svg';
-import listUnorderedImage from './images/list_unordered.svg';
-import listOrderedImage from './images/list_ordered.svg';
-import inlineCodeImage from './images/inline_code.svg';
-import codeBlockImage from './images/code_block.svg';
-import quoteImage from './images/quote.svg';
-import indentImage from './images/indent.svg';
-import unindentImage from './images/unindent.svg';
-import { type Wysiwyg, type WysiwygEvent } from '../lib/types';
+import {
+    type ReactElement,
+    useState,
+    useMemo,
+    useRef,
+    useEffect,
+    useSyncExternalStore,
+} from 'react';
 
-type ButtonProps = {
-    onClick: MouseEventHandler<HTMLButtonElement>;
-    imagePath: string;
-    alt: string;
-    state: 'enabled' | 'disabled' | 'reversed';
-};
+// Compound design tokens (CSS custom properties: --cpd-color-*, --cpd-space-*, etc.)
+import '@vector-im/compound-design-tokens/assets/web/css/compound-design-tokens.css';
+// Compound component styles
+import '@vector-im/compound-web/dist/style.css';
+// Inter font — the Element standard
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/inconsolata/400.css';
 
-function Button({ onClick, imagePath, alt, state }: ButtonProps): ReactElement {
-    const isReversed = state === 'reversed';
-    const isDisabled = state === 'disabled';
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            style={{
-                ...(isReversed && { backgroundColor: 'lightgray' }),
-                ...(isDisabled && { backgroundColor: 'firebrick' }),
-            }}
-        >
-            <img alt={alt} src={imagePath} />
-        </button>
-    );
-}
+import './editor.css';
+import { WysiwygViewModel } from '../lib/WysiwygViewModel.js';
+import { type WysiwygEvent } from '../lib/types.js';
+import { useTestCases } from '../lib/useTestCases/index.js';
+import { refreshComposerView } from '../lib/dom.js';
+
 const emojiSuggestions = new Map<string, string>([[':)', '🙂']]);
+
 function App(): ReactElement {
     const [enterToSend, setEnterToSend] = useState(true);
 
-    const inputEventProcessor = (
-        e: WysiwygEvent,
-        wysiwyg: Wysiwyg,
-    ): WysiwygEvent | null => {
-        if (e instanceof ClipboardEvent) {
-            return e;
-        }
-
-        if (
-            !(e instanceof KeyboardEvent) &&
-            ((enterToSend && e.inputType === 'insertParagraph') ||
-                e.inputType === 'sendMessage')
-        ) {
-            if (debug.testRef.current) {
-                debug.traceAction(null, 'send', `${wysiwyg.content()}`);
-            }
-            console.log(`SENDING MESSAGE HTML: ${wysiwyg.messageContent()}`);
-            wysiwyg.actions.clear();
-            return null;
-        }
-
-        return e;
-    };
-
-    const { ref, isWysiwygReady, actionStates, wysiwyg, debug, suggestion } =
-        useWysiwyg({
-            isAutoFocusEnabled: true,
-            inputEventProcessor,
-            emojiSuggestions: emojiSuggestions,
+    const vm = useMemo(() => {
+        return new WysiwygViewModel({
+            emojiSuggestions,
+            inputEventProcessor: (
+                e: WysiwygEvent,
+                wysiwyg,
+                _editor,
+            ): WysiwygEvent | null => {
+                if (e instanceof ClipboardEvent) return e;
+                if (
+                    !(e instanceof KeyboardEvent) &&
+                    ((enterToSend && e.inputType === 'insertParagraph') ||
+                        e.inputType === 'sendMessage')
+                ) {
+                    console.log(
+                        `SENDING MESSAGE HTML: ${wysiwyg.messageContent()}`,
+                    );
+                    wysiwyg.actions.clear();
+                    return null;
+                }
+                return e;
+            },
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const editorRef = useRef<HTMLDivElement | null>(null);
+    const modelRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const el = editorRef.current;
+        if (!el) return;
+        vm.attach(el);
+        vm.init().catch(console.error);
+        // Expose trace log for Playwright inspection
+        (window as unknown as Record<string, unknown>).__RTE_TRACE = vm.trace;
+        return (): void => {
+            vm.detach();
+        };
+    }, [vm]);
+
+    // Dispose the ViewModel on unmount
+    useEffect((): (() => void) => () => vm.dispose(), [vm]);
+
+    // Wire the useTestCases hook into the ViewModel for test case tracing
+    const { testRef, utilities: testUtilities } = useTestCases(
+        editorRef,
+        vm.composerModel,
+    );
+    useEffect(() => {
+        vm.setTestUtilities(testUtilities);
+    }, [vm, testUtilities]);
 
     const onEnterToSendChanged = (): void => {
-        setEnterToSend((prevValue) => !prevValue);
+        setEnterToSend((prev) => !prev);
     };
 
-    const isInList =
-        actionStates.unorderedList === 'reversed' ||
-        actionStates.orderedList === 'reversed';
+    // Subscribe to the VM snapshot for the debug panel
+    const snapshot = useSyncExternalStore(
+        vm.subscribe,
+        vm.getSnapshot,
+        vm.getSnapshot,
+    );
 
-    const commandExists = suggestion && suggestion.type === 'command';
-    const mentionExists = suggestion && suggestion.type === 'mention';
-    const shouldDisplayAtMention = mentionExists && suggestion.keyChar === '@';
-    const shouldDisplayHashMention =
-        mentionExists && suggestion.keyChar === '#';
+    // Update the Model DOM tree whenever the snapshot changes
+    useEffect(() => {
+        if (modelRef.current && vm.composerModel) {
+            refreshComposerView(modelRef.current, vm.composerModel);
+        }
+    });
+
     return (
-        <div className="wrapper">
-            <div>
-                <div className="editor_container">
-                    <div className="editor_toolbar">
-                        <Button
-                            onClick={wysiwyg.undo}
-                            alt="undo"
-                            imagePath={undoImage}
-                            state={actionStates.undo}
-                        />
-                        <Button
-                            onClick={wysiwyg.redo}
-                            alt="redo"
-                            imagePath={redoImage}
-                            state={actionStates.redo}
-                        />
-                        <Button
-                            onClick={wysiwyg.bold}
-                            alt="bold"
-                            imagePath={boldImage}
-                            state={actionStates.bold}
-                        />
-                        <Button
-                            onClick={wysiwyg.italic}
-                            alt="italic"
-                            imagePath={italicImage}
-                            state={actionStates.italic}
-                        />
-                        <Button
-                            onClick={wysiwyg.underline}
-                            alt="underline"
-                            imagePath={underlineImage}
-                            state={actionStates.underline}
-                        />
-                        <Button
-                            onClick={wysiwyg.strikeThrough}
-                            alt="strike through"
-                            imagePath={strikeTroughImage}
-                            state={actionStates.strikeThrough}
-                        />
-                        <Button
-                            onClick={wysiwyg.unorderedList}
-                            alt="list unordered"
-                            imagePath={listUnorderedImage}
-                            state={actionStates.unorderedList}
-                        />
-                        <Button
-                            onClick={wysiwyg.orderedList}
-                            alt="list ordered"
-                            imagePath={listOrderedImage}
-                            state={actionStates.orderedList}
-                        />
-                        {isInList && (
-                            <Button
-                                onClick={wysiwyg.indent}
-                                alt="indent"
-                                imagePath={indentImage}
-                                state={actionStates.indent}
-                            />
-                        )}
-                        {isInList && (
-                            <Button
-                                onClick={wysiwyg.unindent}
-                                alt="unindent"
-                                imagePath={unindentImage}
-                                state={actionStates.unindent}
-                            />
-                        )}
-                        <Button
-                            onClick={wysiwyg.quote}
-                            alt="quote"
-                            imagePath={quoteImage}
-                            state={actionStates.quote}
-                        />
-                        <Button
-                            onClick={wysiwyg.inlineCode}
-                            alt="inline code"
-                            imagePath={inlineCodeImage}
-                            state={actionStates.inlineCode}
-                        />
-                        <Button
-                            onClick={wysiwyg.codeBlock}
-                            alt="code block"
-                            imagePath={codeBlockImage}
-                            state={actionStates.codeBlock}
-                        />
-                        <button
-                            type="button"
-                            onClick={(_e): void => wysiwyg.clear()}
-                        >
-                            clear
-                        </button>
-                        {shouldDisplayAtMention && (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={(_e): void =>
-                                        wysiwyg.mention(
-                                            'https://matrix.to/#/@alice_user:element.io',
-                                            'Alice',
-                                            new Map([
-                                                [
-                                                    'style',
-                                                    'background-color:#d5f9d5',
-                                                ],
-                                                ['data-mention-type', 'user'],
-                                            ]),
-                                        )
-                                    }
-                                >
-                                    Add User mention
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={(_e): void =>
-                                        wysiwyg.mentionAtRoom(
-                                            new Map([
-                                                [
-                                                    'style',
-                                                    'background-color:#d5f9d5',
-                                                ],
-                                            ]),
-                                        )
-                                    }
-                                >
-                                    Add at-room mention
-                                </button>
-                            </>
-                        )}
-                        {shouldDisplayHashMention && (
-                            <button
-                                type="button"
-                                onClick={(_e): void =>
-                                    wysiwyg.mention(
-                                        'https://matrix.to/#/#my_room:element.io',
-                                        'My room',
-                                        new Map([
-                                            [
-                                                'style',
-                                                'background-color:#d5f9d5',
-                                            ],
-                                        ]),
-                                    )
-                                }
-                            >
-                                Add Room mention
-                            </button>
-                        )}
-                        {commandExists && (
-                            <button
-                                type="button"
-                                onClick={(_e): void =>
-                                    wysiwyg.command('/spoiler')
-                                }
-                            >
-                                Add /spoiler command
-                            </button>
-                        )}
-                    </div>
+        <div
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                background: 'var(--cpd-color-bg-subtle-secondary)',
+            }}
+        >
+            {/* Debug area — takes all available space above the composer */}
+            <div
+                style={{
+                    flex: '1 1 0',
+                    minHeight: 0,
+                    padding: 'var(--cpd-space-4x)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--cpd-space-3x)',
+                    color: 'var(--cpd-color-text-primary)',
+                }}
+            >
+                {/* Model and Test case share space equally */}
+                <div
+                    style={{
+                        flex: '1 1 0',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
+                    <h2 style={debugHeadingStyle}>Model:</h2>
                     <div
-                        className="editor"
-                        ref={ref}
-                        contentEditable={isWysiwygReady}
-                        role="textbox"
+                        className="dom"
+                        ref={modelRef}
+                        style={{
+                            flex: '1 1 0',
+                            minHeight: 0,
+                            overflow: 'auto',
+                        }}
                     />
                 </div>
-                <div className="editor_options">
+
+                <div
+                    style={{
+                        flex: '1 1 0',
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
+                    <h2 style={debugHeadingStyle}>
+                        Test case:{' '}
+                        <button
+                            type="button"
+                            onClick={testUtilities.onResetTestCase}
+                        >
+                            Start from here
+                        </button>
+                    </h2>
+                    <div
+                        className="testCase"
+                        ref={testRef}
+                        style={{
+                            flex: '1 1 0',
+                            minHeight: 0,
+                            overflow: 'auto',
+                        }}
+                    />
+                </div>
+
+                {/* Message Content — fixed height at the bottom of the debug area */}
+                <div
+                    style={{
+                        flexShrink: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
+                    <h2 style={debugHeadingStyle}>
+                        Message Content (Matrix HTML):
+                    </h2>
+                    <div
+                        className="testCase"
+                        style={{ maxHeight: '80px', overflow: 'auto' }}
+                    >
+                        <pre
+                            style={{
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                            }}
+                        >
+                            {snapshot.messageContent ?? '(empty)'}
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+            {/* Composer area — pinned to the bottom */}
+            <div
+                style={{
+                    position: 'relative',
+                    flexShrink: 0,
+                    background: 'var(--cpd-color-bg-canvas-default)',
+                    borderTop:
+                        '1px solid var(--cpd-color-border-interactive-secondary)',
+                    padding: 'var(--cpd-space-3x)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--cpd-space-2x)',
+                }}
+            >
+                <div
+                    ref={editorRef}
+                    contentEditable
+                    role="textbox"
+                    aria-label="Message"
+                    aria-multiline="true"
+                    className="editor"
+                    style={{
+                        outline: 'none',
+                        width: '100%',
+                        minHeight: '1.5em',
+                        font: 'var(--cpd-font-body-md-regular)',
+                        border: '1px solid var(--cpd-color-border-interactive-secondary)',
+                        borderRadius: 'var(--cpd-space-3x)',
+                        padding: 'var(--cpd-space-2x) var(--cpd-space-3x)',
+                    }}
+                />
+
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--cpd-space-2x)',
+                        font: 'var(--cpd-font-body-sm-regular)',
+                        color: 'var(--cpd-color-text-secondary)',
+                        padding: '0 var(--cpd-space-2x)',
+                    }}
+                >
                     <input
                         type="checkbox"
                         id="enterToSend"
@@ -274,21 +269,14 @@ function App(): ReactElement {
                     </label>
                 </div>
             </div>
-            <h2>Model:</h2>
-            <div className="dom" ref={debug.modelRef} />
-            <h2>
-                Test case:{' '}
-                <button type="button" onClick={debug.resetTestCase}>
-                    Start from here
-                </button>
-            </h2>
-            <div className="testCase" ref={debug.testRef}>
-                let mut model = cm("");
-                <br />
-                assert_eq!(tx(&amp;model), "");
-            </div>
         </div>
     );
 }
+
+const debugHeadingStyle: React.CSSProperties = {
+    margin: '0',
+    font: 'var(--cpd-font-body-md-semibold)',
+    color: 'var(--cpd-color-text-secondary)',
+};
 
 export default App;

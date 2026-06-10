@@ -1,170 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="cpd-theme-light">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Rich Text Editor</title>
         <style>
-            body {
-                background-color: #fff;
-                font-size: 2em;
-                margin: 0em;
-                padding: 0em;
-                border: 0em;
-            }
-            .wrapper {
-                display: grid;
-                grid-template-columns: 1fr;
-                grid-template-rows: 6em 0.1fr 1fr 0.1fr 1fr;
-                width: 100vw;
-                height: 100vh;
-                margin: 0em;
-                padding: 0em;
-                border: 0em;
-            }
-            .row1 {
-            }
-            .row2,
-            .row3 {
-                overflow: auto;
-            }
-            .editor_container {
-                border: 2px solid #eee;
-                border-radius: 10px;
-                box-shadow: none;
+            *,
+            *::before,
+            *::after {
                 box-sizing: border-box;
             }
-            .editor_toolbar {
-                border-bottom: none;
-                box-shadow: 0 2px 2px -2px rgba(34, 47, 62, 0.1),
-                    0 8px 8px -4px rgba(34, 47, 62, 0.07);
-                padding: 0.4em 1em 0.3em 0.3em;
+
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+            }
+
+            body {
+                background-color: var(--cpd-color-bg-canvas-default);
+                color: var(--cpd-color-text-primary);
+                font-family: var(--cpd-font-family-sans);
+                font-size: var(--cpd-font-size-body-md);
+            }
+
+            #root {
                 display: flex;
-                gap: 0.1em;
-                flex-wrap: wrap;
+                flex-direction: column;
+                height: 100%;
             }
-            .editor {
-                height: fit-content;
-                padding: 0.3em;
-                font-family: 'Inter', 'Twemoji', 'Apple Color Emoji',
-                    'Segoe UI Emoji', 'STIXGeneral', 'Arial', 'Helvetica',
-                    sans-serif, 'Noto Color Emoji';
-                max-height: 3.1em;
-                overflow: auto;
-            }
-            .editor_toolbar ul,
-            ol {
-                margin: 0em;
-            }
-            .editor_toolbar button {
-                line-height: 0.5em;
-                padding: 0.1em;
-                margin: 0em;
-                background-color: transparent;
-                border: 1px dotted transparent;
-            }
-            .editor_toolbar button:hover {
-                background-color: rgba(0, 0, 0, 0.1);
-                border: 1px dotted rgba(0, 0, 0, 0.3);
-            }
-            .editor_toolbar button img {
-                width: 3em;
-            }
-            .editor_options {
-                text-align: right;
-                font-size: 0.6em;
-                font-family: 'Inter', 'Twemoji', 'Apple Color Emoji',
-                    'Segoe UI Emoji', 'STIXGeneral', 'Arial', 'Helvetica',
-                    sans-serif, 'Noto Color Emoji';
-                padding: 0.2em;
-            }
-            pre {
-                margin: 0em;
-            }
+
+            /* Debug panel: DOM tree inspector */
             .dom,
             .testCase {
-                font-size: 45%;
-                font-family: 'Courier New', 'Ubuntu Mono', 'sans-serif';
-                background-color: rgb(0, 0, 0.2, 0.1);
-                padding: 0.3em;
-                border: 2px solid #ccc;
+                font-size: 13px;
+                font-family: var(--cpd-font-family-mono, 'Courier New', monospace);
+                background-color: rgba(0, 0, 0, 0.04);
+                padding: 0.6em;
+                border: 1px solid var(--cpd-color-border-interactive-secondary, #ccc);
+                border-radius: 8px;
                 overflow: auto;
-                white-space: nowrap;
             }
-            .dom {
-                line-height: 1.1;
-            }
-            .dom .quote {
-                opacity: 30%;
-            }
-            h2 {
-                font-family: sans-serif;
-                font-size: 0.5em;
-                font-weight: bold;
-                margin: 1em 0em 0.2em 0em;
-            }
-            .dom ul {
-                list-style: none;
-                margin: 0em 0em 0em 1.2em;
-                padding: 0em;
-            }
-            .dom > ul {
-                margin: 0em;
-            }
-            .dom ul.group_0 {
-                border-left: 0.2em solid rgba(255, 0, 0, 0.2);
-            }
-            .dom ul.group_1 {
-                border-left: 0.2em solid rgba(0, 0, 255, 0.2);
-            }
-            .dom ul.group_2 {
-                border-left: 0.2em solid rgba(0, 255, 0, 0.2);
-            }
-            .dom ul.group_3 {
-                border-left: 0.2em solid rgba(255, 200, 0, 0.3);
-            }
-            .dom ul.group_4 {
-                border-left: 0.2em solid rgba(0, 200, 200, 0.2);
-            }
-            .dom ul.group_5 {
-                border-left: 0.2em solid rgba(255, 0, 255, 0.2);
-            }
-            .dom ul.group_6 {
-                border-left: 0.2em solid rgba(255, 128, 0, 0.2);
-            }
-            .dom ul.group_7 {
-                border-left: 0.2em solid rgba(0, 128, 255, 0.2);
-            }
-            .dom ul.group_8 {
-                border-left: 0.2em solid rgba(255, 0, 128, 0.2);
-            }
-            .dom ul.group_9 {
-                border-left: 0.2em solid rgba(128, 0, 255, 0.2);
-            }
-            .dom input {
-                opacity: 0;
-                position: absolute;
-            }
-            .dom input ~ ul {
-                display: none;
-            }
-            .dom label {
-                user-select: text;
-            }
-            .dom input ~ label::before {
-                content: '\229E';
-                margin-right: 0.2em;
-                font-size: 120%;
-            }
-            .dom input:disabled:checked ~ label::before {
-                opacity: 0;
-            }
-            .dom input:checked ~ ul {
-                display: block;
-            }
-            .dom input:checked ~ label::before {
-                content: '\229F';
-            }
+            .dom { line-height: 1.3; }
+            .dom .quote { opacity: 0.3; }
+            .dom ul { list-style: none; margin: 0 0 0 1.2em; padding: 0; }
+            .dom > ul { margin: 0; }
+            .dom ul.group_0 { border-left: 2px solid rgba(255,0,0,0.2); }
+            .dom ul.group_1 { border-left: 2px solid rgba(0,0,255,0.2); }
+            .dom ul.group_2 { border-left: 2px solid rgba(0,255,0,0.2); }
+            .dom ul.group_3 { border-left: 2px solid rgba(255,200,0,0.3); }
+            .dom ul.group_4 { border-left: 2px solid rgba(0,200,200,0.2); }
+            .dom ul.group_5 { border-left: 2px solid rgba(255,0,255,0.2); }
+            .dom ul.group_6 { border-left: 2px solid rgba(255,128,0,0.2); }
+            .dom ul.group_7 { border-left: 2px solid rgba(0,128,255,0.2); }
+            .dom ul.group_8 { border-left: 2px solid rgba(255,0,128,0.2); }
+            .dom ul.group_9 { border-left: 2px solid rgba(128,0,255,0.2); }
+            .dom input { opacity: 0; position: absolute; }
+            .dom input ~ ul { display: none; }
+            .dom label { user-select: text; }
+            .dom input ~ label::before { content: '\229E'; margin-right: 0.2em; font-size: 120%; }
+            .dom input:disabled:checked ~ label::before { opacity: 0; }
+            .dom input:checked ~ ul { display: block; }
+            .dom input:checked ~ label::before { content: '\229F'; }
         </style>
     </head>
     <body>

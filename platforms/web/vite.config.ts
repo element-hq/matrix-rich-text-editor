@@ -13,6 +13,11 @@ import dts from 'vite-plugin-dts';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+    define: {
+        // counterpart (used by compound-web) reads process.env.NODE_ENV at runtime;
+        // Vite doesn't provide a process polyfill in the browser, so define it here.
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
+    },
     plugins: [
         react(),
         dts({
@@ -24,6 +29,7 @@ export default defineConfig({
                 'lib/constants.ts',
                 'lib/useListeners/types.ts',
                 'lib/useTestCases/types.ts',
+                'lib/WysiwygViewModel.ts',
             ],
             rollupTypes: true,
             copyDtsFiles: true,
