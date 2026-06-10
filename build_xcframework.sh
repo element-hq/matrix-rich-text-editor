@@ -46,8 +46,12 @@ cargo uniffi-bindgen generate --library $ARM64_LIB_PATH -l swift --out-dir $GENE
 # this should be removed when the Rust code is 100% safe (see `ComposerModelWrapper.swift`).
 mkdir -p "$(dirname "$SWIFT_BINDINGS_FILE_PATH")"
 mv "${GENERATION_PATH}/WysiwygComposer.swift" $SWIFT_BINDINGS_FILE_PATH
-sed -i "" -e '1h;2,$H;$!d;g' -e 's/) -> ComposerUpdate {\n        return try! FfiConverterTypeComposerUpdate.lift(\n            try!/) throws -> ComposerUpdate {\n        return try FfiConverterTypeComposerUpdate.lift(\n            try/g' $SWIFT_BINDINGS_FILE_PATH
-sed -i "" -e '1h;2,$H;$!d;g' -e 's/) -> ComposerUpdate/) throws -> ComposerUpdate/g' $SWIFT_BINDINGS_FILE_PATH
+# Make every `ComposerModel` method returning `ComposerUpdate` throwing — on both the
+# `ComposerModelProtocol` declarations and their implementations — and propagate errors
+# (`try!` -> `try`) instead of force-unwrapping, so `ComposerModelWrapper` can catch them.
+# These are line-based and whitespace-tolerant so they survive uniffi-bindgen formatting changes.
+sed -i "" -e 's/) *-> ComposerUpdate/) throws -> ComposerUpdate/g' $SWIFT_BINDINGS_FILE_PATH
+sed -i "" -e '/FfiConverterTypeComposerUpdate_lift(try! rustCall()/ s/try!/try/g' $SWIFT_BINDINGS_FILE_PATH
 
 # Making this directory is required to not have conflicts with other FFI generated xcframeworks.
 mkdir $GENERATION_PATH/WysiwygComposerFFI

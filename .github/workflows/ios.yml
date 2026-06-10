@@ -24,7 +24,7 @@ jobs:
     runs-on: macos-26
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
 
@@ -64,7 +64,7 @@ jobs:
       run: xcresultparser -q -o cobertura -t WysiwygComposerTests -p $(pwd) tests.xcresult > tests.xml
 
     - name: Upload unit test coverage to Codecov
-      uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         files: ./platforms/ios/example/tests.xml
         fail_ci_if_error: true
@@ -81,7 +81,7 @@ jobs:
       run: xcresultparser -q -o cobertura -p $(pwd) ui-tests.xcresult > ui-tests.xml
 
     - name: Upload ui test coverage to Codecov
-      uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
       with:
         files: ./platforms/ios/example/ui-tests.xml
         fail_ci_if_error: true

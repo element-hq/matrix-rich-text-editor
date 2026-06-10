@@ -55,8 +55,8 @@
     "@types/node": "^24.0.0",
     "jest": "^30.0.0",
     "typedoc": "^0.28.0",
-    "typescript": "^5.8.0",
-    "wasm-pack": "^0.14.0"
+    "typescript": "^6.0.0",
+    "wasm-pack": "^0.15.0"
   },
   "engines": {
     "node": ">= 10"
@@ -70,5 +70,5 @@
     "test": "jest --verbose",
     "doc": "typedoc --tsconfig ."
   },
-  "packageManager": "yarn@4.13.0"
+  "packageManager": "yarn@4.16.0"
 }

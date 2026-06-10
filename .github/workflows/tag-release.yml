@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🧮 Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           token: ${{ secrets.PAT }}
           persist-credentials: false
 
       - name: Get Version
-        uses: mad9000/actions-find-and-replace-string@bce4d50390d08b67e1822bd72fb54b3cf11b0ce9 # v5.0
+        uses: mad9000/actions-find-and-replace-string@789e104bfa5a1e90579e74de187e696450611aa2 # 6
         id: get-version
         with:
           source: ${{ github.head_ref }}
