@@ -167,7 +167,7 @@ extension WysiwygUITests {
     /// - Parameter displayName: The display name for the Pill.
     func assertMatchingPill(_ displayName: String) {
         let pill = textView.staticTexts["WysiwygAttachmentViewLabel" + displayName]
-        XCTAssertTrue(pill.exists)
+        XCTAssertTrue(pill.waitForExistence(timeout: 5))
         XCTAssertEqual(pill.label, displayName)
     }
     
