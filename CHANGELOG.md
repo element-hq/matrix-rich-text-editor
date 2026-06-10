@@ -1,5 +1,15 @@
 # Changelog
 
+# [2.42.0]
+- [iOS] Migrate to Swift 6 and the Swift Testing framework, adopt approachable concurrency, and update build settings and minimum deployment versions #125
+- [iOS] Update Swift dependencies and regenerate the UniFFI Swift bindings for the updated uniffi #68 #127
+- [Web] Fix a race in the composer model initialisation by replacing the polling loop with a shared promise #116
+- [Web] Update dependencies (TypeScript 6, Vite 8, wasm-pack 0.15) #103 #110 #111
+- [Android] Use the Compose BOM from the version catalog #121
+- [Rust] Update dependencies (html5ever, strum, uniffi, speculoos) #59
+- [Common] Update the Rust toolchain to 1.91 and fix the CI build #127
+- [Common] Update GitHub Actions #102 #107
+
 # [2.41.3]
 - [Android] Fix some inline tags being processed as block tags and adding extra line breaks #118
 - [Android] Update dependencies #113
