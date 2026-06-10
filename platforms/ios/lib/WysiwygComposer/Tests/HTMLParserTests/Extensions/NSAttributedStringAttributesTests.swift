@@ -7,20 +7,21 @@
 //
 
 @testable import HTMLParser
-import XCTest
+import Testing
+import UIKit
 
-final class NSAttributedStringTests: XCTestCase {
-    func testEnumerateTypedAttribute() {
+struct NSAttributedStringTests {
+    @Test func enumerateTypedAttribute() {
         let attributed = NSMutableAttributedString(string: "Test",
                                                    attributes: [.font: UIFont.boldSystemFont(ofSize: 15)])
         attributed.enumerateTypedAttribute(.font) { (font: UIFont, range: NSRange, _) in
-            XCTAssertTrue(font.fontDescriptor.symbolicTraits.contains(.traitBold))
-            XCTAssertTrue(range == .init(location: 0, length: attributed.length))
+            #expect(font.fontDescriptor.symbolicTraits.contains(.traitBold))
+            #expect(range == .init(location: 0, length: attributed.length))
         }
         attributed.addAttribute(.font, value: "bad type", range: .init(location: 2, length: 2))
         attributed.enumerateTypedAttribute(.font) { (font: UIFont, range: NSRange, _) in
-            XCTAssertTrue(font.fontDescriptor.symbolicTraits.contains(.traitBold))
-            XCTAssertTrue(range == .init(location: 0, length: 2))
+            #expect(font.fontDescriptor.symbolicTraits.contains(.traitBold))
+            #expect(range == .init(location: 0, length: 2))
         }
     }
 }

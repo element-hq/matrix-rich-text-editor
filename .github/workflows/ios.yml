@@ -28,8 +28,8 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Set Xcode 26.1
-      run: sudo xcode-select -switch /Applications/Xcode_26.1.app
+    - name: Set Xcode 26.5
+      run: sudo xcode-select -switch /Applications/Xcode_26.5.app
 
     - name: Install xcresultparser
       run: brew install a7ex/homebrew-formulae/xcresultparser

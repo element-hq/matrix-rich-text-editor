@@ -6,18 +6,18 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 extension WysiwygComposerTests {
-    func testSuggestionForAtPattern() {
+    @Test func suggestionForAtPattern() {
         let model = ComposerModelWrapper()
         let update = model.replaceText(newText: "@alic")
 
         guard case .suggestion(suggestionPattern: let suggestionPattern) = update.menuAction(),
               let attributes = suggestionPattern.key.mentionType?.attributes
         else {
-            XCTFail("No user suggestion found")
+            Issue.record("No user suggestion found")
             return
         }
 
@@ -38,14 +38,14 @@ extension WysiwygComposerTests {
             .assertSelection(start: 2, end: 2)
     }
 
-    func testNonLeadingSuggestionForAtPattern() {
+    @Test func nonLeadingSuggestionForAtPattern() {
         let model = ComposerModelWrapper()
         let update = model.replaceText(newText: "Hello @alic")
 
         guard case .suggestion(suggestionPattern: let suggestionPattern) = update.menuAction(),
               let attributes = suggestionPattern.key.mentionType?.attributes
         else {
-            XCTFail("No user suggestion found")
+            Issue.record("No user suggestion found")
             return
         }
 
@@ -68,12 +68,12 @@ extension WysiwygComposerTests {
             .assertSelection(start: 8, end: 8)
     }
     
-    func testSuggestionForAtRoomPattern() {
+    @Test func suggestionForAtRoomPattern() {
         let model = ComposerModelWrapper()
         let update = model.replaceText(newText: "@roo")
 
         guard case .suggestion(suggestionPattern: let suggestionPattern) = update.menuAction() else {
-            XCTFail("No user suggestion found")
+            Issue.record("No user suggestion found")
             return
         }
 
@@ -85,12 +85,12 @@ extension WysiwygComposerTests {
             .assertSelection(start: 2, end: 2)
     }
     
-    func testForNonLeadingSuggestionForAtRoomPattern() {
+    @Test func forNonLeadingSuggestionForAtRoomPattern() {
         let model = ComposerModelWrapper()
         let update = model.replaceText(newText: "Hello @roo")
 
         guard case .suggestion(suggestionPattern: let suggestionPattern) = update.menuAction() else {
-            XCTFail("No user suggestion found")
+            Issue.record("No user suggestion found")
             return
         }
 
@@ -102,14 +102,14 @@ extension WysiwygComposerTests {
             .assertSelection(start: 8, end: 8)
     }
 
-    func testSuggestionForHashPattern() {
+    @Test func suggestionForHashPattern() {
         let model = ComposerModelWrapper()
         let update = model.replaceText(newText: "#roo")
 
         guard case .suggestion(suggestionPattern: let suggestionPattern) = update.menuAction(),
               let attributes = suggestionPattern.key.mentionType?.attributes
         else {
-            XCTFail("No room suggestion found")
+            Issue.record("No room suggestion found")
             return
         }
 
@@ -129,12 +129,12 @@ extension WysiwygComposerTests {
             )
     }
 
-    func testSuggestionForSlashPattern() {
+    @Test func suggestionForSlashPattern() {
         let model = ComposerModelWrapper()
         let update = model.replaceText(newText: "/")
 
         guard case .suggestion(suggestionPattern: let suggestionPattern) = update.menuAction() else {
-            XCTFail("No suggestion found")
+            Issue.record("No suggestion found")
             return
         }
 

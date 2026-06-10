@@ -6,11 +6,11 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 extension WysiwygComposerTests {
-    func testInlineCode() {
+    @Test func inlineCode() {
         ComposerModelWrapper()
             .action { $0.apply(.inlineCode) }
             .action { $0.replaceText(newText: "code") }
@@ -24,7 +24,7 @@ extension WysiwygComposerTests {
             )
     }
 
-    func testInlineCodeWithFormatting() {
+    @Test func inlineCodeWithFormatting() {
         ComposerModelWrapper()
             .action { $0.apply(.bold) }
             .action { $0.replaceText(newText: "bold") }

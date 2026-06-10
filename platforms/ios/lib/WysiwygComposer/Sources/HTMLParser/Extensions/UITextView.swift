@@ -39,7 +39,7 @@ public extension UITextView {
     }
 }
 
-private final class BackgroundStyleLayer: CALayer {
+private final nonisolated class BackgroundStyleLayer: CALayer {
     override init() {
         super.init()
     }

@@ -7,9 +7,21 @@
 //
 
 import SnapshotTesting
+import Testing
+import UIKit
+@testable import WysiwygComposer
 
-final class ListsSnapshotTests: SnapshotTests {
-    func testOrderedListContent() throws {
+@MainActor
+struct ListsSnapshotTests {
+    let isRecord = SnapshotScene.isRecord
+    let viewModel: WysiwygComposerViewModel
+    let hostingController: UIViewController
+
+    init() {
+        (viewModel, hostingController) = SnapshotScene.make()
+    }
+
+    @Test func orderedListContent() {
         viewModel.setHtmlContent("<ol><li>Item 1</li><li>Item 2</li></ol><p>Standard text</p>")
         assertSnapshot(
             of: hostingController,
@@ -18,7 +30,7 @@ final class ListsSnapshotTests: SnapshotTests {
         )
     }
 
-    func testUnorderedListContent() throws {
+    @Test func unorderedListContent() {
         viewModel.setHtmlContent("<ul><li>Item 1</li><li>Item 2</li></ul><p>Standard text</p>")
         assertSnapshot(
             of: hostingController,
@@ -27,7 +39,7 @@ final class ListsSnapshotTests: SnapshotTests {
         )
     }
 
-    func testMultipleListsContent() throws {
+    @Test func multipleListsContent() {
         viewModel.setHtmlContent(
             """
             <ol><li>Item 1</li><li>Item2</li></ol>\
@@ -41,7 +53,7 @@ final class ListsSnapshotTests: SnapshotTests {
         )
     }
 
-    func testIndentedListContent() throws {
+    @Test func indentedListContent() {
         viewModel.setHtmlContent(
             """
             <ol><li>Item 1</li><li><p>Item 2</p>\
@@ -56,7 +68,7 @@ final class ListsSnapshotTests: SnapshotTests {
         )
     }
 
-    func testListInQuote() throws {
+    @Test func listInQuote() {
         viewModel.setHtmlContent(
             """
             <blockquote>\

@@ -6,8 +6,8 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 private enum Constants {
     /// A list with three items.
@@ -21,33 +21,33 @@ private enum Constants {
 }
 
 extension WysiwygComposerTests {
-    func testIndent() {
+    @Test func indent() {
         ComposerModelWrapper()
             .action { $0.setContentFromHtml(html: Constants.sampleListHtml) }
             // Select somewhere on item 2
             .action { $0.select(startUtf16Codeunit: 9, endUtf16Codeunit: 9) }
             .action { $0.apply(.indent) }
-            .execute { XCTAssertTrue($0.actionStates()[.indent] == .disabled) }
+            .execute { #expect($0.actionStates()[.indent] == .disabled) }
             // Select somewhere on item 3
             .action { $0.select(startUtf16Codeunit: 18, endUtf16Codeunit: 18) }
             .action { $0.apply(.indent) }
             .action { $0.apply(.indent) }
-            .execute { XCTAssertTrue($0.actionStates()[.indent] == .disabled) }
+            .execute { #expect($0.actionStates()[.indent] == .disabled) }
             .assertHtml(Constants.indentedSampleListHtml)
     }
 
-    func testUnindent() {
+    @Test func unindent() {
         ComposerModelWrapper()
             .action { $0.setContentFromHtml(html: Constants.indentedSampleListHtml) }
             // Select somewhere on item 3
             .action { $0.select(startUtf16Codeunit: 18, endUtf16Codeunit: 18) }
             .action { $0.apply(.unindent) }
             .action { $0.apply(.unindent) }
-            .execute { XCTAssertTrue($0.actionStates()[.unindent] == .disabled) }
+            .execute { #expect($0.actionStates()[.unindent] == .disabled) }
             // Select somewhere on item 2
             .action { $0.select(startUtf16Codeunit: 9, endUtf16Codeunit: 9) }
             .action { $0.apply(.unindent) }
-            .execute { XCTAssertTrue($0.actionStates()[.unindent] == .disabled) }
+            .execute { #expect($0.actionStates()[.unindent] == .disabled) }
             .assertHtml(Constants.sampleListHtml)
     }
 }

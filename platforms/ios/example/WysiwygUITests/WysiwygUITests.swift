@@ -8,16 +8,15 @@
 
 import XCTest
 
+@MainActor
 class WysiwygUITests: XCTestCase {
-    let app = XCUIApplication(bundleIdentifier: "org.matrix.Wysiwyg")
+    var app = XCUIApplication(bundleIdentifier: "org.matrix.Wysiwyg")
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = false
         app.launch()
         try focusComposerAndClearTutorialIfNeeded()
     }
-
-    override func tearDownWithError() throws { }
 
     func testMinMaxResizing() {
         sleep(1)
@@ -168,7 +167,7 @@ extension WysiwygUITests {
     /// - Parameter displayName: The display name for the Pill.
     func assertMatchingPill(_ displayName: String) {
         let pill = textView.staticTexts["WysiwygAttachmentViewLabel" + displayName]
-        XCTAssertTrue(pill.exists)
+        XCTAssertTrue(pill.waitForExistence(timeout: 5))
         XCTAssertEqual(pill.label, displayName)
     }
     

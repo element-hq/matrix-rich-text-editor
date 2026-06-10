@@ -11,7 +11,7 @@ import Foundation
 typealias UTF16Removals = [NSRange]
 typealias UTF16Insertions = [(range: NSRange, text: String)]
 
-extension CollectionDifference<Character> {
+nonisolated extension CollectionDifference<Character> {
     /// Transforms the removals in the `CollectionDifference` into an array of ranges.
     /// Output ranges are defined with UTF16 locations and lengths.
     ///

@@ -8,7 +8,7 @@
 
 import Foundation
 
-public extension NSRange {
+public nonisolated extension NSRange {
     /// Returns a range at starting location, i.e. {0, 0}.
     static let zero = Self(location: 0, length: 0)
 }

@@ -7,6 +7,7 @@
 //
 
 import OSLog
+import Synchronization
 import UIKit
 
 // MARK: - Logger
@@ -26,10 +27,16 @@ extension Logger {
         case none
     }
 
-    /// Current log level reported to OSLog. Default: only errors are reported.
-    public static var wysywygLogLevel: LogLevel = .error
+    private nonisolated static let _wysywygLogLevel = Mutex<LogLevel>(.error)
 
-    static var subsystem = "org.matrix.WysiwygComposer"
+    /// Current log level reported to OSLog. Default: only errors are reported.
+    /// Nonisolated so that hosting apps can change the log level from any thread.
+    public nonisolated static var wysywygLogLevel: LogLevel {
+        get { _wysywygLogLevel.withLock { $0 } }
+        set { _wysywygLogLevel.withLock { $0 = newValue } }
+    }
+
+    static let subsystem = "org.matrix.WysiwygComposer"
 
     /// Creates a customized log for debug.
     ///

@@ -8,155 +8,158 @@
 //
 
 import Combine
+import Testing
+import UIKit
 @testable import WysiwygComposer
-import XCTest
 
-final class WysiwygComposerViewModelTests: XCTestCase {
-    var viewModel: WysiwygComposerViewModel!
+@MainActor
+struct WysiwygComposerViewModelTests {
+    let viewModel = WysiwygComposerViewModel()
 
-    override func setUpWithError() throws {
-        viewModel = WysiwygComposerViewModel()
+    init() {
         viewModel.clearContent()
     }
 
-    func testIsContentEmpty() {
-        XCTAssertTrue(viewModel.isContentEmpty)
+    @Test func isContentEmpty() async {
+        #expect(viewModel.isContentEmpty)
 
-        let expectFalse = expectContentEmpty(false)
-        _ = viewModel.replaceText(range: .zero,
-                                  replacementText: "Test")
-        viewModel.textView.attributedText = viewModel.attributedContent.text
-        waitExpectation(expectation: expectFalse, timeout: 2.0)
+        let emptyPublisher = viewModel.$isContentEmpty.removeDuplicates().dropFirst()
+        let becameNonEmpty = await nextValue(of: emptyPublisher) {
+            _ = viewModel.replaceText(range: .zero, replacementText: "Test")
+            viewModel.textView.attributedText = viewModel.attributedContent.text
+        }
+        #expect(becameNonEmpty == false)
 
-        let expectTrue = expectContentEmpty(true)
-        _ = viewModel.replaceText(range: .init(location: 0, length: viewModel.attributedContent.text.length),
-                                  replacementText: "")
-        viewModel.textView.attributedText = viewModel.attributedContent.text
-        waitExpectation(expectation: expectTrue, timeout: 2.0)
+        let becameEmpty = await nextValue(of: emptyPublisher) {
+            _ = viewModel.replaceText(range: .init(location: 0, length: viewModel.attributedContent.text.length),
+                                      replacementText: "")
+            viewModel.textView.attributedText = viewModel.attributedContent.text
+        }
+        #expect(becameEmpty == true)
     }
-    
-    func testIsContentEmptyAfterDeletingSingleSpace() {
+
+    @Test func isContentEmptyAfterDeletingSingleSpace() {
         // When typing a single space.
         _ = viewModel.replaceText(range: .zero, replacementText: " ")
         viewModel.textView.attributedText = NSAttributedString(string: " ")
         viewModel.didUpdateText()
-        
+
         // And then deleting that space.
         _ = viewModel.replaceText(range: .init(location: 0, length: 1), replacementText: "")
         viewModel.textView.attributedText = NSAttributedString(string: "")
         viewModel.didUpdateText()
-        
+
         // Then the content should be empty for the placeholder to be shown.
-        XCTAssertTrue(viewModel.isContentEmpty)
+        #expect(viewModel.isContentEmpty)
     }
-    
-    func testIsContentEmptyAfterDeletingMultilineContent() {
+
+    @Test func isContentEmptyAfterDeletingMultilineContent() {
         // When typing a new line.
         _ = viewModel.replaceText(range: .zero, replacementText: "\n")
         viewModel.textView.attributedText = NSAttributedString(string: "\n")
         viewModel.didUpdateText()
-        
+
         // And then deleting that new line.
         _ = viewModel.replaceText(range: .init(location: 0, length: 1), replacementText: "")
         viewModel.textView.attributedText = NSAttributedString(string: "")
         viewModel.didUpdateText()
-        
+
         // Then the content should be empty for the placeholder to be shown.
-        XCTAssertTrue(viewModel.isContentEmpty)
+        #expect(viewModel.isContentEmpty)
     }
 
-    func testSimpleTextInputIsAccepted() {
+    @Test func simpleTextInputIsAccepted() {
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "A")
-        XCTAssertTrue(shouldChange)
+        #expect(shouldChange)
     }
 
-    func testSimpleTextInputIsNotAccepted() {
+    @Test func simpleTextInputIsNotAccepted() {
         viewModel.shouldReplaceText = false
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "A")
-        XCTAssertFalse(shouldChange)
+        #expect(!shouldChange)
     }
 
-    func testNewlineIsNotAccepted() {
+    @Test func newlineIsNotAccepted() {
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "\n")
-        XCTAssertFalse(shouldChange)
+        #expect(!shouldChange)
     }
 
-    func testReconciliateModel() {
+    @Test func reconciliateModel() {
         _ = viewModel.replaceText(range: .zero,
                                   replacementText: "wa")
-        XCTAssertEqual(viewModel.attributedContent.text.string, "wa")
-        XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 2, length: 0))
+        #expect(viewModel.attributedContent.text.string == "wa")
+        #expect(viewModel.attributedContent.selection == NSRange(location: 2, length: 0))
         reconciliate(to: "わ", selectedRange: NSRange(location: 1, length: 0))
-        XCTAssertEqual(viewModel.attributedContent.text.string, "わ")
-        XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 1, length: 0))
+        #expect(viewModel.attributedContent.text.string == "わ")
+        #expect(viewModel.attributedContent.selection == NSRange(location: 1, length: 0))
     }
 
-    func testReconciliateRestoresSelection() {
+    @Test func reconciliateRestoresSelection() {
         _ = viewModel.replaceText(range: .zero, replacementText: "I\'m")
-        XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 3, length: 0))
+        #expect(viewModel.attributedContent.selection == NSRange(location: 3, length: 0))
         reconciliate(to: "I’m", selectedRange: NSRange(location: 3, length: 0))
-        XCTAssertEqual(viewModel.attributedContent.selection, NSRange(location: 3, length: 0))
+        #expect(viewModel.attributedContent.selection == NSRange(location: 3, length: 0))
 
         viewModel.clearContent()
 
         _ = viewModel.replaceText(range: .zero, replacementText: "Some text")
         viewModel.select(range: .zero)
-        XCTAssertEqual(viewModel.attributedContent.selection, .zero)
+        #expect(viewModel.attributedContent.selection == .zero)
         reconciliate(to: "Some test", selectedRange: .zero)
-        XCTAssertEqual(viewModel.attributedContent.selection, .zero)
+        #expect(viewModel.attributedContent.selection == .zero)
     }
 
-    func testPlainTextMode() {
+    @Test func plainTextMode() {
         _ = viewModel.replaceText(range: .zero,
                                   replacementText: "Some bold text")
         viewModel.textView.attributedText = NSAttributedString(string: "Some bold text")
         viewModel.select(range: .init(location: 10, length: 4))
         viewModel.apply(.bold)
 
-        XCTAssertEqual(viewModel.content.html, "Some bold <strong>text</strong>")
+        #expect(viewModel.content.html == "Some bold <strong>text</strong>")
 
         viewModel.plainTextMode = true
-        XCTAssertEqual(viewModel.content.markdown, "Some bold __text__")
-        XCTAssertEqual(viewModel.content.html, "Some bold <strong>text</strong>")
+        #expect(viewModel.content.markdown == "Some bold __text__")
+        #expect(viewModel.content.html == "Some bold <strong>text</strong>")
 
         viewModel.plainTextMode = false
-        XCTAssertEqual(viewModel.content.html, "Some bold <strong>text</strong>")
-    }
-    
-    func testReplaceTextAfterLinkIsNotAccepted() {
-        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 4, length: 0), replacementText: "abc")
-        XCTAssertFalse(result)
-        XCTAssertEqual(viewModel.content.html, "<a href=\"https://element.io\">test</a>abc")
-        XCTAssertTrue(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
-    }
-    
-    func testReplaceTextPartiallyInsideAndAfterLinkIsNotAccepted() {
-        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 3, length: 1), replacementText: "abc")
-        XCTAssertFalse(result)
-        XCTAssertEqual(viewModel.content.html, "<a href=\"https://element.io\">tes</a>abc")
-        XCTAssertTrue(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
-    }
-    
-    func testReplaceTextInsideLinkIsAccepted() {
-        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 2, length: 0), replacementText: "abc")
-        XCTAssertTrue(result)
-        XCTAssertEqual(viewModel.content.html, "<a href=\"https://element.io\">teabcst</a>")
+        #expect(viewModel.content.html == "Some bold <strong>text</strong>")
     }
 
-    func testCrashRecoveryUsesLatestPlainText() {
+    @Test func replaceTextAfterLinkIsNotAccepted() {
+        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
+        let result = viewModel.replaceText(range: .init(location: 4, length: 0), replacementText: "abc")
+        #expect(!result)
+        #expect(viewModel.content.html == "<a href=\"https://element.io\">test</a>abc")
+        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
+    }
+
+    @Test func replaceTextPartiallyInsideAndAfterLinkIsNotAccepted() {
+        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
+        let result = viewModel.replaceText(range: .init(location: 3, length: 1), replacementText: "abc")
+        #expect(!result)
+        #expect(viewModel.content.html == "<a href=\"https://element.io\">tes</a>abc")
+        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
+    }
+
+    @Test func replaceTextInsideLinkIsAccepted() {
+        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
+        let result = viewModel.replaceText(range: .init(location: 2, length: 0), replacementText: "abc")
+        #expect(result)
+        #expect(viewModel.content.html == "<a href=\"https://element.io\">teabcst</a>")
+    }
+
+    @Test func crashRecoveryUsesLatestPlainText() {
         viewModel.setHtmlContent("<strong>Some <em>text</em></strong>")
         // Force a crash
         viewModel.setHtmlContent("<//strong>")
-        XCTAssertEqual(viewModel.content.html, "Some text")
+        #expect(viewModel.content.html == "Some text")
     }
 
-    func testPendingFormatIsReapplied() {
+    @Test func pendingFormatIsReapplied() {
         viewModel.apply(.orderedList)
         viewModel.apply(.bold)
         viewModel.apply(.italic)
@@ -164,7 +167,7 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         // Enter
         mockTrailingTyping("\n")
         mockTrailingTyping("Still formatted")
-        XCTAssertTrue(
+        #expect(
             viewModel
                 .textView
                 .attributedText
@@ -173,23 +176,23 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         )
     }
 
-    func testPendingFormatFlagInNewList() {
+    @Test func pendingFormatFlagInNewList() {
         viewModel.apply(.bold)
         viewModel.apply(.italic)
         mockTrailingTyping("Text")
         viewModel.enter()
         // After creating a list, pending format flag is on
         viewModel.apply(.orderedList)
-        XCTAssertTrue(viewModel.hasPendingFormats)
+        #expect(viewModel.hasPendingFormats)
         // Typing consumes the flag
         mockTrailingTyping("Item")
-        XCTAssertFalse(viewModel.hasPendingFormats)
+        #expect(!viewModel.hasPendingFormats)
         // Creating a second list item re-enables the flag
         viewModel.enter()
-        XCTAssertTrue(viewModel.hasPendingFormats)
+        #expect(viewModel.hasPendingFormats)
     }
 
-    func testPendingFormatFlagAfterReselectingListItem() {
+    @Test func pendingFormatFlagAfterReselectingListItem() {
         viewModel.apply(.bold)
         viewModel.apply(.italic)
         mockTrailingTyping("Text1")
@@ -201,51 +204,35 @@ final class WysiwygComposerViewModelTests: XCTestCase {
         // After re-selecting the empty list item, pending format flag is still on
         viewModel.select(range: NSRange(location: inListSelection.location + insertedText.utf16Length,
                                         length: inListSelection.length))
-        XCTAssertTrue(viewModel.hasPendingFormats)
+        #expect(viewModel.hasPendingFormats)
     }
 }
 
-// MARK: - WysiwygTestExpectation
+// MARK: - Async helpers
 
 extension WysiwygComposerViewModelTests {
-    /// Defines a test expectation.
-    struct WysiwygTestExpectation {
-        let value: XCTestExpectation
-        let cancellable: AnyCancellable
-    }
-
-    /// Wait for an expectation to be fulfilled.
+    /// Awaits the next value published by `publisher` while `action` runs, then returns it.
     ///
-    /// - Parameters:
-    ///   - expectation: Expectation to fulfill.
-    ///   - timeout: Timeout for failure.
-    func waitExpectation(expectation: WysiwygTestExpectation, timeout: TimeInterval) {
-        wait(for: [expectation.value], timeout: timeout)
-        expectation.cancellable.cancel()
-    }
-
-    /// Create an expectation for empty content status to be published by the view model.
-    ///
-    /// - Parameters:
-    ///   - expectedIsContentEmpty: Expected `isContentEmpty` value.
-    ///   - description: Description for expectation.
-    /// - Returns: Expectation to be fulfilled. Can be used with `waitExpectation`.
-    func expectContentEmpty(_ expectedIsContentEmpty: Bool,
-                            description: String = "Await isContentEmpty") -> WysiwygTestExpectation {
-        let expectation = expectation(description: description)
-        let cancellable = viewModel.$isContentEmpty
-            // Ignore on subscribe publish.
-            .removeDuplicates()
-            .dropFirst()
-            .sink(receiveValue: { isContentEmpty in
-                // Assert the plain text,
-                XCTAssertEqual(
-                    isContentEmpty,
-                    expectedIsContentEmpty
-                )
-                expectation.fulfill()
-            })
-        return WysiwygTestExpectation(value: expectation, cancellable: cancellable)
+    /// The view model publishes on the main actor, so the value typically arrives synchronously
+    /// during `action`. Replaces the previous `XCTestExpectation` + Combine-sink helpers.
+    func nextValue<P: Publisher>(of publisher: P, while action: () -> Void) async -> P.Output
+        where P.Failure == Never {
+        var result: P.Output?
+        var cancellable: AnyCancellable?
+        // Resume with `Void` and stash the value in `result`: the value (e.g. attributed content)
+        // may be non-Sendable, so it must stay on the main actor rather than cross the continuation.
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            var resumed = false
+            cancellable = publisher.sink { value in
+                guard !resumed else { return }
+                resumed = true
+                result = value
+                continuation.resume()
+            }
+            action()
+        }
+        cancellable?.cancel()
+        return result!
     }
 }
 

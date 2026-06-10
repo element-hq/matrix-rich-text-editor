@@ -25,7 +25,7 @@ public enum AttributedRangeError: LocalizedError, Equatable {
     }
 }
 
-extension NSAttributedString {
+nonisolated extension NSAttributedString {
     // MARK: - Public
 
     /// Computes range inside the HTML raw text from the
@@ -179,7 +179,7 @@ extension NSAttributedString {
     }
 }
 
-extension NSMutableAttributedString {
+nonisolated extension NSMutableAttributedString {
     /// Remove all discardable elements from the attributed
     /// string (i.e. list prefixes, zwsp placeholders, etc)
     ///

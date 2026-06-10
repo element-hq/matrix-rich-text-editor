@@ -18,7 +18,7 @@ struct MentionReplacement {
 
 // MARK: - Helpers
 
-extension MentionReplacement {
+nonisolated extension MentionReplacement {
     /// Computes the offset between the replacement and the original part (i.e. if the original length
     /// is greater than the replacement range, this offset will be negative).
     var offset: Int {

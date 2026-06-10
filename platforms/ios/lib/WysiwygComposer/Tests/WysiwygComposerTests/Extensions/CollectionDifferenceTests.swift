@@ -6,87 +6,88 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Foundation
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
-final class CollectionDifferenceTests: XCTestCase {
-    func testNoChanges() {
+struct CollectionDifferenceTests {
+    @Test func noChanges() {
         let changes = changes(from: "text", to: "text")
-        XCTAssertTrue(changes.removals.isEmpty)
-        XCTAssertTrue(changes.insertions.isEmpty)
+        #expect(changes.removals.isEmpty)
+        #expect(changes.insertions.isEmpty)
     }
 
-    func testSimpleRemoval() {
+    @Test func simpleRemoval() {
         let changes = changes(from: "text", to: "tex")
-        XCTAssertEqual(changes.removals,
-                       [NSRange(location: 3, length: 1)])
-        XCTAssertTrue(changes.insertions.isEmpty)
+        #expect(changes.removals ==
+            [NSRange(location: 3, length: 1)])
+        #expect(changes.insertions.isEmpty)
     }
 
-    func testMultipleRemovals() {
+    @Test func multipleRemovals() {
         let changes = changes(from: "text", to: "ex")
-        XCTAssertEqual(changes.removals,
-                       [NSRange(location: 0, length: 1),
-                        NSRange(location: 3, length: 1)])
-        XCTAssertTrue(changes.insertions.isEmpty)
+        #expect(changes.removals ==
+            [NSRange(location: 0, length: 1),
+             NSRange(location: 3, length: 1)])
+        #expect(changes.insertions.isEmpty)
     }
 
-    func testSimpleInsertion() {
+    @Test func simpleInsertion() {
         let changes = changes(from: "tex", to: "text")
-        XCTAssertEqual(changes.insertions.map(\.range),
-                       [NSRange(location: 3, length: 1)])
-        XCTAssertEqual(changes.insertions.map(\.text),
-                       ["t"])
-        XCTAssertTrue(changes.removals.isEmpty)
+        #expect(changes.insertions.map(\.range) ==
+            [NSRange(location: 3, length: 1)])
+        #expect(changes.insertions.map(\.text) ==
+            ["t"])
+        #expect(changes.removals.isEmpty)
     }
 
-    func testMultipleInsertions() {
+    @Test func multipleInsertions() {
         let changes = changes(from: "ex", to: "texts")
-        XCTAssertEqual(changes.insertions.map(\.range),
-                       [NSRange(location: 0, length: 1),
-                        NSRange(location: 3, length: 2)])
-        XCTAssertEqual(changes.insertions.map(\.text),
-                       ["t", "ts"])
-        XCTAssertTrue(changes.removals.isEmpty)
+        #expect(changes.insertions.map(\.range) ==
+            [NSRange(location: 0, length: 1),
+             NSRange(location: 3, length: 2)])
+        #expect(changes.insertions.map(\.text) ==
+            ["t", "ts"])
+        #expect(changes.removals.isEmpty)
     }
 
-    func testSimpleReplacement() {
+    @Test func simpleReplacement() {
         let changes = changes(from: "text", to: "tessst")
-        XCTAssertEqual(changes.removals,
-                       [NSRange(location: 2, length: 1)])
-        XCTAssertEqual(changes.insertions.map(\.range),
-                       [NSRange(location: 2, length: 3)])
-        XCTAssertEqual(changes.insertions.map(\.text),
-                       ["sss"])
+        #expect(changes.removals ==
+            [NSRange(location: 2, length: 1)])
+        #expect(changes.insertions.map(\.range) ==
+            [NSRange(location: 2, length: 3)])
+        #expect(changes.insertions.map(\.text) ==
+            ["sss"])
     }
 
-    func testMultipleReplacements() {
+    @Test func multipleReplacements() {
         let changes = changes(from: "text", to: "wexpf")
-        XCTAssertEqual(changes.removals,
-                       [NSRange(location: 0, length: 1),
-                        NSRange(location: 3, length: 1)])
-        XCTAssertEqual(changes.insertions.map(\.range),
-                       [NSRange(location: 0, length: 1),
-                        NSRange(location: 3, length: 2)])
-        XCTAssertEqual(changes.insertions.map(\.text),
-                       ["w", "pf"])
+        #expect(changes.removals ==
+            [NSRange(location: 0, length: 1),
+             NSRange(location: 3, length: 1)])
+        #expect(changes.insertions.map(\.range) ==
+            [NSRange(location: 0, length: 1),
+             NSRange(location: 3, length: 2)])
+        #expect(changes.insertions.map(\.text) ==
+            ["w", "pf"])
     }
 
-    func testMultipleCodeUnitsReplacements() {
+    @Test func multipleCodeUnitsReplacements() {
         let changes1 = changes(from: "abcde 🥳", to: "abcde")
-        XCTAssertEqual(changes1.removals,
-                       [NSRange(location: 5, length: 3)])
+        #expect(changes1.removals ==
+            [NSRange(location: 5, length: 3)])
         let changes2 = changes(from: "abcde", to: "abcde 🥳")
-        XCTAssertEqual(changes2.insertions.map(\.range),
-                       [NSRange(location: 5, length: 3)])
-        XCTAssertEqual(changes2.insertions.map(\.text),
-                       [" 🥳"])
+        #expect(changes2.insertions.map(\.range) ==
+            [NSRange(location: 5, length: 3)])
+        #expect(changes2.insertions.map(\.text) ==
+            [" 🥳"])
     }
 
-    func testRemovalNearMultiCodeUnitsCharacters() {
+    @Test func removalNearMultiCodeUnitsCharacters() {
         let changes = changes(from: "abcde 🥳 ", to: "abcde 🥳")
-        XCTAssertEqual(changes.removals,
-                       [NSRange(location: 8, length: 1)])
+        #expect(changes.removals ==
+            [NSRange(location: 8, length: 1)])
     }
 }
 

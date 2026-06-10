@@ -6,8 +6,8 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import Testing
 @testable import WysiwygComposer
-import XCTest
 
 private enum Constants {
     static let resultHtml = "<pre><code>Some code\n\tmore code</code></pre><p>\(Character.nbsp)</p>"
@@ -25,7 +25,7 @@ private enum Constants {
 }
 
 extension WysiwygComposerTests {
-    func testCodeBlocksFromEmptyComposer() {
+    @Test func codeBlocksFromEmptyComposer() {
         ComposerModelWrapper()
             .action { $0.apply(.codeBlock) }
             .action { $0.replaceText(newText: "Some code") }
@@ -38,7 +38,7 @@ extension WysiwygComposerTests {
             .assertTree(Constants.resultTree)
     }
 
-    func testCodeBlocksWithMultilineInput() {
+    @Test func codeBlocksWithMultilineInput() {
         ComposerModelWrapper()
             .action { $0.apply(.codeBlock) }
             .action { $0.replaceText(newText: "Some code\n\tmore code") }
@@ -48,7 +48,7 @@ extension WysiwygComposerTests {
             .assertTree(Constants.resultTree)
     }
 
-    func testCodeBlocksFromContent() {
+    @Test func codeBlocksFromContent() {
         ComposerModelWrapper()
             .action { $0.replaceText(newText: "Some code") }
             .action { $0.apply(.codeBlock) }
