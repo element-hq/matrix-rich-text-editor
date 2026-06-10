@@ -8,7 +8,6 @@ use super::{
     paqual_name, PaDom, PaDomCreationError, PaDomHandle, PaDomNode,
     PaNodeContainer, PaNodeText,
 };
-use html5ever::interface::NextParserState;
 use html5ever::tendril::{StrTendril, TendrilSink};
 use html5ever::tree_builder::{ElementFlags, NodeOrText, QuirksMode, TreeSink};
 use html5ever::{parse_fragment, Attribute, QualName};
@@ -27,6 +26,7 @@ impl PaDomCreator {
             Default::default(),
             paqual_name(""),
             vec![],
+            false,
         )
         .from_utf8()
         .one(html.as_bytes())
@@ -252,10 +252,6 @@ impl TreeSink for PaDomCreator {
         // Nothing to do here for now, but this is called on tests with new lines
     }
 
-    fn complete_script(&self, _node: &Self::Handle) -> NextParserState {
-        todo!("complete_script not yet supported")
-    }
-
     fn allow_declarative_shadow_roots(
         &self,
         _intended_parent: &Self::Handle,
@@ -267,8 +263,8 @@ impl TreeSink for PaDomCreator {
         &self,
         _location: &Self::Handle,
         _template: &Self::Handle,
-        _attrs: Vec<Attribute>,
-    ) -> Result<(), String> {
+        _attrs: &[Attribute],
+    ) -> bool {
         todo!("attach_declarative_shadow not yet supported")
     }
 }
