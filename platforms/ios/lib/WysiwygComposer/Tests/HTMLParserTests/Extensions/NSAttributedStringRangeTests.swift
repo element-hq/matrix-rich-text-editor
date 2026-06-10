@@ -117,7 +117,17 @@ struct NSAttributedStringRangeTests {
     }
 
     @Test func positionAfterDoubleLineBreak() throws {
-        let html = "<p>Test</p><p>\(Character.nbsp)</p><p>T</p>"
+        let html = "<p>Test</p><p></p><p>T</p>"
+        let attributed = try HTMLParser.parse(html: html)
+        #expect(try attributed.htmlRange(from: .init(location: 7, length: 0)) == NSRange(location: 6, length: 0))
+        #expect(try attributed.attributedRange(from: .init(location: 6, length: 0)) == NSRange(location: 7, length: 0))
+        assertHtmlCharsLengthMatchLastPosition(in: attributed)
+    }
+
+    /// Whitespace-only paragraphs must behave like empty ones: recent SDKs' libxml2 drops
+    /// whitespace-only text nodes during parsing, which used to break the position mapping.
+    @Test func positionAfterDoubleLineBreakWithWhitespaceParagraph() throws {
+        let html = "<p>Test</p><p> </p><p>T</p>"
         let attributed = try HTMLParser.parse(html: html)
         #expect(try attributed.htmlRange(from: .init(location: 7, length: 0)) == NSRange(location: 6, length: 0))
         #expect(try attributed.attributedRange(from: .init(location: 6, length: 0)) == NSRange(location: 7, length: 0))

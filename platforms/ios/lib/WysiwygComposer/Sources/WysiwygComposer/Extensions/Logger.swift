@@ -27,15 +27,16 @@ extension Logger {
         case none
     }
 
-    private static let _wysywygLogLevel = Mutex<LogLevel>(.error)
+    private nonisolated static let _wysywygLogLevel = Mutex<LogLevel>(.error)
 
     /// Current log level reported to OSLog. Default: only errors are reported.
-    public static var wysywygLogLevel: LogLevel {
+    /// Nonisolated so that hosting apps can change the log level from any thread.
+    public nonisolated static var wysywygLogLevel: LogLevel {
         get { _wysywygLogLevel.withLock { $0 } }
         set { _wysywygLogLevel.withLock { $0 = newValue } }
     }
 
-    static var subsystem = "org.matrix.WysiwygComposer"
+    static let subsystem = "org.matrix.WysiwygComposer"
 
     /// Creates a customized log for debug.
     ///

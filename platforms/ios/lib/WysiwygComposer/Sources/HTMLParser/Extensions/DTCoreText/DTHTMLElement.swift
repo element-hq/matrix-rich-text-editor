@@ -12,6 +12,15 @@ nonisolated extension DTHTMLElement {
     /// Sanitize the DTHTMLElement right before it's written inside the resulting attributed string.
     /// Invoked from DTCoreText's `DTHTMLAttributedStringBuilder` serial queue, so must stay off the main actor.
     func sanitize() {
+        // libxml2 in recent SDKs drops whitespace-only text nodes, so e.g. `<p> </p>`
+        // flushes with no children instead of a single space text node. Re-insert a
+        // discardable placeholder so the empty paragraph keeps a valid cursor position,
+        // matching the `<p>&nbsp;</p>` handling below.
+        if tag == .p, childNodes == nil || childNodes.isEmpty {
+            addChildNode(createDiscardableElement())
+            return
+        }
+
         guard let childNodes = childNodes as? [DTHTMLElement] else { return }
 
         if tag == .a,
@@ -70,6 +79,7 @@ private enum DTHTMLElementTag: String {
     case pre
     case code
     case a
+    case p
 }
 
 private nonisolated extension DTHTMLElement {

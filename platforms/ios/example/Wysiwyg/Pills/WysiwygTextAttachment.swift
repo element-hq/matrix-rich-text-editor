@@ -68,8 +68,16 @@ class WysiwygTextAttachment: NSTextAttachment {
         super.init(coder: coder)
 
         nonisolated(unsafe) let attachment = self
-        MainActor.assumeIsolated {
-            attachment.updateBounds()
+        if Thread.isMainThread {
+            MainActor.assumeIsolated {
+                attachment.updateBounds()
+            }
+        } else {
+            // Unlike the TextKit-driven init, decoding can happen off the main thread
+            // (e.g. pasteboard/drag & drop round-trips), so hop instead of asserting.
+            Task { @MainActor in
+                attachment.updateBounds()
+            }
         }
     }
 }
