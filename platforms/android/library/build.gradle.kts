@@ -149,7 +149,7 @@ androidComponents {
             mustRunAfter("generateUniffiBindingsLibrary")
 
             val outDir = "${layout.buildDirectory.get().asFile.path}/generated/source/uniffi/${variant.name}/java"
-            commandLine("cargo", "uniffi-bindgen", "generate", "--library", "${targetDirWithVariant}/libuniffi_wysiwyg_composer.so", "--language", "kotlin", "--out-dir", outDir)
+            commandLine("cargo", "uniffi-bindgen", "generate", "--library", "${targetDirWithVariant}/libuniffi_wysiwyg_composer.so", "--language", "kotlin", "--out-dir", outDir, "--no-format")
         }
     }
 }
