@@ -14,6 +14,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import android.text.Editable
+import android.text.Spannable
 import android.text.style.BulletSpan
 import android.text.style.ReplacementSpan
 import android.text.style.StyleSpan
@@ -36,9 +37,13 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.android.apps.common.testing.accessibility.framework.replacements.SpannableStringBuilder
 import io.element.android.wysiwyg.display.TextDisplay
 import io.element.android.wysiwyg.test.R
 import io.element.android.wysiwyg.test.rules.createFlakyEmulatorRule
+import io.element.android.wysiwyg.test.rules.lambda.lambdaRecorder
+import io.element.android.wysiwyg.test.rules.lambda.matching
+import io.element.android.wysiwyg.test.rules.lambda.value
 import io.element.android.wysiwyg.test.utils.AnyViewAction
 import io.element.android.wysiwyg.test.utils.EditorActions
 import io.element.android.wysiwyg.test.utils.ImeActions
@@ -52,10 +57,6 @@ import io.element.android.wysiwyg.view.models.InlineFormat
 import io.element.android.wysiwyg.view.spans.LinkSpan
 import io.element.android.wysiwyg.view.spans.OrderedListSpan
 import io.element.android.wysiwyg.view.spans.PillSpan
-import io.mockk.confirmVerified
-import io.mockk.mockk
-import io.mockk.spyk
-import io.mockk.verify
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.Description
@@ -473,7 +474,7 @@ class EditorEditTextInputTests {
             // Check text contains a Bold StyleSpan
             .check(matches(TextViewMatcher { view ->
                 view.editableText.getSpans<StyleSpan>(start, end)
-                    .any { (it as? StyleSpan)?.style == Typeface.BOLD }
+                    .any { it.style == Typeface.BOLD }
             }))
     }
 
@@ -508,7 +509,7 @@ class EditorEditTextInputTests {
 
     @Test
     fun testTextWatcher() {
-        val textWatcher = spyk<(text: Editable?) -> Unit>({ })
+        val textWatcher = lambdaRecorder<Editable?, Unit> {}
         onView(withId(R.id.rich_text_edit_text))
             .perform(EditorActions.addTextWatcher(textWatcher))
             .perform(EditorActions.setText("text"))
@@ -522,19 +523,13 @@ class EditorEditTextInputTests {
             .perform(EditorActions.toggleList(ordered = false))
             .perform(EditorActions.setHtml("<b>text</b>"))
 
-        verify(exactly = 9) {
-            textWatcher.invoke(match { it.toString() == "text" })
-        }
-        verify(inverse = true) {
-            textWatcher.invoke(match { it.toString() == "" })
-        }
-        confirmVerified(textWatcher)
+        textWatcher.assertions().isCalledExactly(times = 9).withLastParameters(listOf(matching<Spannable> { it.toString() == "text" }))
     }
 
     @Test
     fun testPasteImage() {
         val imageUri = Uri.parse("content://fakeImage")
-        val contentWatcher = spyk<(uri: Uri) -> Unit>({ })
+        val contentWatcher = lambdaRecorder<Uri, Unit> {}
         onView(withId(R.id.rich_text_edit_text))
             .perform(EditorActions.addContentWatcher(arrayOf("image/*"), contentWatcher))
 
@@ -546,50 +541,39 @@ class EditorEditTextInputTests {
             clipboardManager.setPrimaryClip(clpData)
             editor.onTextContextMenuItem(android.R.id.paste)
         }
-        verify(exactly = 1) {
-            contentWatcher.invoke(match { it == imageUri })
-        }
-
-        confirmVerified(contentWatcher)
+        contentWatcher.assertions().isCalledOnce().with(value(imageUri))
     }
 
     @Test
     fun testPastePlainText() {
         val clipData = ClipData.newPlainText("text", ipsum)
-        val contentWatcher = spyk<(uri: Uri) -> Unit>({ })
-        val textWatcher = spyk<(text: Editable?) -> Unit>({ })
+        val textWatcher = lambdaRecorder<Editable?, Unit> {}
         onView(withId(R.id.rich_text_edit_text))
             .perform(EditorActions.addTextWatcher(textWatcher))
         pasteFromClipboard(clipData, false)
 
         pasteFromClipboard(clipData, true)
 
-        verify(exactly = 2) {
-            textWatcher.invoke(match { it.toString() == ipsum + ipsum })
-        }
-
-        confirmVerified(contentWatcher)
+        textWatcher.assertions().isCalledExactly(2)
+            .withFirstParameters(listOf(matching<Editable?> { it.toString() == ipsum + ipsum }))
     }
 
     @Test
     fun testPasteHtmlText() {
         val html = "<bold>$ipsum</bold>"
         val clipData = ClipData.newHtmlText("html", ipsum, html)
-        val contentWatcher = spyk<(uri: Uri) -> Unit>({ })
-        val textWatcher = spyk<(text: Editable?) -> Unit>({ })
+        val textWatcher = lambdaRecorder<Editable?, Unit> {}
         onView(withId(R.id.rich_text_edit_text))
             .perform(EditorActions.addTextWatcher(textWatcher))
         pasteFromClipboard(clipData, false)
 
         pasteFromClipboard(clipData, true)
 
-        verify(exactly = 2) {
-            // In future when we support parsing/loading of pasted html into the model
-            // we can make more assertions on that the correct formatting is applied
-            textWatcher(match { it.toString() == ipsum + ipsum })
-        }
-
-        confirmVerified(contentWatcher)
+        // In the future when we support parsing/loading of pasted HTML into the model
+        // we can make more assertions on that the correct formatting is applied
+        textWatcher.assertions().isCalledExactly(2).withFirstParameters(listOf(matching<Editable?> {
+            it.toString() == ipsum + ipsum
+        }))
     }
 
 
@@ -640,21 +624,22 @@ class EditorEditTextInputTests {
 
     @Test
     fun testRustCrashRecovery() {
-        val mockErrorCollector = mockk<RustErrorCollector>(relaxed = true)
+        val recorder = lambdaRecorder<Throwable, Unit> {}
+        val mockErrorCollector = RustErrorCollector { recorder(it) }
 
         onView(withId(R.id.rich_text_edit_text))
             .perform(ImeActions.commitText("Testing"))
             .perform(EditorActions.testCrash(errorCollector = mockErrorCollector))
+
+        recorder.assertions().isCalledOnce().with(matching<Throwable> {
+            it is uniffi.wysiwyg_composer.InternalException &&
+                    it.message == "This should only happen in tests."
+        })
+
+        onView(withId(R.id.rich_text_edit_text))
             .check(matches(withText("Testing")))
             .perform(ImeActions.commitText("...1, 2, 3"))
             .check(matches(withText("Testing...1, 2, 3")))
-
-        verify {
-            mockErrorCollector.onRustError(withArg {
-                it is uniffi.wysiwyg_composer.InternalException &&
-                        it.message == "This should only happen in tests."
-            })
-        }
     }
 
     @Test

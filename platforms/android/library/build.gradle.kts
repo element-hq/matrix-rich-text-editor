@@ -12,16 +12,16 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
-if (project.hasProperty("coverage")) {
+//if (project.hasProperty("coverage")) {
     apply(plugin = "jacoco")
 
     tasks.withType<Test>().configureEach {
         configure<JacocoTaskExtension> {
             isIncludeNoLocationClasses = true
-            excludes = listOf("jdk.internal.**", "io.mockk.**")
+            excludes = listOf("jdk.internal.*")
         }
     }
-}
+//}
 
 android {
     namespace = "io.element.android.wysiwyg"
@@ -106,7 +106,6 @@ dependencies {
     androidTestImplementation(libs.test.androidx.junit)
     androidTestImplementation(libs.test.androidx.espresso)
     androidTestImplementation(libs.test.androidx.espresso.accessibility)
-    androidTestImplementation(libs.test.mockk.android)
     androidTestImplementation(libs.test.androidx.uiautomator)
     androidTestImplementation(libs.androidx.constraintlayout)
 }
