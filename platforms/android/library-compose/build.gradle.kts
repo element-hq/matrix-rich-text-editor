@@ -17,7 +17,7 @@ if (project.hasProperty("coverage")) {
     tasks.withType<Test>().configureEach {
         configure<JacocoTaskExtension> {
             isIncludeNoLocationClasses = true
-            excludes = listOf("io/mockk/**")
+            excludes = listOf("jdk.internal.**", "io.mockk.**")
         }
     }
 }
