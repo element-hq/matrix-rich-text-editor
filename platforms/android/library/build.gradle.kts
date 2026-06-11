@@ -133,7 +133,7 @@ androidComponents {
         val validTargetDirNames = listOf("aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android")
         val targetDirWithVariant = runCatching {
             val targetDir = File(layout.settingsDirectory.asFile, "../../target").listFiles().find { it.isDirectory && it.name in validTargetDirNames } ?: return@onVariants
-            targetDir.listFiles().find { it.name == "debug" || it.name == "release" } ?: return@onVariants
+            targetDir.listFiles().find { (it.name == "debug" || it.name == "release") && File(it, "libuniffi_wysiwyg_composer.so").exists() } ?: return@onVariants
         }.getOrNull() ?: return@onVariants
         tasks.register<Exec>("generate${variant.name.capitalized()}KotlinBindings") {
             group = "build"
