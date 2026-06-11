@@ -37,8 +37,9 @@ android {
     namespace = "io.element.android.wysiwyg.compose"
     testNamespace = "io.element.android.wysiwyg.compose.test"
 
+    compileSdk = 36
+
     defaultConfig {
-        compileSdk = 36
         minSdk = 23
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
