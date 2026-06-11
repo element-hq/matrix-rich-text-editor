@@ -90,7 +90,7 @@ jobs:
 
       - name: ⬆️ Publish to Sonatype
         working-directory: platforms/android
-        run: ./gradlew generateDebugKotlinBindings publishAndReleaseToMavenCentral
+        run: ./gradlew generateReleaseKotlinBindings publishAndReleaseToMavenCentral
 
   npm:
     name: Publish to npm
