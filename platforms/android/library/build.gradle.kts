@@ -3,15 +3,24 @@ import com.vanniktech.maven.publish.DeploymentValidation
 import java.io.File
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
-import org.gradle.api.tasks.testing.Test
 import org.gradle.internal.extensions.stdlib.capitalized
-import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 plugins {
     id("com.android.library")
 
     alias(libs.plugins.maven.publish)
     alias(libs.plugins.compose.compiler)
+}
+
+if (project.hasProperty("coverage")) {
+    apply(plugin = "jacoco")
+
+    tasks.withType<Test>().configureEach {
+        configure<JacocoTaskExtension> {
+            isIncludeNoLocationClasses = true
+            excludes = listOf("jdk.internal.**", "io.mockk.**")
+        }
+    }
 }
 
 android {
