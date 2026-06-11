@@ -8,7 +8,24 @@
 
 package io.element.android.wysiwyg.test.utils
 
+import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import io.element.android.wysiwyg.test.R
 
-class TestActivity : AppCompatActivity(R.layout.activity_test)
+class TestActivity : AppCompatActivity(R.layout.activity_test) {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures()
+                    or WindowInsetsCompat.Type.systemBars())
+
+            view.updatePadding(left = insets.left, right = insets.right, bottom = insets.bottom, top = insets.top)
+
+            WindowInsetsCompat.CONSUMED
+        }
+    }
+}

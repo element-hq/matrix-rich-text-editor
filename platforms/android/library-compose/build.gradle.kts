@@ -17,7 +17,7 @@ if (project.hasProperty("coverage")) {
     tasks.withType<Test>().configureEach {
         configure<JacocoTaskExtension> {
             isIncludeNoLocationClasses = true
-            excludes = listOf("jdk.internal.**", "io.mockk.**")
+            excludes = listOf("jdk.internal.*")
         }
     }
 }
@@ -98,7 +98,6 @@ dependencies {
     androidTestImplementation(project(":test"))
     androidTestImplementation(libs.test.androidx.junit)
     androidTestImplementation(libs.test.androidx.espresso)
-    androidTestImplementation(libs.test.mockk.android)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.core.text.buildSpannedString
 import androidx.core.text.inSpans
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.withText
@@ -207,7 +208,9 @@ object DummyReplacementSpan : ReplacementSpan() {
         start: Int,
         end: Int,
         fm: Paint.FontMetricsInt?,
-    ): Int = 100
+    ): Int {
+        return paint.measureText(text, start, end).toInt()
+    }
 
     override fun draw(
         canvas: Canvas,
@@ -219,7 +222,8 @@ object DummyReplacementSpan : ReplacementSpan() {
         y: Int,
         bottom: Int,
         paint: Paint,
-    ) = Unit
-
+    ) {
+        canvas.drawText(text ?: "", start, end, x, y.toFloat(), paint)
+    }
 }
 
