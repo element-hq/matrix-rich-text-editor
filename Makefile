@@ -46,6 +46,7 @@ targets-android:
 	rustup target add x86_64-linux-android
 	rustup target add i686-linux-android
 	rustup target add armv7-linux-androideabi
+	cargo install cargo-ndk
 
 targets-ios:
 	rustup target add aarch64-apple-ios
