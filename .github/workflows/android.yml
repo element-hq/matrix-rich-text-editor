@@ -86,6 +86,7 @@ jobs:
           disk-size: 3G
           script: |
             chmod +x scripts/ci_test.sh
+            ./gradlew generateDebugKotlinBindings
             scripts/ci_test.sh
 
       - name : Upload test results
