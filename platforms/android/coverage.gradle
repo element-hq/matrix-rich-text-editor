@@ -1,6 +1,8 @@
 def commonExcludes = [
         // Bindings
         'uniffi/**/',
+        // Mockk
+        'io/mockk/**/',
 ]
 
 def unitTestExcludes = [
@@ -22,8 +24,6 @@ def unitTestExcludes = [
 def instrumentationTestExcludes = []
 
 def initializeReport(report, projects, classExcludes, executionDataPaths) {
-    projects.each { project -> project.apply plugin: 'jacoco' }
-
     report.executionData {
         fileTree(rootProject.rootDir.absolutePath).include(
                 *executionDataPaths

@@ -12,5 +12,8 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Rich Text Editor"
-include ':example-view', ':example-compose', ':library', ':library-compose', ':test'
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+rootProject.name = "RichTextEditor"
+include(":example-view", ":example-compose", ":library", ":library-compose", ":test")
