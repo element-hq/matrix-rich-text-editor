@@ -1,9 +1,6 @@
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.vanniktech.maven.publish.DeploymentValidation
-import java.io.File
-import org.gradle.api.Project
-import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
-import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 
 plugins {
     id("com.android.library")
@@ -143,7 +140,7 @@ androidComponents {
             val targetDir = File(layout.settingsDirectory.asFile, "../../target").listFiles().find { it.isDirectory && it.name in validTargetDirNames } ?: return@onVariants
             targetDir.listFiles().find { (it.name == "debug" || it.name == "release") && File(it, "libuniffi_wysiwyg_composer.so").exists() } ?: return@onVariants
         }.getOrNull() ?: return@onVariants
-        tasks.register<Exec>("generate${variant.name.capitalized()}KotlinBindings") {
+        tasks.register<Exec>("generate${variant.name.uppercaseFirstChar()}KotlinBindings") {
             group = "build"
             description = "Generates Kotlin bindings for Android for the ${variant.name} variant."
             mustRunAfter("generateUniffiBindingsLibrary")
