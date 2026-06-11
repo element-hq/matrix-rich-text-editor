@@ -12,7 +12,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
-//if (project.hasProperty("coverage")) {
+if (project.hasProperty("coverage")) {
     apply(plugin = "jacoco")
 
     tasks.withType<Test>().configureEach {
@@ -21,7 +21,7 @@ plugins {
             excludes = listOf("jdk.internal.*")
         }
     }
-//}
+}
 
 android {
     namespace = "io.element.android.wysiwyg"
