@@ -162,7 +162,12 @@ internal class InterceptInputConnection(
                     val toAppend = newText.substring(pos until pos + diff)
                     val (_, cEnd) = EditorIndexMapper.fromEditorToComposer(start, end, editable)
                         ?: error("Invalid indexes in composer $start, $end")
-                    processInput(EditorInputAction.ReplaceTextIn(cEnd, cEnd, toAppend))
+
+                    if (toAppend.isEmpty()) {
+                        processInput(EditorInputAction.ReplaceText(""))
+                    } else {
+                        processInput(EditorInputAction.ReplaceTextIn(cEnd, cEnd, toAppend))
+                    }
                 }
                 newText != null && actualPreviousText.startsWith(newText) -> {
                     // Removing text from the end
