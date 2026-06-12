@@ -390,6 +390,18 @@ class EditorEditText : AppCompatEditText {
     }
 
     fun toggleInlineFormat(inlineFormat: InlineFormat): Boolean {
+        val compositionStart = BaseInputConnection.getComposingSpanStart(editableText)
+        val compositionEnd = BaseInputConnection.getComposingSpanEnd(editableText)
+
+        if (compositionStart != -1 && compositionEnd != -1 && selectionStart == selectionEnd) {
+            clearComposingText()
+            val addWhitespaceResult = viewModel.processInput(EditorInputAction.ReplaceText(" ")) as? ReplaceText
+            if (addWhitespaceResult != null) {
+                setTextFromComposerUpdate(addWhitespaceResult.text)
+                setSelectionFromComposerUpdate(addWhitespaceResult.selection.first, addWhitespaceResult.selection.last)
+            }
+        }
+
         val result = processInputAsTextResult(EditorInputAction.ApplyInlineFormat(inlineFormat))
             ?: return false
 
