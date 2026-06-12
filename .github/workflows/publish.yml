@@ -85,9 +85,12 @@ jobs:
         with:
           cache-disabled: true
 
+      - name: Build Android bindings
+        run: make android-bindings
+
       - name: ⬆️ Publish to Sonatype
         working-directory: platforms/android
-        run: ./gradlew publishAndReleaseToMavenCentral
+        run: ./gradlew generateReleaseKotlinBindings publishAndReleaseToMavenCentral
 
   npm:
     name: Publish to npm

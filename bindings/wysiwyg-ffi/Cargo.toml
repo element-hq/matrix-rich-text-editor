@@ -18,9 +18,6 @@ assert-invariants = ["wysiwyg/assert-invariants"]
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-# Keep the uniffi version here in sync with the installed version of
-# uniffi-bindgen that is called from
-# ../../examples/example-android/app/build.gradle
 html-escape = "0.2.11"
 matrix_mentions = { path = "../../crates/matrix_mentions" }
 uniffi = { workspace = true }

@@ -21,7 +21,17 @@ import io.element.android.wysiwyg.utils.RustErrorCollector
 import io.element.android.wysiwyg.view.models.InlineFormat
 import io.element.android.wysiwyg.view.models.LinkAction
 import timber.log.Timber
-import uniffi.wysiwyg_composer.*
+import uniffi.wysiwyg_composer.ActionState
+import uniffi.wysiwyg_composer.ComposerAction
+import uniffi.wysiwyg_composer.ComposerModel
+import uniffi.wysiwyg_composer.ComposerModelInterface
+import uniffi.wysiwyg_composer.ComposerUpdate
+import uniffi.wysiwyg_composer.InternalException
+import uniffi.wysiwyg_composer.LinkActionUpdate
+import uniffi.wysiwyg_composer.MentionsState
+import uniffi.wysiwyg_composer.MenuAction
+import uniffi.wysiwyg_composer.MenuState
+import uniffi.wysiwyg_composer.TextUpdate
 
 internal class EditorViewModel(
     private val provideComposer: () -> ComposerModelInterface?,
@@ -324,11 +334,7 @@ internal class EditorViewModel(
         // behaviour
         this.crashOnComposerFailure = false
 
-        runCatching {
-            composer?.debugPanic()
-        }.onFailure {
-            onComposerFailure(it)
-        }
+        onComposerFailure(InternalException("This should only happen in tests."))
 
         this.crashOnComposerFailure = crashOnComposerFailure
     }
@@ -337,5 +343,4 @@ internal class EditorViewModel(
             Timber.e("HtmlConverter not set. This seems like a configuration issue.")
             ""
         }
-
 }

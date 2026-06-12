@@ -1,5 +1,6 @@
 #!/bin/sh
 
+set -e
 DIR=$(dirname -- "$0")
 cd $DIR
 ./gradlew unitTestsWithCoverage

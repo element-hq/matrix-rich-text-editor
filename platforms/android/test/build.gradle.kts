@@ -1,15 +1,14 @@
 @Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
-    namespace = "io.element.android.wysiwyg.test"
     compileSdk = 35
+    namespace = "io.element.android.wysiwyg.test"
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 23
     }
 
     buildTypes {
