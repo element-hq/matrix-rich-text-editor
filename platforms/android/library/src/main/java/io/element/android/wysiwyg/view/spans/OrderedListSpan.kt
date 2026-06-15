@@ -28,7 +28,7 @@ class OrderedListSpan(
 ) : LeadingMarginSpan, BlockSpan {
 
     private val prefix = "$order."
-    private val prefixToMeasure = "99."
+    private val prefixToMeasure = if (prefix.length > 3) prefix else "99."
 
     private val typefacePaint = Paint().apply {
         this.textSize = textSize
