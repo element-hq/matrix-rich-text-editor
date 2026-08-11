@@ -86,4 +86,83 @@ describe('handleKeyDown', () => {
             expect(await result).toBe(expected);
         },
     );
+
+    describe('table cell navigation', () => {
+        function selectInsideCell(cell: HTMLElement): void {
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            const selection = document.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+        }
+
+        it('dispatches moveToNextCell for Tab inside a table cell', async () => {
+            const editor = document.createElement('div');
+            editor.innerHTML = '<table><tr><td>a</td><td>b</td></tr></table>';
+            document.body.appendChild(editor);
+            const cell = editor.querySelector('td')!;
+            selectInsideCell(cell);
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab' });
+            const result = new Promise((resolve) => {
+                editor.addEventListener('wysiwygInput', (({
+                    detail: { blockType },
+                }: FormatBlockEvent) => {
+                    resolve(blockType);
+                }) as EventListener);
+            });
+
+            const model = new_composer_model();
+            handleKeyDown(event, editor, model, {} as FormattingFunctions);
+
+            expect(await result).toBe('moveToNextCell');
+            editor.remove();
+        });
+
+        it('dispatches moveToPreviousCell for Shift+Tab inside a table cell', async () => {
+            const editor = document.createElement('div');
+            editor.innerHTML = '<table><tr><td>a</td><td>b</td></tr></table>';
+            document.body.appendChild(editor);
+            const cell = editor.querySelectorAll('td')[1]!;
+            selectInsideCell(cell);
+
+            const event = new KeyboardEvent('keydown', {
+                key: 'Tab',
+                shiftKey: true,
+            });
+            const result = new Promise((resolve) => {
+                editor.addEventListener('wysiwygInput', (({
+                    detail: { blockType },
+                }: FormatBlockEvent) => {
+                    resolve(blockType);
+                }) as EventListener);
+            });
+
+            const model = new_composer_model();
+            handleKeyDown(event, editor, model, {} as FormattingFunctions);
+
+            expect(await result).toBe('moveToPreviousCell');
+            editor.remove();
+        });
+
+        it('does not intercept Tab outside of a table cell', () => {
+            const editor = document.createElement('div');
+            editor.innerHTML = '<p>a</p>';
+            document.body.appendChild(editor);
+            const paragraph = editor.querySelector('p')!;
+            selectInsideCell(paragraph);
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab' });
+            let dispatched = false;
+            editor.addEventListener('wysiwygInput', () => {
+                dispatched = true;
+            });
+
+            const model = new_composer_model();
+            handleKeyDown(event, editor, model, {} as FormattingFunctions);
+
+            expect(dispatched).toBe(false);
+            editor.remove();
+        });
+    });
 });

@@ -30,6 +30,7 @@ import { type AllActionStates } from '../types';
 import { mapToAllActionStates } from './utils';
 import {
     type AtRoomSuggestionEvent,
+    type InsertTableEvent,
     type LinkEvent,
     type SuggestionEvent,
 } from './types';
@@ -51,13 +52,29 @@ export function sendWysiwygInputEvent(
         | string
         | LinkEvent['data']
         | SuggestionEvent['data']
-        | AtRoomSuggestionEvent['data'],
+        | AtRoomSuggestionEvent['data']
+        | InsertTableEvent['data'],
 ): void {
     e?.preventDefault();
     e?.stopPropagation();
     editor.dispatchEvent(
         new CustomEvent('wysiwygInput', { detail: { blockType, data } }),
     );
+}
+
+/**
+ * Returns whether the current selection is inside a table cell, using the
+ * live contenteditable DOM (not the Rust model) since that's the cheapest
+ * and most reliable way to decide whether Tab should navigate cells or keep
+ * its default browser behaviour (moving focus to the next element).
+ */
+function isSelectionInsideTableCell(): boolean {
+    const node = document.getSelection()?.anchorNode;
+    if (!node) {
+        return false;
+    }
+    const element = node instanceof Element ? node : node.parentElement;
+    return !!element?.closest('td, th');
 }
 
 /**
@@ -77,6 +94,16 @@ function getInputFromKeyDown(
             case '5':
                 return 'formatStrikeThrough';
         }
+    }
+
+    if (
+        e.key === 'Tab' &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        isSelectionInsideTableCell()
+    ) {
+        return e.shiftKey ? 'moveToPreviousCell' : 'moveToNextCell';
     }
 
     const operatingSystem = getUserOperatingSystem();

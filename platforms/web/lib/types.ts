@@ -11,6 +11,7 @@ import { type ComposerUpdate } from '@vector-im/matrix-wysiwyg-wasm';
 import { type ACTION_TYPES, type SUGGESTIONS } from './constants';
 import {
     type AllowedMentionAttributes,
+    type InsertTableEvent,
     type LinkEvent,
 } from './useListeners/types';
 
@@ -19,6 +20,7 @@ export type BlockType = InputEvent['inputType'] | 'formatInlineCode' | 'clear';
 export type WysiwygInputEvent =
     | ClipboardEvent
     | LinkEvent
+    | InsertTableEvent
     | (InputEvent & {
           inputType: BlockType;
           data?: string | null;
@@ -46,6 +48,17 @@ export type FormattingFunctions = Record<
     mentionAtRoom: (attributes: AllowedMentionAttributes) => void;
     command: (text: string) => void;
     emoji: (text: string) => void;
+    insertTable: (rows: number, columns: number) => void;
+    addTableRowBefore: () => void;
+    addTableRowAfter: () => void;
+    removeTableRow: () => void;
+    addTableColumnBefore: () => void;
+    addTableColumnAfter: () => void;
+    removeTableColumn: () => void;
+    toggleTableHeader: () => void;
+    removeTable: () => void;
+    moveToNextCell: () => void;
+    moveToPreviousCell: () => void;
     removeLinks: () => void;
     getLink: () => string;
 };

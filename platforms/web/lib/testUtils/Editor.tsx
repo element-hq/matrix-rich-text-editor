@@ -45,7 +45,18 @@ export const Editor = forwardRef<HTMLDivElement, EditorProps>(function Editor(
             key !== 'command' &&
             key !== 'indent' &&
             key !== 'unindent' &&
-            key !== `emoji`,
+            key !== `emoji` &&
+            key !== 'insertTable' &&
+            key !== 'addTableRowBefore' &&
+            key !== 'addTableRowAfter' &&
+            key !== 'removeTableRow' &&
+            key !== 'addTableColumnBefore' &&
+            key !== 'addTableColumnAfter' &&
+            key !== 'removeTableColumn' &&
+            key !== 'toggleTableHeader' &&
+            key !== 'removeTable' &&
+            key !== 'moveToNextCell' &&
+            key !== 'moveToPreviousCell',
     ) as Array<
         Exclude<
             keyof typeof wysiwyg,
@@ -59,6 +70,17 @@ export const Editor = forwardRef<HTMLDivElement, EditorProps>(function Editor(
             | 'unindent'
             | 'mentionAtRoom'
             | 'emoji'
+            | 'insertTable'
+            | 'addTableRowBefore'
+            | 'addTableRowAfter'
+            | 'removeTableRow'
+            | 'addTableColumnBefore'
+            | 'addTableColumnAfter'
+            | 'removeTableColumn'
+            | 'toggleTableHeader'
+            | 'removeTable'
+            | 'moveToNextCell'
+            | 'moveToPreviousCell'
         >
     >;
 

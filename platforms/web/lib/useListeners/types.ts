@@ -32,3 +32,8 @@ export type AtRoomSuggestionEvent = Omit<InputEvent, 'data'> & {
     inputType: 'insertAtRoomSuggestion';
     data: { attributes: AllowedMentionAttributes };
 };
+
+export type InsertTableEvent = Omit<InputEvent, 'data'> & {
+    inputType: 'insertTable';
+    data: { rows: number; columns: number };
+};

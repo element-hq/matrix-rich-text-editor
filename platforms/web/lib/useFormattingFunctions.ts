@@ -14,6 +14,7 @@ import { sendWysiwygInputEvent } from './useListeners';
 import {
     type AllowedMentionAttributes,
     type AtRoomSuggestionEvent,
+    type InsertTableEvent,
     type LinkEvent,
     type SuggestionEvent,
 } from './useListeners/types';
@@ -33,7 +34,8 @@ export function useFormattingFunctions(
                 | string
                 | LinkEvent['data']
                 | SuggestionEvent['data']
-                | AtRoomSuggestionEvent['data'],
+                | AtRoomSuggestionEvent['data']
+                | InsertTableEvent['data'],
         ): void => {
             if (editorRef.current) {
                 sendWysiwygInputEvent(
@@ -75,6 +77,20 @@ export function useFormattingFunctions(
             emoji: (text: string): void => sendEvent('insertEmoji', text),
             mentionAtRoom: (attributes: AllowedMentionAttributes): void =>
                 sendEvent('insertAtRoomSuggestion', { attributes }),
+            insertTable: (rows: number, columns: number): void =>
+                sendEvent('insertTable', { rows, columns }),
+            addTableRowBefore: (): void => sendEvent('insertTableRowBefore'),
+            addTableRowAfter: (): void => sendEvent('insertTableRowAfter'),
+            removeTableRow: (): void => sendEvent('removeTableRow'),
+            addTableColumnBefore: (): void =>
+                sendEvent('insertTableColumnBefore'),
+            addTableColumnAfter: (): void =>
+                sendEvent('insertTableColumnAfter'),
+            removeTableColumn: (): void => sendEvent('removeTableColumn'),
+            toggleTableHeader: (): void => sendEvent('toggleTableHeader'),
+            removeTable: (): void => sendEvent('removeTable'),
+            moveToNextCell: (): void => sendEvent('moveToNextCell'),
+            moveToPreviousCell: (): void => sendEvent('moveToPreviousCell'),
         };
     }, [editorRef, composerModel]);
 

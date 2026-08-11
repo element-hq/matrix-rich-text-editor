@@ -27,6 +27,17 @@ const mockComposerModel = {
     indent: vi.fn(),
     unindent: vi.fn(),
     set_content_from_html: vi.fn(),
+    insert_table: vi.fn(),
+    add_table_row_before: vi.fn(),
+    add_table_row_after: vi.fn(),
+    remove_table_row: vi.fn(),
+    add_table_column_before: vi.fn(),
+    add_table_column_after: vi.fn(),
+    remove_table_column: vi.fn(),
+    toggle_table_header: vi.fn(),
+    remove_table: vi.fn(),
+    move_to_next_cell: vi.fn(),
+    move_to_previous_cell: vi.fn(),
 } as unknown as ComposerModel;
 
 const mockAction = vi.fn();
@@ -117,6 +128,46 @@ const testCases: testCase[] = [
         composerMethod: 'set_content_from_html',
         composerArguments: ['content'],
         actionArguments: ['content'],
+    },
+    {
+        eventType: 'insertTableRowBefore',
+        composerMethod: 'add_table_row_before',
+    },
+    {
+        eventType: 'insertTableRowAfter',
+        composerMethod: 'add_table_row_after',
+    },
+    {
+        eventType: 'removeTableRow',
+        composerMethod: 'remove_table_row',
+    },
+    {
+        eventType: 'insertTableColumnBefore',
+        composerMethod: 'add_table_column_before',
+    },
+    {
+        eventType: 'insertTableColumnAfter',
+        composerMethod: 'add_table_column_after',
+    },
+    {
+        eventType: 'removeTableColumn',
+        composerMethod: 'remove_table_column',
+    },
+    {
+        eventType: 'toggleTableHeader',
+        composerMethod: 'toggle_table_header',
+    },
+    {
+        eventType: 'removeTable',
+        composerMethod: 'remove_table',
+    },
+    {
+        eventType: 'moveToNextCell',
+        composerMethod: 'move_to_next_cell',
+    },
+    {
+        eventType: 'moveToPreviousCell',
+        composerMethod: 'move_to_previous_cell',
     },
 ];
 
@@ -276,6 +327,30 @@ describe('processInput', () => {
         // Then mockAction have is not called
         expect(returnValue).not.toBeDefined();
         expect(mockAction).not.toHaveBeenCalled();
+    });
+
+    it('handles insertTable with rows and columns from its data payload', () => {
+        const e = new InputEvent('input', {
+            inputType: 'insertTable',
+        }) as unknown as InputEvent & {
+            inputType: 'insertTable';
+            data: { rows: number; columns: number };
+        };
+        Object.defineProperty(e, 'data', {
+            value: { rows: 2, columns: 3 },
+        });
+
+        processInput(
+            e,
+            mockComposerModel,
+            mockAction,
+            mockFormattingFunctions,
+            editor,
+            mockSuggestion,
+        );
+
+        expect(mockComposerModel.insert_table).toHaveBeenCalledWith(2, 3);
+        expect(mockAction).toHaveBeenCalledWith(undefined, 'insert_table');
     });
 
     it('returns null from a send message event', () => {

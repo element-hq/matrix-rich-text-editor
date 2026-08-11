@@ -15,6 +15,12 @@ function App(): React.ReactElement {
         isAutoFocusEnabled: true,
     });
 
+    const insertTable = (): void => {
+        const rows = Number(window.prompt('Rows?', '2')) || 2;
+        const columns = Number(window.prompt('Columns?', '2')) || 2;
+        wysiwyg.insertTable(rows, columns);
+    };
+
     return (
         <div>
             <button onClick={wysiwyg.undo}>undo</button>
@@ -27,6 +33,19 @@ function App(): React.ReactElement {
             <button onClick={wysiwyg.unorderedList}>unorderedList</button>
             <button onClick={wysiwyg.inlineCode}>inlineCode</button>
             <button onClick={wysiwyg.clear}>clear</button>
+            <button onClick={insertTable}>insertTable</button>
+            <button onClick={wysiwyg.addTableRowAfter}>addTableRow</button>
+            <button onClick={wysiwyg.removeTableRow}>removeTableRow</button>
+            <button onClick={wysiwyg.addTableColumnAfter}>
+                addTableColumn
+            </button>
+            <button onClick={wysiwyg.removeTableColumn}>
+                removeTableColumn
+            </button>
+            <button onClick={wysiwyg.toggleTableHeader}>
+                toggleTableHeader
+            </button>
+            <button onClick={wysiwyg.removeTable}>removeTable</button>
             <div ref={ref} contentEditable={isWysiwygReady} />
         </div>
     );

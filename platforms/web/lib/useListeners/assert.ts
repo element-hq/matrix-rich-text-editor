@@ -6,7 +6,11 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { type LinkEvent, type SuggestionEvent } from './types';
+import {
+    type InsertTableEvent,
+    type LinkEvent,
+    type SuggestionEvent,
+} from './types';
 
 export function isInputEvent(e: Event): e is InputEvent {
     return 'inputType' in e;
@@ -26,4 +30,8 @@ export function isAtRoomSuggestionEvent(e: Event): e is SuggestionEvent {
 
 export function isLinkEvent(e: Event): e is LinkEvent {
     return isInputEvent(e) && e.inputType == 'insertLink';
+}
+
+export function isInsertTableEvent(e: Event): e is InsertTableEvent {
+    return isInputEvent(e) && e.inputType === 'insertTable';
 }

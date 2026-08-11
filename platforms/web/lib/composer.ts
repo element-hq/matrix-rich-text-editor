@@ -23,6 +23,7 @@ import {
 import {
     isAtRoomSuggestionEvent,
     isClipboardEvent,
+    isInsertTableEvent,
     isLinkEvent,
     isSuggestionEvent,
 } from './useListeners/assert';
@@ -179,6 +180,59 @@ export function processInput(
             return action(composerModel.code_block(), 'code_block');
         case 'insertQuote':
             return action(composerModel.quote(), 'quote');
+        case 'insertTable':
+            if (isInsertTableEvent(event)) {
+                const { rows, columns } = event.data;
+                return action(
+                    composerModel.insert_table(rows, columns),
+                    'insert_table',
+                );
+            }
+            break;
+        case 'insertTableRowBefore':
+            return action(
+                composerModel.add_table_row_before(),
+                'add_table_row_before',
+            );
+        case 'insertTableRowAfter':
+            return action(
+                composerModel.add_table_row_after(),
+                'add_table_row_after',
+            );
+        case 'removeTableRow':
+            return action(composerModel.remove_table_row(), 'remove_table_row');
+        case 'insertTableColumnBefore':
+            return action(
+                composerModel.add_table_column_before(),
+                'add_table_column_before',
+            );
+        case 'insertTableColumnAfter':
+            return action(
+                composerModel.add_table_column_after(),
+                'add_table_column_after',
+            );
+        case 'removeTableColumn':
+            return action(
+                composerModel.remove_table_column(),
+                'remove_table_column',
+            );
+        case 'toggleTableHeader':
+            return action(
+                composerModel.toggle_table_header(),
+                'toggle_table_header',
+            );
+        case 'removeTable':
+            return action(composerModel.remove_table(), 'remove_table');
+        case 'moveToNextCell':
+            return action(
+                composerModel.move_to_next_cell(),
+                'move_to_next_cell',
+            );
+        case 'moveToPreviousCell':
+            return action(
+                composerModel.move_to_previous_cell(),
+                'move_to_previous_cell',
+            );
         case 'insertFromPaste':
             // Paste is already handled by catching the 'paste' event, which
             // results in a ClipboardEvent, handled above. Ideally, we would
