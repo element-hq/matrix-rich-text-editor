@@ -20,6 +20,7 @@ pub mod quotes;
 pub mod replace_html;
 pub mod replace_text;
 pub mod selection;
+pub mod tables;
 pub mod undo_redo;
 
 pub use base::ComposerModel;

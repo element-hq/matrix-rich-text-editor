@@ -96,7 +96,7 @@ mod sys {
     use crate::dom::nodes::dom_node::DomNodeKind::CodeBlock;
     use crate::dom::nodes::{ContainerNode, DomNode};
     use crate::dom::parser::sys::PaNodeText;
-    use crate::ListType;
+    use crate::{ListType, TableCellType};
 
     pub(super) struct HtmlParser {
         current_path: Vec<DomNodeKind>,
@@ -251,6 +251,24 @@ mod sys {
             {
                 // If we are inside a list, we can only have list items.
                 invalid_node_error = Some(Error::InvalidListItemNode);
+                skip_children = true;
+            }
+            if matches!(node.kind(), ContainerNodeKind::Table)
+                && tag != "tr"
+                && tag != "thead"
+                && tag != "tbody"
+            {
+                // If we are inside a table, we can only have rows
+                // (optionally grouped inside `<thead>`/`<tbody>`).
+                invalid_node_error = Some(Error::InvalidTableRowNode);
+                skip_children = true;
+            }
+            if matches!(node.kind(), ContainerNodeKind::TableRow)
+                && tag != "td"
+                && tag != "th"
+            {
+                // If we are inside a table row, we can only have cells.
+                invalid_node_error = Some(Error::InvalidTableCellNode);
                 skip_children = true;
             }
 
@@ -455,6 +473,67 @@ mod sys {
                         )?;
                         self.current_path.remove(cur_path_idx);
                     }
+                    "table" => {
+                        self.current_path.push(DomNodeKind::Table);
+                        node.append_child(Self::new_table());
+                        self.convert_children(
+                            padom,
+                            child,
+                            last_container_mut_in(&mut node),
+                            html_source,
+                        )?;
+                        self.current_path.remove(cur_path_idx);
+                    }
+                    "thead" | "tbody" => 'table_section: {
+                        if !matches!(node.kind(), ContainerNodeKind::Table) {
+                            invalid_node_error =
+                                Some(Error::UnknownNode(tag.to_string()));
+                            break 'table_section;
+                        }
+                        // Transparent: `<thead>`/`<tbody>` are not
+                        // represented as Dom nodes, their children are
+                        // added directly to the table.
+                        self.convert(padom, child, &mut node, html_source)?;
+                    }
+                    "tr" => 'tr: {
+                        if !matches!(node.kind(), ContainerNodeKind::Table) {
+                            invalid_node_error =
+                                Some(Error::InvalidTableRowNode);
+                            break 'tr;
+                        }
+                        self.current_path.push(DomNodeKind::TableRow);
+                        node.append_child(Self::new_table_row());
+                        self.convert_children(
+                            padom,
+                            child,
+                            last_container_mut_in(&mut node),
+                            html_source,
+                        )?;
+                        self.current_path.remove(cur_path_idx);
+                    }
+                    "td" | "th" => 'cell: {
+                        if !matches!(node.kind(), ContainerNodeKind::TableRow) {
+                            invalid_node_error =
+                                Some(Error::InvalidTableCellNode);
+                            break 'cell;
+                        }
+                        let cell_type = if tag == "th" {
+                            TableCellType::Header
+                        } else {
+                            TableCellType::Data
+                        };
+                        self.current_path.push(DomNodeKind::TableCell);
+                        node.append_child(Self::new_table_cell(
+                            cell_type, child,
+                        ));
+                        self.convert_children(
+                            padom,
+                            child,
+                            last_container_mut_in(&mut node),
+                            html_source,
+                        )?;
+                        self.current_path.remove(cur_path_idx);
+                    }
                     _ => {
                         invalid_node_error =
                             Some(Error::UnknownNode(tag.to_string()));
@@ -611,6 +690,47 @@ mod sys {
             DomNode::Container(ContainerNode::new_paragraph(Vec::new()))
         }
 
+        /// Create a table node
+        fn new_table<S>() -> DomNode<S>
+        where
+            S: UnicodeString,
+        {
+            DomNode::Container(ContainerNode::new_table(Vec::new(), None))
+        }
+
+        /// Create a table row node
+        fn new_table_row<S>() -> DomNode<S>
+        where
+            S: UnicodeString,
+        {
+            DomNode::Container(ContainerNode::new_table_row(Vec::new()))
+        }
+
+        /// Create a table cell node, carrying over any `colspan`/`rowspan`/
+        /// `align` attributes present on the source element.
+        fn new_table_cell<S>(
+            cell_type: TableCellType,
+            child: &PaNodeContainer,
+        ) -> DomNode<S>
+        where
+            S: UnicodeString,
+        {
+            let attrs: Vec<(S, S)> = ["colspan", "rowspan", "align"]
+                .into_iter()
+                .filter_map(|name| {
+                    child
+                        .get_attr(name)
+                        .map(|value| (name.into(), value.into()))
+                })
+                .collect();
+            let attrs = if attrs.is_empty() { None } else { Some(attrs) };
+            DomNode::Container(ContainerNode::new_table_cell(
+                cell_type,
+                Vec::new(),
+                attrs,
+            ))
+        }
+
         fn padom_creation_error_to_html_parse_error(
             &mut self,
             e: PaDomCreationError,
@@ -626,6 +746,8 @@ mod sys {
         UnknownNode(String),
         InvalidListItemNode,
         ParentNotAList,
+        InvalidTableRowNode,
+        InvalidTableCellNode,
     }
 
     impl fmt::Display for Error {
@@ -648,6 +770,18 @@ mod sys {
                 }
                 Self::ParentNotAList => {
                     write!(formatter, "Parent node is not a list")
+                }
+                Self::InvalidTableRowNode => {
+                    write!(
+                        formatter,
+                        "Invalid table row node: a table must only contain table rows"
+                    )
+                }
+                Self::InvalidTableCellNode => {
+                    write!(
+                        formatter,
+                        "Invalid table cell node: a table row must only contain table cells"
+                    )
                 }
             }
         }
@@ -759,6 +893,93 @@ mod sys {
                   └>"bar"
                 "#}
             );
+        }
+
+        #[test]
+        fn parse_simple_table_roundtrips() {
+            assert_that!(
+                "<table><tbody><tr><td>a</td><td>b</td></tr></tbody></table>"
+            )
+            .roundtrips();
+        }
+
+        #[test]
+        fn parse_table_with_header_roundtrips() {
+            assert_that!(
+                "<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>c</td><td>d</td></tr></tbody></table>"
+            )
+            .roundtrips();
+        }
+
+        #[test]
+        fn parse_table_with_colspan_roundtrips() {
+            assert_that!(
+                r#"<table><tbody><tr><td colspan="2">a</td></tr></tbody></table>"#
+            )
+            .roundtrips();
+        }
+
+        #[test]
+        fn parse_table_without_explicit_tbody_synthesizes_one_on_output() {
+            // A table without `<thead>`/`<tbody>` in the source parses fine
+            // (they're not real Dom nodes, just synthesized on the way back
+            // out to HTML), but re-serializing always wraps rows in a
+            // `<tbody>`.
+            let html = "<table><tr><td>a</td></tr></table>";
+            let dom: Dom<Utf16String> =
+                HtmlParser::default().parse(html).unwrap();
+            let tree = dom.to_tree().to_string();
+            assert_eq!(
+                tree,
+                indoc! {
+                r#"
+
+                └>table
+                  └>tr
+                    └>td
+                      └>"a"
+                "#}
+            );
+            assert_eq!(
+                dom.to_html().to_string(),
+                "<table><tbody><tr><td>a</td></tr></tbody></table>"
+            );
+        }
+
+        #[test]
+        fn parse_table_inside_paragraph_context_tree() {
+            let html = "<p>before</p><table><tbody><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></tbody></table>";
+            let dom: Dom<Utf16String> =
+                HtmlParser::default().parse(html).unwrap();
+            let tree = dom.to_tree().to_string();
+            assert_eq!(
+                tree,
+                indoc! {
+                r#"
+
+                ├>p
+                │ └>"before"
+                └>table
+                  ├>tr
+                  │ ├>td
+                  │ │ └>"a"
+                  │ └>td
+                  │   └>"b"
+                  └>tr
+                    ├>td
+                    │ └>"c"
+                    └>td
+                      └>"d"
+                "#}
+            );
+        }
+
+        #[test]
+        fn parse_tr_outside_table_is_rejected() {
+            let html = "<tr><td>a</td></tr>";
+            let result: Result<Dom<Utf16String>, _> =
+                HtmlParser::default().parse(html);
+            assert!(result.is_err());
         }
 
         #[test]
@@ -1552,7 +1773,7 @@ mod js {
     use crate::dom::nodes::dom_node::DomNodeKind::CodeBlock;
     use crate::{
         dom::nodes::{ContainerNode, DomNode},
-        InlineFormatType, ListType,
+        InlineFormatType, ListType, TableCellType,
     };
     use matrix_mentions::Mention;
     use std::fmt;
@@ -1684,6 +1905,24 @@ mod js {
                 {
                     // If we are inside a list, we can only have list items.
                     invalid_node_error = Some(Error::InvalidListItemNode);
+                    skip_children = true;
+                }
+                if parent_kind == DomNodeKind::Table
+                    && tag != "TR"
+                    && tag != "THEAD"
+                    && tag != "TBODY"
+                {
+                    // If we are inside a table, we can only have rows
+                    // (optionally grouped inside `<thead>`/`<tbody>`).
+                    invalid_node_error = Some(Error::InvalidTableRowNode);
+                    skip_children = true;
+                }
+                if parent_kind == DomNodeKind::TableRow
+                    && tag != "TD"
+                    && tag != "TH"
+                {
+                    // If we are inside a table row, we can only have cells.
+                    invalid_node_error = Some(Error::InvalidTableCellNode);
                     skip_children = true;
                 }
 
@@ -1924,6 +2163,111 @@ mod js {
                             ));
                             self.current_path.pop();
                         }
+
+                        "TABLE" => {
+                            self.current_path.push(DomNodeKind::Table);
+                            dom.append_child(DomNode::Container(
+                                ContainerNode::new_table(
+                                    self.convert(
+                                        node.child_nodes(),
+                                        DomNodeKind::Table,
+                                        html_source,
+                                    )?
+                                    .take_children(),
+                                    None,
+                                ),
+                            ));
+                            self.current_path.pop();
+                        }
+
+                        "THEAD" | "TBODY" => {
+                            if parent_kind != DomNodeKind::Table {
+                                invalid_node_error =
+                                    Some(Error::UnknownNode(tag.to_string()));
+                            } else {
+                                // Transparent: `<thead>`/`<tbody>` are not
+                                // represented as Dom nodes, their children
+                                // are added directly to the table.
+                                let children_nodes = self
+                                    .convert(
+                                        node.child_nodes(),
+                                        DomNodeKind::Table,
+                                        html_source,
+                                    )?
+                                    .take_children();
+                                if !children_nodes.is_empty() {
+                                    dom.append_children(children_nodes);
+                                }
+                            }
+                        }
+
+                        "TR" => {
+                            if parent_kind != DomNodeKind::Table {
+                                invalid_node_error =
+                                    Some(Error::InvalidTableRowNode);
+                            } else {
+                                self.current_path.push(DomNodeKind::TableRow);
+                                dom.append_child(DomNode::Container(
+                                    ContainerNode::new_table_row(
+                                        self.convert(
+                                            node.child_nodes(),
+                                            DomNodeKind::TableRow,
+                                            html_source,
+                                        )?
+                                        .take_children(),
+                                    ),
+                                ));
+                                self.current_path.pop();
+                            }
+                        }
+
+                        "TD" | "TH" => {
+                            if parent_kind != DomNodeKind::TableRow {
+                                invalid_node_error =
+                                    Some(Error::InvalidTableCellNode);
+                            } else {
+                                let cell_type = if tag == "TH" {
+                                    TableCellType::Header
+                                } else {
+                                    TableCellType::Data
+                                };
+                                let mut attrs: Vec<(S, S)> = Vec::new();
+                                for attr in ["colspan", "rowspan", "align"] {
+                                    if node
+                                        .unchecked_ref::<Element>()
+                                        .has_attribute(attr)
+                                    {
+                                        attrs.push((
+                                            attr.into(),
+                                            node.unchecked_ref::<Element>()
+                                                .get_attribute(attr)
+                                                .unwrap_or_default()
+                                                .into(),
+                                        ));
+                                    }
+                                }
+                                let attrs = if attrs.is_empty() {
+                                    None
+                                } else {
+                                    Some(attrs)
+                                };
+                                self.current_path.push(DomNodeKind::TableCell);
+                                dom.append_child(DomNode::Container(
+                                    ContainerNode::new_table_cell(
+                                        cell_type,
+                                        self.convert(
+                                            node.child_nodes(),
+                                            DomNodeKind::TableCell,
+                                            html_source,
+                                        )?
+                                        .take_children(),
+                                        attrs,
+                                    ),
+                                ));
+                                self.current_path.pop();
+                            }
+                        }
+
                         node_name => {
                             let formatting_kind = match node_name {
                                 "STRONG" | "B" => Some(InlineFormatType::Bold),
@@ -2081,6 +2425,8 @@ mod js {
         UnknownNode(String),
         InvalidListItemNode,
         ParentNotAList,
+        InvalidTableRowNode,
+        InvalidTableCellNode,
     }
 
     impl fmt::Display for Error {
@@ -2104,6 +2450,18 @@ mod js {
                 }
                 Self::ParentNotAList => {
                     write!(formatter, "Parent node is not a list")
+                }
+                Self::InvalidTableRowNode => {
+                    write!(
+                        formatter,
+                        "Invalid table row node: a table must only contain table rows"
+                    )
+                }
+                Self::InvalidTableCellNode => {
+                    write!(
+                        formatter,
+                        "Invalid table cell node: a table row must only contain table cells"
+                    )
                 }
             }
         }

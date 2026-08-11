@@ -20,6 +20,7 @@ mod menu_action;
 mod menu_state;
 mod pattern_key;
 mod suggestion_pattern;
+mod table_cell_type;
 mod tests;
 mod text_update;
 
@@ -52,6 +53,7 @@ pub use crate::menu_state::MenuState;
 pub use crate::menu_state::MenuStateUpdate;
 pub use crate::pattern_key::PatternKey;
 pub use crate::suggestion_pattern::SuggestionPattern;
+pub use crate::table_cell_type::TableCellType;
 pub use crate::text_update::ReplaceAll;
 pub use crate::text_update::Selection;
 pub use crate::text_update::TextUpdate;

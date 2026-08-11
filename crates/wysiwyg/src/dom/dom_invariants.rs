@@ -54,6 +54,7 @@ where
         self.assert_no_adjacent_text_nodes();
         self.assert_exactly_one_generic_container();
         self.assert_all_nodes_in_containers_are_block_or_inline();
+        self.assert_table_structure();
 
         // We probably want some more asserts like these:
         // self.assert_document_node_is_a_container();
@@ -128,6 +129,42 @@ where
                 container.children().iter().all(|n| n.is_block_node());
             if !all_nodes_are_inline && !all_nodes_are_block {
                 panic!("All child nodes of handle {:?} must be either inline nodes or block nodes:\n{}", container.handle(), container.to_tree());
+            }
+        }
+    }
+
+    /// Check that tables only contain rows, and rows only contain cells.
+    #[cfg(any(test, feature = "assert-invariants"))]
+    fn assert_table_structure(&self) {
+        use super::nodes::ContainerNodeKind;
+
+        for container in self.iter_containers() {
+            match container.kind() {
+                ContainerNodeKind::Table => {
+                    for child in container.children() {
+                        let is_row = matches!(
+                            child,
+                            DomNode::Container(c)
+                                if matches!(c.kind(), ContainerNodeKind::TableRow)
+                        );
+                        if !is_row {
+                            panic!("Table at handle {:?} must only contain table rows:\n{}", container.handle(), container.to_tree());
+                        }
+                    }
+                }
+                ContainerNodeKind::TableRow => {
+                    for child in container.children() {
+                        let is_cell = matches!(
+                            child,
+                            DomNode::Container(c)
+                                if matches!(c.kind(), ContainerNodeKind::TableCell(_))
+                        );
+                        if !is_cell {
+                            panic!("Table row at handle {:?} must only contain table cells:\n{}", container.handle(), container.to_tree());
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }

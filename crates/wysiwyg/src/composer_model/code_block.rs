@@ -220,7 +220,9 @@ where
 
         if matches!(
             container.kind(),
-            ContainerNodeKind::Paragraph | ContainerNodeKind::ListItem
+            ContainerNodeKind::Paragraph
+                | ContainerNodeKind::ListItem
+                | ContainerNodeKind::TableCell(_)
         ) {
             vec![DomNode::new_paragraph(children)]
         } else if container.is_block_node() {

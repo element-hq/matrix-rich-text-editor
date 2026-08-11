@@ -17,7 +17,7 @@ use crate::dom::to_raw_text::ToRawText;
 use crate::dom::to_tree::ToTree;
 use crate::dom::unicode_string::{UnicodeStr, UnicodeStrExt, UnicodeStringExt};
 use crate::dom::{self, UnicodeString};
-use crate::{InlineFormatType, ListType};
+use crate::{InlineFormatType, ListType, TableCellType};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContainerNode<S>
@@ -44,6 +44,9 @@ where
     CodeBlock,
     Quote,
     Paragraph,
+    Table,
+    TableRow,
+    TableCell(TableCellType),
 }
 
 impl<S: dom::unicode_string::UnicodeString> Default for ContainerNode<S> {
@@ -160,6 +163,43 @@ where
             name: "blockquote".into(),
             kind: ContainerNodeKind::Quote,
             attrs: None,
+            children,
+            handle: DomHandle::new_unset(),
+        }
+    }
+
+    pub fn new_table(
+        children: Vec<DomNode<S>>,
+        attrs: Option<Vec<(S, S)>>,
+    ) -> Self {
+        Self {
+            name: "table".into(),
+            kind: ContainerNodeKind::Table,
+            attrs,
+            children,
+            handle: DomHandle::new_unset(),
+        }
+    }
+
+    pub fn new_table_row(children: Vec<DomNode<S>>) -> Self {
+        Self {
+            name: "tr".into(),
+            kind: ContainerNodeKind::TableRow,
+            attrs: None,
+            children,
+            handle: DomHandle::new_unset(),
+        }
+    }
+
+    pub fn new_table_cell(
+        cell_type: TableCellType,
+        children: Vec<DomNode<S>>,
+        attrs: Option<Vec<(S, S)>>,
+    ) -> Self {
+        Self {
+            name: cell_type.tag().into(),
+            kind: ContainerNodeKind::TableCell(cell_type),
+            attrs,
             children,
             handle: DomHandle::new_unset(),
         }
@@ -340,7 +380,7 @@ where
     pub(crate) fn is_structure_node(&self) -> bool {
         use ContainerNodeKind::*;
 
-        matches!(self.kind, List(_) | ListItem)
+        matches!(self.kind, List(_) | ListItem | Table | TableRow)
     }
 
     pub(crate) fn is_formatting_node(&self) -> bool {
@@ -408,6 +448,25 @@ where
             }
             _ => panic!(
                 "Setting list type to a non-list container is not allowed"
+            ),
+        }
+    }
+
+    pub(crate) fn get_cell_type(&self) -> Option<TableCellType> {
+        match &self.kind {
+            ContainerNodeKind::TableCell(t) => Some(*t),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn set_cell_type(&mut self, cell_type: TableCellType) {
+        match self.kind {
+            ContainerNodeKind::TableCell(_) => {
+                self.name = cell_type.tag().into();
+                self.kind = ContainerNodeKind::TableCell(cell_type);
+            }
+            _ => panic!(
+                "Setting cell type on a non-table-cell container is not allowed"
             ),
         }
     }
@@ -618,6 +677,12 @@ where
                 state,
                 as_message,
             ),
+            ContainerNodeKind::Table => self.fmt_table_html(
+                formatter,
+                selection_writer,
+                state,
+                as_message,
+            ),
             _ => self.fmt_default_html(
                 formatter,
                 selection_writer,
@@ -764,6 +829,79 @@ impl<S: UnicodeString> ContainerNode<S> {
         self.fmt_tag_close(&S::from("pre"), formatter);
     }
 
+    fn fmt_table_html(
+        &self,
+        formatter: &mut S,
+        selection_writer: Option<&mut SelectionWriter>,
+        state: &ToHtmlState,
+        as_message: bool,
+    ) {
+        assert!(matches!(self.kind, ContainerNodeKind::Table));
+        let name = self.name();
+        self.fmt_tag_open(name, formatter, &self.attrs);
+
+        // Rows are grouped so that a leading run of rows whose cells are
+        // all headers is wrapped in a synthesized `<thead>`, and any
+        // remaining rows are wrapped in a synthesized `<tbody>`. Neither
+        // exists as a real Dom node - see the table architecture notes.
+        let header_row_count = self
+            .children
+            .iter()
+            .take_while(|c| is_header_row(c))
+            .count();
+        let has_header = header_row_count > 0;
+        let has_body = header_row_count < self.children.len();
+
+        if let Some(w) = selection_writer {
+            if has_header {
+                formatter.push("<thead>");
+            }
+            for (i, child) in self.children.iter().enumerate() {
+                if i == header_row_count && has_body {
+                    if has_header {
+                        formatter.push("</thead>");
+                    }
+                    formatter.push("<tbody>");
+                }
+                let state = self.updated_state(state, i);
+                child.fmt_html(formatter, Some(w), &state, as_message);
+            }
+            if has_body {
+                formatter.push("</tbody>");
+            } else if has_header {
+                formatter.push("</thead>");
+            }
+            if self.is_empty() {
+                w.write_selection_empty_container(
+                    formatter,
+                    formatter.len(),
+                    self,
+                )
+            }
+        } else {
+            if has_header {
+                formatter.push("<thead>");
+            }
+            for (i, child) in self.children.iter().enumerate() {
+                if i == header_row_count && has_body {
+                    if has_header {
+                        formatter.push("</thead>");
+                    }
+                    formatter.push("<tbody>");
+                }
+                let state = self.updated_state(state, i);
+                child.fmt_html(formatter, None, &state, as_message);
+            }
+            if has_body {
+                formatter.push("</tbody>");
+            } else if has_header {
+                formatter.push("</thead>");
+            }
+        }
+
+        self.fmt_tag_close(name, formatter);
+    }
+
     fn fmt_children_html(
         &self,
         formatter: &mut S,
@@ -807,6 +945,29 @@ impl<S: UnicodeString> ContainerNode<S> {
     }
 }
 
+/// Returns true if [node] is a table row container whose cells are all
+/// header cells (used to decide the synthesized `<thead>`/`<tbody>` split
+/// when serializing a table to HTML).
+fn is_header_row<S: UnicodeString>(node: &DomNode<S>) -> bool {
+    let DomNode::Container(row) = node else {
+        return false;
+    };
+    if !matches!(row.kind(), ContainerNodeKind::TableRow) {
+        return false;
+    }
+    !row.children().is_empty()
+        && row.children().iter().all(|cell| {
+            matches!(
+                cell,
+                DomNode::Container(c)
+                    if matches!(
+                        c.kind(),
+                        ContainerNodeKind::TableCell(TableCellType::Header)
+                    )
+            )
+        })
+}
+
 impl<S> ToRawText<S> for ContainerNode<S>
 where
     S: UnicodeString,
@@ -829,6 +990,9 @@ where
         match self.kind {
             ContainerNodeKind::List(_) => fmt_list(self, &mut text),
             ContainerNodeKind::ListItem => fmt_list_item(self, &mut text),
+            ContainerNodeKind::Table => fmt_table(self, &mut text),
+            ContainerNodeKind::TableRow => fmt_table_row(self, &mut text),
+            ContainerNodeKind::TableCell(_) => fmt_list_item(self, &mut text),
             _ => fmt_default(self, &mut text),
         }
         return text;
@@ -854,6 +1018,32 @@ where
         ) {
             for child in container.children() {
                 text.push(child.to_plain_text());
+            }
+        }
+
+        #[inline(always)]
+        fn fmt_table<S: UnicodeString>(
+            container: &ContainerNode<S>,
+            text: &mut S,
+        ) {
+            for row in container.children.iter() {
+                text.push(row.to_plain_text());
+                if !matches!(text.chars().last(), Some('\n')) {
+                    text.push("\n");
+                }
+            }
+        }
+
+        #[inline(always)]
+        fn fmt_table_row<S: UnicodeString>(
+            container: &ContainerNode<S>,
+            text: &mut S,
+        ) {
+            for (index, cell) in container.children.iter().enumerate() {
+                if index != 0 {
+                    text.push("\t");
+                }
+                text.push(cell.to_plain_text());
             }
         }
 
@@ -968,6 +1158,18 @@ where
 
             Paragraph => {
                 fmt_paragraph(self, buffer, &options, as_message)?;
+            }
+
+            Table => {
+                fmt_table(self, buffer, &options, as_message)?;
+            }
+
+            TableRow => {
+                fmt_table_row(self, buffer, &options, as_message)?;
+            }
+
+            TableCell(_) => {
+                fmt_children(self, buffer, &options, as_message)?;
             }
         };
 
@@ -1354,6 +1556,83 @@ where
         {
             fmt_children(this, buffer, options, as_message)?;
 
+            Ok(())
+        }
+
+        /// Formats a table as GFM-style pipe table syntax. GFM requires the
+        /// first row to act as the header (with a `| --- |` separator row
+        /// right after it), regardless of whether our model considers that
+        /// row a header row - there is no markdown syntax for a headerless
+        /// table.
+        #[inline(always)]
+        fn fmt_table<S>(
+            this: &ContainerNode<S>,
+            buffer: &mut S,
+            options: &MarkdownOptions,
+            as_message: bool,
+        ) -> Result<(), MarkdownError<S>>
+        where
+            S: UnicodeString,
+        {
+            let rows: Vec<&ContainerNode<S>> = this
+                .children
+                .iter()
+                .filter_map(|c| match c {
+                    DomNode::Container(row)
+                        if matches!(
+                            row.kind(),
+                            ContainerNodeKind::TableRow
+                        ) =>
+                    {
+                        Some(row)
+                    }
+                    _ => None,
+                })
+                .collect();
+
+            if rows.is_empty() {
+                return Ok(());
+            }
+
+            let col_count = rows[0].children().len();
+
+            for (nth, row) in rows.iter().enumerate() {
+                fmt_table_row(row, buffer, options, as_message)?;
+                buffer.push('\n');
+                if nth == 0 {
+                    buffer.push('|');
+                    for _ in 0..col_count {
+                        buffer.push(" --- |");
+                    }
+                    buffer.push('\n');
+                }
+            }
+
+            Ok(())
+        }
+
+        #[inline(always)]
+        fn fmt_table_row<S>(
+            this: &ContainerNode<S>,
+            buffer: &mut S,
+            options: &MarkdownOptions,
+            as_message: bool,
+        ) -> Result<(), MarkdownError<S>>
+        where
+            S: UnicodeString,
+        {
+            buffer.push('|');
+            for cell in this.children() {
+                buffer.push(' ');
+                let mut cell_buffer = S::default();
+                cell.fmt_markdown(&mut cell_buffer, options, as_message)?;
+                let cell_text = cell_buffer
+                    .to_string()
+                    .replace('\n', " ")
+                    .replace('|', "\\|");
+                buffer.push(cell_text.as_str());
+                buffer.push(" |");
+            }
             Ok(())
         }
     }

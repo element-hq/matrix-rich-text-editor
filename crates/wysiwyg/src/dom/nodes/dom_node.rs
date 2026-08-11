@@ -16,7 +16,7 @@ use crate::dom::to_raw_text::ToRawText;
 use crate::dom::to_tree::ToTree;
 use crate::dom::unicode_string::UnicodeStrExt;
 use crate::dom::{self, UnicodeString};
-use crate::{InlineFormatType, ListType};
+use crate::{InlineFormatType, ListType, TableCellType};
 
 use super::mention_node::UriParseError;
 use super::MentionNode;
@@ -94,6 +94,23 @@ where
 
     pub fn new_paragraph(children: Vec<DomNode<S>>) -> DomNode<S> {
         DomNode::Container(ContainerNode::new_paragraph(children))
+    }
+
+    pub fn new_table(children: Vec<DomNode<S>>) -> DomNode<S> {
+        DomNode::Container(ContainerNode::new_table(children, None))
+    }
+
+    pub fn new_table_row(children: Vec<DomNode<S>>) -> DomNode<S> {
+        DomNode::Container(ContainerNode::new_table_row(children))
+    }
+
+    pub fn new_table_cell(
+        cell_type: TableCellType,
+        children: Vec<DomNode<S>>,
+    ) -> DomNode<S> {
+        DomNode::Container(ContainerNode::new_table_cell(
+            cell_type, children, None,
+        ))
     }
 
     pub fn handle(&self) -> DomHandle {
@@ -280,6 +297,12 @@ where
                 c1.kind() == c2.kind()
                     && !c1.is_list_item()
                     && !matches!(c1.kind(), ContainerNodeKind::Paragraph)
+                    && !matches!(
+                        c1.kind(),
+                        ContainerNodeKind::Table
+                            | ContainerNodeKind::TableRow
+                            | ContainerNodeKind::TableCell(_)
+                    )
             }
             (DomNode::Text(_), DomNode::Text(_)) => true,
             _ => false,
@@ -517,6 +540,9 @@ pub enum DomNodeKind {
     CodeBlock,
     Quote,
     Paragraph,
+    Table,
+    TableRow,
+    TableCell,
 }
 
 impl DomNodeKind {
@@ -534,11 +560,17 @@ impl DomNodeKind {
             ContainerNodeKind::CodeBlock => DomNodeKind::CodeBlock,
             ContainerNodeKind::Quote => DomNodeKind::Quote,
             ContainerNodeKind::Paragraph => DomNodeKind::Paragraph,
+            ContainerNodeKind::Table => DomNodeKind::Table,
+            ContainerNodeKind::TableRow => DomNodeKind::TableRow,
+            ContainerNodeKind::TableCell(_) => DomNodeKind::TableCell,
         }
     }
 
     pub fn is_structure_kind(&self) -> bool {
-        matches!(self, Self::List | Self::ListItem)
+        matches!(
+            self,
+            Self::List | Self::ListItem | Self::Table | Self::TableRow
+        )
     }
 
     pub fn is_block_kind(&self) -> bool {
@@ -550,6 +582,9 @@ impl DomNodeKind {
                 | Self::CodeBlock
                 | Self::Quote
                 | Self::Paragraph
+                | Self::Table
+                | Self::TableRow
+                | Self::TableCell
         )
     }
 
@@ -563,7 +598,10 @@ impl DomNodeKind {
             | Self::List
             | Self::CodeBlock
             | Self::Quote
-            | Self::Paragraph => false,
+            | Self::Paragraph
+            | Self::Table
+            | Self::TableRow
+            | Self::TableCell => false,
         }
     }
 

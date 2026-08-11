@@ -78,7 +78,10 @@ where
                 | DomNodeKind::CodeBlock
                 | DomNodeKind::Quote
                 | DomNodeKind::Generic
-                | DomNodeKind::Paragraph => {
+                | DomNodeKind::Paragraph
+                | DomNodeKind::Table
+                | DomNodeKind::TableRow
+                | DomNodeKind::TableCell => {
                     unreachable!("Inside leaf iterator and found a non-leaf")
                 }
             }
