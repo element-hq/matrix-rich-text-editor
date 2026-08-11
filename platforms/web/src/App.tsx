@@ -184,6 +184,56 @@ function App(): ReactElement {
                         />
                         <button
                             type="button"
+                            onClick={(_e): void => {
+                                const rows =
+                                    Number(window.prompt('Rows?', '2')) || 2;
+                                const columns =
+                                    Number(window.prompt('Columns?', '2')) || 2;
+                                wysiwyg.insertTable(rows, columns);
+                            }}
+                        >
+                            insert table
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(_e): void => wysiwyg.addTableRowAfter()}
+                        >
+                            +row
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(_e): void => wysiwyg.removeTableRow()}
+                        >
+                            -row
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(_e): void =>
+                                wysiwyg.addTableColumnAfter()
+                            }
+                        >
+                            +column
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(_e): void => wysiwyg.removeTableColumn()}
+                        >
+                            -column
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(_e): void => wysiwyg.toggleTableHeader()}
+                        >
+                            toggle header
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(_e): void => wysiwyg.removeTable()}
+                        >
+                            remove table
+                        </button>
+                        <button
+                            type="button"
                             onClick={(_e): void => wysiwyg.clear()}
                         >
                             clear
