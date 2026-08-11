@@ -256,7 +256,12 @@ mod sys {
 
             if invalid_node_error.is_none() {
                 match tag {
-                    "b" | "code" | "del" | "em" | "i" | "strong" | "u" => {
+                    "b" | "code" | "del" | "em" | "i" | "s" | "strike"
+                    | "strong" | "u" => {
+                        let tag = match tag {
+                            "s" | "strike" => "del",
+                            _ => tag,
+                        };
                         let formatting_node = Self::new_formatting(tag);
                         if tag == "code"
                             && self.current_path.contains(&CodeBlock)
@@ -698,6 +703,28 @@ mod sys {
         #[test]
         fn parse_simple_tag() {
             assert_that!("<strong>sdfds</strong>").roundtrips();
+        }
+
+        #[test]
+        fn parse_del_tag() {
+            assert_that!("<del>gone</del>").roundtrips();
+        }
+
+        #[test]
+        fn parse_s_and_strike_tags_as_strikethrough() {
+            for html in ["<s>gone</s>", "<strike>gone</strike>"] {
+                let dom = parse::<Utf16String>(html).unwrap();
+                assert_eq!(dom.to_html().to_string(), "<del>gone</del>");
+            }
+        }
+
+        #[test]
+        fn parse_s_tag_nested_in_another_tag() {
+            let dom = parse::<Utf16String>("<b>kept <s>gone</s></b>").unwrap();
+            assert_eq!(
+                dom.to_html().to_string(),
+                "<b>kept <del>gone</del></b>"
+            );
         }
 
         #[test]
@@ -1928,7 +1955,9 @@ mod js {
                             let formatting_kind = match node_name {
                                 "STRONG" | "B" => Some(InlineFormatType::Bold),
                                 "EM" | "I" => Some(InlineFormatType::Italic),
-                                "DEL" => Some(InlineFormatType::StrikeThrough),
+                                "DEL" | "S" | "STRIKE" => {
+                                    Some(InlineFormatType::StrikeThrough)
+                                }
                                 "U" => Some(InlineFormatType::Underline),
                                 "CODE" => Some(InlineFormatType::InlineCode),
                                 "SPAN" => {

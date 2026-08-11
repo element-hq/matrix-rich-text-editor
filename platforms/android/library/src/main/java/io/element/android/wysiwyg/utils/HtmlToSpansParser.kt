@@ -83,7 +83,7 @@ internal class HtmlToSpansParser(
             "b", "strong" -> parseInlineFormatting(element, InlineFormat.Bold)
             "i", "em" -> parseInlineFormatting(element, InlineFormat.Italic)
             "u" -> parseInlineFormatting(element, InlineFormat.Underline)
-            "del" -> parseInlineFormatting(element, InlineFormat.StrikeThrough)
+            "del", "s", "strike" -> parseInlineFormatting(element, InlineFormat.StrikeThrough)
             // Note we're using a different method for inline code
             "code" -> parseInlineCode(element)
             "ul", "ol" -> parseList(element)
