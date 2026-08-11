@@ -7,7 +7,9 @@
 //! Methods on Dom that modify its contents and are guaranteed to conform to
 //! our invariants e.g. no empty text nodes, no adjacent text nodes.
 
-use crate::dom::nodes::dom_node::DomNodeKind::{Generic, ListItem, Paragraph};
+use crate::dom::nodes::dom_node::DomNodeKind::{
+    Generic, ListItem, Paragraph, TableCell,
+};
 use crate::dom::range::DomLocationPosition::After;
 use crate::dom::DomLocation;
 use crate::{DomHandle, DomNode, UnicodeString};
@@ -520,7 +522,7 @@ where
                                 first_text_node = false;
                             } else if first_text_node {
                                 match loc.kind {
-                                    Paragraph | ListItem => {
+                                    Paragraph | ListItem | TableCell => {
                                         let text_node = DomNode::new_text(new_text.clone());
                                         action_list.push(DomAction::add_node(
                                             loc.node_handle.clone(),

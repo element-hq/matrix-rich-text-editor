@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-use crate::dom::nodes::dom_node::DomNodeKind::{Link, ListItem};
+use crate::dom::nodes::dom_node::DomNodeKind::{Link, ListItem, TableCell};
 use crate::dom::nodes::text_node::CharType;
 use crate::dom::nodes::{DomNode, TextNode};
 use crate::dom::unicode_string::UnicodeStrExt;
@@ -371,9 +371,21 @@ where
             // we are at the start of a list item.
             let parent_list_item_loc =
                 range.deepest_node_of_kind(ListItem, Some(&leaf.node_handle));
+            let parent_table_cell_loc =
+                range.deepest_node_of_kind(TableCell, Some(&leaf.node_handle));
             if let Some(list_item_loc) = parent_list_item_loc {
                 if list_item_loc.start_offset == 0 {
                     self.do_backspace_in_list(&list_item_loc.node_handle)
+                } else {
+                    self.do_backspace()
+                }
+            } else if let Some(cell_loc) = parent_table_cell_loc {
+                if cell_loc.start_offset == 0
+                    && self.is_first_cell_of_entirely_empty_table(
+                        &cell_loc.node_handle,
+                    )
+                {
+                    self.remove_table()
                 } else {
                     self.do_backspace()
                 }

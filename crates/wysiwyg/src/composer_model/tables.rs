@@ -7,7 +7,8 @@
 use crate::dom::nodes::dom_node::DomNodeKind;
 use crate::dom::DomHandle;
 use crate::{
-    ComposerModel, ComposerUpdate, DomNode, TableCellType, UnicodeString,
+    ComposerModel, ComposerUpdate, DomNode, Location, TableCellType,
+    UnicodeString,
 };
 
 impl<S> ComposerModel<S>
@@ -33,6 +34,9 @@ where
         let (s, e) = self.safe_selection();
         let range = self.state.dom.find_range(s, e);
         let leaves: Vec<_> = range.leaves().collect();
+        // The handle of the freshly-inserted table, when it can be
+        // determined reliably - see the branches below.
+        let mut table_handle: Option<DomHandle> = None;
         if leaves.is_empty() {
             if let Some(deepest_block_location) = range.deepest_block_node(None)
             {
@@ -42,20 +46,28 @@ where
                     let list_item = block_node.as_container_mut().unwrap();
                     list_item.remove_children();
                     list_item.append_child(table_node);
-                    self.state.dom.insert_at(
+                    let list_item_handle = self.state.dom.insert_at(
                         &deepest_block_location.node_handle,
                         block_node,
                     );
+                    table_handle = Some(list_item_handle.child_handle(0));
                 } else {
-                    self.state.dom.insert_at(
+                    table_handle = Some(self.state.dom.insert_at(
                         &deepest_block_location.node_handle,
                         table_node,
-                    );
+                    ));
                 }
             } else {
-                self.state.dom.append_at_end_of_document(table_node);
+                table_handle =
+                    Some(self.state.dom.append_at_end_of_document(table_node));
             }
         } else {
+            // The table is inserted as a new sibling of existing inline
+            // content, so that content needs wrapping in a paragraph to
+            // keep the invariant that a container's children are either
+            // all block or all inline. This can shift sibling indices, so
+            // unlike the branches above, the table's resulting handle
+            // isn't reliably known here - the cursor is left where it was.
             let first_leaf_loc = leaves.first().unwrap();
             let insert_at = if first_leaf_loc.is_start() {
                 first_leaf_loc.node_handle.next_sibling()
@@ -63,15 +75,21 @@ where
                 first_leaf_loc.node_handle.clone()
             };
             self.state.dom.insert_at(&insert_at, table_node);
+            self.state.dom.wrap_inline_nodes_into_paragraphs_if_needed(
+                &insert_at.parent_handle(),
+            );
         }
 
-        // A table is a block node, so if it now sits next to bare inline
-        // content (e.g. text typed before the cursor with no wrapping
-        // paragraph), that content needs wrapping to keep the invariant
-        // that a container's children are either all block or all inline.
-        self.state
-            .dom
-            .wrap_inline_nodes_into_paragraphs_if_needed(&DomHandle::root());
+        if let Some(table_handle) = table_handle {
+            let first_cell_handle =
+                table_handle.child_handle(0).child_handle(0);
+            let position = self
+                .state
+                .dom
+                .location_for_node(&first_cell_handle)
+                .position;
+            self.select(Location::from(position), Location::from(position));
+        }
 
         self.create_update_replace_all()
     }
@@ -263,6 +281,123 @@ where
         self.create_update_replace_all()
     }
 
+    /// Moves the cursor to the start of the next cell in reading order
+    /// (Tab), wrapping to the next row. Tabbing forward from the last cell
+    /// of the last row inserts a new row and moves into its first cell,
+    /// matching the convention used by Google Docs/Word.
+    pub fn move_to_next_cell(&mut self) -> ComposerUpdate<S> {
+        self.move_to_adjacent_cell(true)
+    }
+
+    /// Moves the cursor to the start of the previous cell in reading order
+    /// (Shift+Tab), wrapping to the previous row.
+    pub fn move_to_previous_cell(&mut self) -> ComposerUpdate<S> {
+        self.move_to_adjacent_cell(false)
+    }
+
+    fn move_to_adjacent_cell(&mut self, forward: bool) -> ComposerUpdate<S> {
+        let Some((table_handle, cell_handle)) = self.current_table_and_cell()
+        else {
+            return ComposerUpdate::keep();
+        };
+        let row_handle = cell_handle.parent_handle();
+        let row_index = row_handle.index_in_parent();
+        let column_index = cell_handle.index_in_parent();
+        let row_count = self
+            .state
+            .dom
+            .lookup_container(&table_handle)
+            .children()
+            .len();
+        let column_count = self
+            .state
+            .dom
+            .lookup_container(&row_handle)
+            .children()
+            .len();
+
+        let target_cell_handle = if forward {
+            if column_index + 1 < column_count {
+                Some(row_handle.child_handle(column_index + 1))
+            } else if row_index + 1 < row_count {
+                Some(table_handle.child_handle(row_index + 1).child_handle(0))
+            } else {
+                self.push_state_to_history();
+                let new_row = new_table_row_node(column_count);
+                let new_row_handle = table_handle.child_handle(row_count);
+                self.state.dom.insert_at(&new_row_handle, new_row);
+                Some(new_row_handle.child_handle(0))
+            }
+        } else if column_index > 0 {
+            Some(row_handle.child_handle(column_index - 1))
+        } else if row_index > 0 {
+            let prev_row_handle = table_handle.child_handle(row_index - 1);
+            let prev_row_column_count = self
+                .state
+                .dom
+                .lookup_container(&prev_row_handle)
+                .children()
+                .len();
+            Some(
+                prev_row_handle
+                    .child_handle(prev_row_column_count.saturating_sub(1)),
+            )
+        } else {
+            None
+        };
+
+        let Some(target_cell_handle) = target_cell_handle else {
+            return ComposerUpdate::keep();
+        };
+
+        let position = self
+            .state
+            .dom
+            .location_for_node(&target_cell_handle)
+            .position;
+        self.select(Location::from(position), Location::from(position))
+    }
+
+    /// Returns true if [cell_handle] is the first cell of the first row of
+    /// its table, and the whole table has no content - used to decide
+    /// whether backspacing at the very start of an empty table should
+    /// remove it entirely.
+    pub(crate) fn is_first_cell_of_entirely_empty_table(
+        &self,
+        cell_handle: &DomHandle,
+    ) -> bool {
+        if cell_handle.index_in_parent() != 0 {
+            return false;
+        }
+        let row_handle = cell_handle.parent_handle();
+        if row_handle.index_in_parent() != 0 {
+            return false;
+        }
+        let Some(table_handle) =
+            self.find_closest_ancestor_of_kind(&row_handle, DomNodeKind::Table)
+        else {
+            return false;
+        };
+        let table = self.state.dom.lookup_container(&table_handle);
+        table.children().iter().all(|row| {
+            row.as_container().is_some_and(|r| {
+                r.children().iter().all(|cell| cell.is_empty())
+            })
+        })
+    }
+
+    /// Finds the (table, cell) handles the cursor is currently inside of.
+    fn current_table_and_cell(&self) -> Option<(DomHandle, DomHandle)> {
+        let handle = self.current_cursor_handle()?;
+        let cell_handle = self.find_closest_ancestor_of_kind_or_self(
+            &handle,
+            DomNodeKind::TableCell,
+        )?;
+        let table_handle = self
+            .find_closest_ancestor_of_kind(&cell_handle, DomNodeKind::Table)?;
+        Some((table_handle, cell_handle))
+    }
+
     /// Finds the (table, row) handles the cursor is currently inside of.
     fn current_table_row_handle(&self) -> Option<(DomHandle, DomHandle)> {
         let handle = self.current_cursor_handle()?;
@@ -278,13 +413,7 @@ where
     /// Finds the table handle and the column index of the cell the cursor
     /// is currently inside of.
     fn current_table_and_column(&self) -> Option<(DomHandle, usize)> {
-        let handle = self.current_cursor_handle()?;
-        let cell_handle = self.find_closest_ancestor_of_kind_or_self(
-            &handle,
-            DomNodeKind::TableCell,
-        )?;
-        let table_handle = self
-            .find_closest_ancestor_of_kind(&cell_handle, DomNodeKind::Table)?;
+        let (table_handle, cell_handle) = self.current_table_and_cell()?;
         Some((table_handle, cell_handle.index_in_parent()))
     }
 
@@ -314,7 +443,7 @@ fn new_table_row_node<S: UnicodeString>(columns: usize) -> DomNode<S> {
 
 #[cfg(test)]
 mod test {
-    use crate::tests::testutils_composer_model::cm;
+    use crate::tests::testutils_composer_model::{cm, tx};
     use crate::ToHtml;
 
     fn html(model: &crate::ComposerModel<widestring::Utf16String>) -> String {
@@ -328,6 +457,39 @@ mod test {
         assert_eq!(
             html(&model),
             "<table><tbody><tr><td></td><td></td></tr><tr><td></td><td></td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn insert_table_moves_cursor_into_first_cell() {
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>|</td><td></td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn can_type_directly_into_an_empty_cell() {
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        model.replace_text("hi".into());
+        assert_eq!(
+            html(&model),
+            "<table><tbody><tr><td>hi</td><td></td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn can_type_into_a_cell_after_tabbing() {
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        model.move_to_next_cell();
+        model.replace_text("hi".into());
+        assert_eq!(
+            html(&model),
+            "<table><tbody><tr><td></td><td>hi</td></tr></tbody></table>"
         );
     }
 
@@ -411,5 +573,95 @@ mod test {
         model.insert_table(1, 1);
         model.remove_table_column();
         assert_eq!(html(&model), "");
+    }
+
+    #[test]
+    fn tab_moves_to_next_cell() {
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        model.move_to_next_cell();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td></td><td>|</td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn tab_wraps_to_next_row() {
+        let mut model = cm("|");
+        model.insert_table(2, 2);
+        model.move_to_next_cell();
+        model.move_to_next_cell();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td></td><td></td></tr><tr><td>|</td><td></td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn tab_in_last_cell_inserts_a_new_row() {
+        let mut model = cm("|");
+        model.insert_table(1, 1);
+        model.move_to_next_cell();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td></td></tr><tr><td>|</td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn shift_tab_moves_to_previous_cell() {
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        model.move_to_next_cell();
+        model.move_to_previous_cell();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>|</td><td></td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn shift_tab_wraps_to_previous_row() {
+        let mut model = cm("|");
+        model.insert_table(2, 2);
+        model.move_to_next_cell();
+        model.move_to_next_cell();
+        model.move_to_previous_cell();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td></td><td>|</td></tr><tr><td></td><td></td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn shift_tab_in_first_cell_does_nothing() {
+        let mut model = cm("|");
+        model.insert_table(1, 1);
+        model.move_to_previous_cell();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>|</td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn backspace_at_start_of_empty_table_removes_it() {
+        let mut model = cm("<p>|</p>");
+        model.insert_table(1, 1);
+        model.backspace();
+        assert_eq!(tx(&model), "|");
+    }
+
+    #[test]
+    fn backspace_inside_non_empty_table_does_not_remove_it() {
+        let mut model = cm("|");
+        model.insert_table(1, 1);
+        model.replace_text("x".into());
+        model.backspace();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>|</td></tr></tbody></table>"
+        );
     }
 }
