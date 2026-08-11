@@ -52,6 +52,37 @@ class HtmlToSpansParserTest {
     }
 
     @Test
+    fun testStrikethroughTagVariants() {
+        val html = "<del>del</del>" +
+                "<s>s</s>" +
+                "<strike>strike</strike>"
+        val spanned = convertHtml(html)
+
+        assertThat(
+            spanned.dumpSpans(), equalTo(
+                listOf(
+                    "del: android.text.style.StrikethroughSpan (0-3) fl=#17",
+                    "s: android.text.style.StrikethroughSpan (3-4) fl=#17",
+                    "strike: android.text.style.StrikethroughSpan (4-10) fl=#17",
+                )
+            )
+        )
+    }
+
+    @Test
+    fun testStrikethroughTagVariantsNestedInOtherTags() {
+        val html = "<p>kept <s>gone</s></p>"
+        val spanned = convertHtml(html)
+
+        assertThat(spanned.toString(), equalTo("kept gone"))
+        assertThat(
+            spanned.dumpSpans(), contains(
+                "gone: android.text.style.StrikethroughSpan (5-9) fl=#17",
+            )
+        )
+    }
+
+    @Test
     fun testLists() {
         val html = """
             <ol>
