@@ -275,6 +275,53 @@ impl ComposerModel {
         ComposerUpdate::from(self.inner.quote())
     }
 
+    pub fn insert_table(&mut self, rows: u32, columns: u32) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.insert_table(
+            usize::try_from(rows).unwrap(),
+            usize::try_from(columns).unwrap(),
+        ))
+    }
+
+    pub fn add_table_row_before(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.add_table_row_before())
+    }
+
+    pub fn add_table_row_after(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.add_table_row_after())
+    }
+
+    pub fn remove_table_row(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.remove_table_row())
+    }
+
+    pub fn add_table_column_before(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.add_table_column_before())
+    }
+
+    pub fn add_table_column_after(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.add_table_column_after())
+    }
+
+    pub fn remove_table_column(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.remove_table_column())
+    }
+
+    pub fn toggle_table_header(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.toggle_table_header())
+    }
+
+    pub fn remove_table(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.remove_table())
+    }
+
+    pub fn move_to_next_cell(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.move_to_next_cell())
+    }
+
+    pub fn move_to_previous_cell(&mut self) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.move_to_previous_cell())
+    }
+
     pub fn inline_code(&mut self) -> ComposerUpdate {
         ComposerUpdate::from(self.inner.inline_code())
     }

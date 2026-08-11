@@ -223,6 +223,78 @@ impl ComposerModel {
         Arc::new(ComposerUpdate::from(self.inner.lock().unwrap().quote()))
     }
 
+    pub fn insert_table(
+        self: &Arc<Self>,
+        rows: u32,
+        columns: u32,
+    ) -> Arc<ComposerUpdate> {
+        let rows = usize::try_from(rows).unwrap();
+        let columns = usize::try_from(columns).unwrap();
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().insert_table(rows, columns),
+        ))
+    }
+
+    pub fn add_table_row_before(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().add_table_row_before(),
+        ))
+    }
+
+    pub fn add_table_row_after(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().add_table_row_after(),
+        ))
+    }
+
+    pub fn remove_table_row(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().remove_table_row(),
+        ))
+    }
+
+    pub fn add_table_column_before(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().add_table_column_before(),
+        ))
+    }
+
+    pub fn add_table_column_after(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().add_table_column_after(),
+        ))
+    }
+
+    pub fn remove_table_column(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().remove_table_column(),
+        ))
+    }
+
+    pub fn toggle_table_header(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().toggle_table_header(),
+        ))
+    }
+
+    pub fn remove_table(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().remove_table(),
+        ))
+    }
+
+    pub fn move_to_next_cell(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().move_to_next_cell(),
+        ))
+    }
+
+    pub fn move_to_previous_cell(self: &Arc<Self>) -> Arc<ComposerUpdate> {
+        Arc::new(ComposerUpdate::from(
+            self.inner.lock().unwrap().move_to_previous_cell(),
+        ))
+    }
+
     pub fn ordered_list(self: &Arc<Self>) -> Arc<ComposerUpdate> {
         Arc::new(ComposerUpdate::from(
             self.inner.lock().unwrap().ordered_list(),
