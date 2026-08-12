@@ -444,7 +444,7 @@ fn new_table_row_node<S: UnicodeString>(columns: usize) -> DomNode<S> {
 #[cfg(test)]
 mod test {
     use crate::tests::testutils_composer_model::{cm, tx};
-    use crate::ToHtml;
+    use crate::{Location, ToHtml};
 
     fn html(model: &crate::ComposerModel<widestring::Utf16String>) -> String {
         model.state.dom.to_html().to_string()
@@ -664,4 +664,29 @@ mod test {
             "<table><tbody><tr><td>|</td></tr></tbody></table>"
         );
     }
+
+    #[test]
+    fn enter_in_empty_cell_inserts_line_break() {
+        let mut model = cm("|");
+        model.insert_table(1, 1);
+        model.enter();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td><br />|</td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn enter_in_cell_with_text_inserts_line_break() {
+        let mut model = cm("|");
+        model.insert_table(1, 1);
+        model.replace_text("ab".into());
+        model.select(Location::from(1), Location::from(1));
+        model.enter();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>a<br />|b</td></tr></tbody></table>"
+        );
+    }
 }
+

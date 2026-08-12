@@ -180,6 +180,26 @@ where
             Generic => {
                 self.do_new_line_in_paragraph(first_leaf, block_location);
             }
+            DomNodeKind::TableCell => {
+                // Table cells can't be split into siblings like paragraphs can
+                // (a table cell's only valid siblings are other cells in the
+                // same row), so Enter inserts a soft line break within the
+                // cell instead of creating a new block.
+                if first_leaf.is_some() {
+                    self.do_add_line_break();
+                } else {
+                    // Cell has no leaf nodes at all yet: do_add_line_break's
+                    // "no leaf found" fallback appends to the document root,
+                    // which would escape the cell, so append directly here.
+                    let DomNode::Container(cell) =
+                        self.state.dom.lookup_node_mut(&block_handle)
+                    else {
+                        panic!("Table cell must be a container node");
+                    };
+                    cell.append_child(DomNode::new_line_break());
+                    self.state.advance_selection();
+                }
+            }
             _ => panic!(
                 "Unexpected kind {:?} with inline contents",
                 block_location.kind

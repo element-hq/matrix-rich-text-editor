@@ -59,7 +59,7 @@ where
         self.do_add_line_break()
     }
 
-    fn do_add_line_break(&mut self) -> ComposerUpdate<S> {
+    pub(crate) fn do_add_line_break(&mut self) -> ComposerUpdate<S> {
         let (s, e) = self.safe_selection();
 
         if s == e {
