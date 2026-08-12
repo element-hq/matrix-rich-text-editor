@@ -33,6 +33,17 @@ protocol ComposerModelWrapperProtocol {
     func getCurrentDomState() -> ComposerState
     func actionStates() -> [ComposerAction: ActionState]
     func getLinkAction() -> LinkAction
+    func insertTable(rows: UInt32, columns: UInt32) -> ComposerUpdate
+    func addTableRowBefore() -> ComposerUpdate
+    func addTableRowAfter() -> ComposerUpdate
+    func removeTableRow() -> ComposerUpdate
+    func addTableColumnBefore() -> ComposerUpdate
+    func addTableColumnAfter() -> ComposerUpdate
+    func removeTableColumn() -> ComposerUpdate
+    func toggleTableHeader() -> ComposerUpdate
+    func removeTable() -> ComposerUpdate
+    func moveToNextCell() -> ComposerUpdate
+    func moveToPreviousCell() -> ComposerUpdate
 
     // Extensions
     func apply(_ action: ComposerAction) -> ComposerUpdate
@@ -159,9 +170,53 @@ final class ComposerModelWrapper: ComposerModelWrapperProtocol {
     func getLinkAction() -> LinkAction {
         model.getLinkAction()
     }
-    
+
     func getMentionsState() -> MentionsState {
         model.getMentionsState()
+    }
+
+    func insertTable(rows: UInt32, columns: UInt32) -> ComposerUpdate {
+        execute { try $0.insertTable(rows: rows, columns: columns) }
+    }
+
+    func addTableRowBefore() -> ComposerUpdate {
+        execute { try $0.addTableRowBefore() }
+    }
+
+    func addTableRowAfter() -> ComposerUpdate {
+        execute { try $0.addTableRowAfter() }
+    }
+
+    func removeTableRow() -> ComposerUpdate {
+        execute { try $0.removeTableRow() }
+    }
+
+    func addTableColumnBefore() -> ComposerUpdate {
+        execute { try $0.addTableColumnBefore() }
+    }
+
+    func addTableColumnAfter() -> ComposerUpdate {
+        execute { try $0.addTableColumnAfter() }
+    }
+
+    func removeTableColumn() -> ComposerUpdate {
+        execute { try $0.removeTableColumn() }
+    }
+
+    func toggleTableHeader() -> ComposerUpdate {
+        execute { try $0.toggleTableHeader() }
+    }
+
+    func removeTable() -> ComposerUpdate {
+        execute { try $0.removeTable() }
+    }
+
+    func moveToNextCell() -> ComposerUpdate {
+        execute { try $0.moveToNextCell() }
+    }
+
+    func moveToPreviousCell() -> ComposerUpdate {
+        execute { try $0.moveToPreviousCell() }
     }
 
     // MARK: Extensions

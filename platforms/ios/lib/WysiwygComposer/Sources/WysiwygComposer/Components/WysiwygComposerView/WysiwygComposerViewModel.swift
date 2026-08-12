@@ -285,6 +285,67 @@ public extension WysiwygComposerViewModel {
         let update = model.replaceTextSuggestion(newText: name, suggestion: suggestionPattern)
         applyUpdate(update)
     }
+
+    /// Inserts a new table with given number of rows/columns at the current selection.
+    ///
+    /// - Parameters:
+    ///   - rows: Number of rows for the new table.
+    ///   - columns: Number of columns for the new table.
+    func insertTable(rows: UInt32, columns: UInt32) {
+        applyUpdate(model.insertTable(rows: rows, columns: columns))
+    }
+
+    /// Adds a new row before the row at the current selection.
+    func addTableRowBefore() {
+        applyUpdate(model.addTableRowBefore())
+    }
+
+    /// Adds a new row after the row at the current selection.
+    func addTableRowAfter() {
+        applyUpdate(model.addTableRowAfter())
+    }
+
+    /// Removes the row at the current selection.
+    func removeTableRow() {
+        applyUpdate(model.removeTableRow())
+    }
+
+    /// Adds a new column before the column at the current selection.
+    func addTableColumnBefore() {
+        applyUpdate(model.addTableColumnBefore())
+    }
+
+    /// Adds a new column after the column at the current selection.
+    func addTableColumnAfter() {
+        applyUpdate(model.addTableColumnAfter())
+    }
+
+    /// Removes the column at the current selection.
+    func removeTableColumn() {
+        applyUpdate(model.removeTableColumn())
+    }
+
+    /// Toggles the current table row between header cells and data cells.
+    func toggleTableHeader() {
+        applyUpdate(model.toggleTableHeader())
+    }
+
+    /// Removes the table the current selection is inside of, if any.
+    func removeTable() {
+        applyUpdate(model.removeTable())
+    }
+
+    /// Moves the selection to the start of the next table cell in reading order, wrapping to
+    /// the next row (Tab).
+    func moveToNextCell() {
+        applyUpdate(model.moveToNextCell())
+    }
+
+    /// Moves the selection to the start of the previous table cell in reading order, wrapping
+    /// to the previous row (Shift+Tab).
+    func moveToPreviousCell() {
+        applyUpdate(model.moveToPreviousCell())
+    }
 }
 
 // MARK: - WysiwygComposerViewModelProtocol

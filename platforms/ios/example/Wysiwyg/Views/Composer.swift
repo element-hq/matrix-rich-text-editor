@@ -57,6 +57,9 @@ struct Composer: View {
                 }
                 .environmentObject(viewModel)
                 .padding(.horizontal, 16)
+                TableButtons()
+                    .environmentObject(viewModel)
+                    .padding(.horizontal, 16)
             }
         }
     }
