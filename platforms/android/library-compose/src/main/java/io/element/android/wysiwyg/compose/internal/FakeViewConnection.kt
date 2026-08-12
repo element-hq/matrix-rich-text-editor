@@ -75,6 +75,18 @@ internal class FakeViewActionCollector(
             is ViewAction.SetSelection -> {
                 state.selection = value.start to value.end
             }
+            // Table actions have no meaningful fake simulation without a real Dom model.
+            is ViewAction.InsertTable,
+            ViewAction.AddTableRowBefore,
+            ViewAction.AddTableRowAfter,
+            ViewAction.RemoveTableRow,
+            ViewAction.AddTableColumnBefore,
+            ViewAction.AddTableColumnAfter,
+            ViewAction.RemoveTableColumn,
+            ViewAction.ToggleTableHeader,
+            ViewAction.RemoveTable,
+            ViewAction.MoveToNextCell,
+            ViewAction.MoveToPreviousCell -> Unit
         }
     }
     private fun toggleInlineFormat(inlineFormat: InlineFormat): Boolean {

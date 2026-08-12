@@ -140,6 +140,21 @@ internal class EditorViewModel(
                 is EditorInputAction.InsertMentionAtSuggestion -> insertMentionAtSuggestion(action)
                 is EditorInputAction.InsertAtRoomMentionAtSuggestion -> insertAtRoomMentionAtSuggestion()
                 is EditorInputAction.UpdateSelection -> composer?.select(action.start, action.end)
+                is EditorInputAction.InsertTable -> composer?.insertTable(
+                    action.rows.toUInt(),
+                    action.columns.toUInt()
+                )
+
+                is EditorInputAction.AddTableRowBefore -> composer?.addTableRowBefore()
+                is EditorInputAction.AddTableRowAfter -> composer?.addTableRowAfter()
+                is EditorInputAction.RemoveTableRow -> composer?.removeTableRow()
+                is EditorInputAction.AddTableColumnBefore -> composer?.addTableColumnBefore()
+                is EditorInputAction.AddTableColumnAfter -> composer?.addTableColumnAfter()
+                is EditorInputAction.RemoveTableColumn -> composer?.removeTableColumn()
+                is EditorInputAction.ToggleTableHeader -> composer?.toggleTableHeader()
+                is EditorInputAction.RemoveTable -> composer?.removeTable()
+                is EditorInputAction.MoveToNextCell -> composer?.moveToNextCell()
+                is EditorInputAction.MoveToPreviousCell -> composer?.moveToPreviousCell()
             }
         }.onFailure(::onComposerFailure)
             .getOrNull()

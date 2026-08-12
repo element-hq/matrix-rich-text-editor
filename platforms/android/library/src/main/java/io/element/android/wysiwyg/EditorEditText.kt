@@ -505,6 +505,101 @@ class EditorEditText : AppCompatEditText {
         setSelectionFromComposerUpdate(result.selection.last)
     }
 
+    /**
+     * Inserts a new table with the given number of [rows] and [columns] at the current
+     * selection.
+     */
+    fun insertTable(rows: Int, columns: Int) {
+        val result = processInputAsTextResult(EditorInputAction.InsertTable(rows, columns)) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.first, result.selection.last)
+    }
+
+    fun addTableRowBefore() {
+        val result = processInputAsTextResult(EditorInputAction.AddTableRowBefore) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    fun addTableRowAfter() {
+        val result = processInputAsTextResult(EditorInputAction.AddTableRowAfter) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    fun removeTableRow() {
+        val result = processInputAsTextResult(EditorInputAction.RemoveTableRow) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    fun addTableColumnBefore() {
+        val result = processInputAsTextResult(EditorInputAction.AddTableColumnBefore) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    fun addTableColumnAfter() {
+        val result = processInputAsTextResult(EditorInputAction.AddTableColumnAfter) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    fun removeTableColumn() {
+        val result = processInputAsTextResult(EditorInputAction.RemoveTableColumn) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    /**
+     * Toggles the current table row between header cells and data cells.
+     */
+    fun toggleTableHeader() {
+        val result = processInputAsTextResult(EditorInputAction.ToggleTableHeader) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    /**
+     * Removes the table the current selection is inside of, if any.
+     */
+    fun removeTable() {
+        val result = processInputAsTextResult(EditorInputAction.RemoveTable) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    /**
+     * Moves the selection to the start of the next table cell in reading order, wrapping to
+     * the next row (Tab).
+     */
+    fun moveToNextCell() {
+        val result = processInputAsTextResult(EditorInputAction.MoveToNextCell) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
+    /**
+     * Moves the selection to the start of the previous table cell in reading order, wrapping
+     * to the previous row (Shift+Tab).
+     */
+    fun moveToPreviousCell() {
+        val result = processInputAsTextResult(EditorInputAction.MoveToPreviousCell) ?: return
+
+        setTextFromComposerUpdate(result.text)
+        setSelectionFromComposerUpdate(result.selection.last)
+    }
+
     fun setHtml(html: String) {
         val result = processInputAsTextResult(EditorInputAction.ReplaceAllHtml(html)) ?: return
 

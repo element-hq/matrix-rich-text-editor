@@ -125,4 +125,44 @@ internal sealed interface EditorInputAction {
      * @param end The end index of the selection in the composer.
      */
     data class UpdateSelection(val start: UInt, val end: UInt) : EditorInputAction
+
+    /**
+     * Inserts a new table with the given number of [rows] and [columns] at the current
+     * selection.
+     */
+    data class InsertTable(val rows: Int, val columns: Int): EditorInputAction
+
+    object AddTableRowBefore: EditorInputAction
+
+    object AddTableRowAfter: EditorInputAction
+
+    object RemoveTableRow: EditorInputAction
+
+    object AddTableColumnBefore: EditorInputAction
+
+    object AddTableColumnAfter: EditorInputAction
+
+    object RemoveTableColumn: EditorInputAction
+
+    /**
+     * Toggles the current table row between header cells and data cells.
+     */
+    object ToggleTableHeader: EditorInputAction
+
+    /**
+     * Removes the table the current selection is inside of, if any.
+     */
+    object RemoveTable: EditorInputAction
+
+    /**
+     * Moves the selection to the start of the next table cell in reading order, wrapping to
+     * the next row (Tab).
+     */
+    object MoveToNextCell: EditorInputAction
+
+    /**
+     * Moves the selection to the start of the previous table cell in reading order, wrapping
+     * to the previous row (Shift+Tab).
+     */
+    object MoveToPreviousCell: EditorInputAction
 }

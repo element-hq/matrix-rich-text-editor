@@ -174,6 +174,68 @@ class RichTextEditorState(
     }
 
     /**
+     * Inserts a new table with the given number of [rows] and [columns] at the current
+     * selection.
+     */
+    suspend fun insertTable(rows: Int, columns: Int) {
+        _viewActions.emit(ViewAction.InsertTable(rows, columns))
+    }
+
+    suspend fun addTableRowBefore() {
+        _viewActions.emit(ViewAction.AddTableRowBefore)
+    }
+
+    suspend fun addTableRowAfter() {
+        _viewActions.emit(ViewAction.AddTableRowAfter)
+    }
+
+    suspend fun removeTableRow() {
+        _viewActions.emit(ViewAction.RemoveTableRow)
+    }
+
+    suspend fun addTableColumnBefore() {
+        _viewActions.emit(ViewAction.AddTableColumnBefore)
+    }
+
+    suspend fun addTableColumnAfter() {
+        _viewActions.emit(ViewAction.AddTableColumnAfter)
+    }
+
+    suspend fun removeTableColumn() {
+        _viewActions.emit(ViewAction.RemoveTableColumn)
+    }
+
+    /**
+     * Toggles the current table row between header cells and data cells.
+     */
+    suspend fun toggleTableHeader() {
+        _viewActions.emit(ViewAction.ToggleTableHeader)
+    }
+
+    /**
+     * Removes the table the current selection is inside of, if any.
+     */
+    suspend fun removeTable() {
+        _viewActions.emit(ViewAction.RemoveTable)
+    }
+
+    /**
+     * Moves the selection to the start of the next table cell in reading order, wrapping to
+     * the next row (Tab).
+     */
+    suspend fun moveToNextCell() {
+        _viewActions.emit(ViewAction.MoveToNextCell)
+    }
+
+    /**
+     * Moves the selection to the start of the previous table cell in reading order, wrapping
+     * to the previous row (Shift+Tab).
+     */
+    suspend fun moveToPreviousCell() {
+        _viewActions.emit(ViewAction.MoveToPreviousCell)
+    }
+
+    /**
      * The content of the editor as HTML formatted for sending as a message.
      */
     var messageHtml by mutableStateOf(initialHtml)

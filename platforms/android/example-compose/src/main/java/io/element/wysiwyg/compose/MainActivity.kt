@@ -49,6 +49,7 @@ import io.element.android.wysiwyg.view.models.InlineFormat
 import io.element.android.wysiwyg.view.models.LinkAction
 import io.element.wysiwyg.compose.matrix.Mention
 import io.element.wysiwyg.compose.ui.components.FormattingButtons
+import io.element.wysiwyg.compose.ui.components.TableButtons
 import io.element.wysiwyg.compose.ui.theme.RichTextEditorTheme
 import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.coroutines.launch
@@ -240,6 +241,31 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         })
+
+                        TableButtons(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            onInsertTable = {
+                                coroutineScope.launch { state.insertTable(2, 2) }
+                            },
+                            onAddRow = {
+                                coroutineScope.launch { state.addTableRowAfter() }
+                            },
+                            onRemoveRow = {
+                                coroutineScope.launch { state.removeTableRow() }
+                            },
+                            onAddColumn = {
+                                coroutineScope.launch { state.addTableColumnAfter() }
+                            },
+                            onRemoveColumn = {
+                                coroutineScope.launch { state.removeTableColumn() }
+                            },
+                            onToggleHeader = {
+                                coroutineScope.launch { state.toggleTableHeader() }
+                            },
+                            onRemoveTable = {
+                                coroutineScope.launch { state.removeTable() }
+                            },
+                        )
                     }
                 }
             }

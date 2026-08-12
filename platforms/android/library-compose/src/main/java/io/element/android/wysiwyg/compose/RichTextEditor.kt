@@ -218,6 +218,17 @@ private fun RealEditor(
                                     )
                                     is ViewAction.InsertAtRoomMentionAtSuggestion -> insertAtRoomMentionAtSuggestion()
                                     is ViewAction.SetSelection -> setSelection(it.start, it.end)
+                                    is ViewAction.InsertTable -> insertTable(it.rows, it.columns)
+                                    is ViewAction.AddTableRowBefore -> addTableRowBefore()
+                                    is ViewAction.AddTableRowAfter -> addTableRowAfter()
+                                    is ViewAction.RemoveTableRow -> removeTableRow()
+                                    is ViewAction.AddTableColumnBefore -> addTableColumnBefore()
+                                    is ViewAction.AddTableColumnAfter -> addTableColumnAfter()
+                                    is ViewAction.RemoveTableColumn -> removeTableColumn()
+                                    is ViewAction.ToggleTableHeader -> toggleTableHeader()
+                                    is ViewAction.RemoveTable -> removeTable()
+                                    is ViewAction.MoveToNextCell -> moveToNextCell()
+                                    is ViewAction.MoveToPreviousCell -> moveToPreviousCell()
                                 }
                             }
                     }
