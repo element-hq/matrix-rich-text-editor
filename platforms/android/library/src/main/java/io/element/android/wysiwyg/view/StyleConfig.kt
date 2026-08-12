@@ -22,6 +22,7 @@ import io.element.android.wysiwyg.EditorEditText
  * @property codeBlock A custom style for code blocks.
  * @property inlineCode A custom style for inline code.
  * @property pill A custom style for pills.
+ * @property table A custom style for tables.
  */
 data class StyleConfig(
     val bulletList: BulletListStyleConfig,
@@ -31,6 +32,8 @@ data class StyleConfig(
     val codeBlock: CodeBlockStyleConfig,
 
     val pill: PillStyleConfig,
+
+    val table: TableStyleConfig,
 )
 
 /**
@@ -88,4 +91,19 @@ data class CodeBlockStyleConfig(
 data class PillStyleConfig(
     @ColorInt
     val backgroundColor: Int,
+)
+
+/**
+ * Style configuration for tables.
+ *
+ * @property leadingMargin The leading margin to apply
+ * @property rowDividerWidth The width of the divider line drawn between rows
+ * @property rowDividerColor The color of the divider line drawn between rows
+ * @property backgroundDrawable The border/background drawable to use for the whole table
+ */
+data class TableStyleConfig(
+    @Px val leadingMargin: Int,
+    @Px val rowDividerWidth: Int,
+    @ColorInt val rowDividerColor: Int,
+    val backgroundDrawable: Drawable,
 )

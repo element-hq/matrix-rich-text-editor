@@ -21,6 +21,7 @@ import io.element.android.wysiwyg.view.CodeBlockStyleConfig
 import io.element.android.wysiwyg.view.InlineCodeStyleConfig
 import io.element.android.wysiwyg.view.PillStyleConfig
 import io.element.android.wysiwyg.view.StyleConfig
+import io.element.android.wysiwyg.view.TableStyleConfig
 
 internal class EditorEditTextAttributeReader(context: Context, attrs: AttributeSet?) {
     val styleConfig: StyleConfig
@@ -55,6 +56,12 @@ internal class EditorEditTextAttributeReader(context: Context, attrs: AttributeS
             ),
             pill = PillStyleConfig(
                 backgroundColor = typedArray.getColorOrThrow(R.styleable.EditorEditText_pillBackgroundColor),
+            ),
+            table = TableStyleConfig(
+                leadingMargin = typedArray.getDimensionPixelSizeOrThrow(R.styleable.EditorEditText_tableLeadingMargin),
+                rowDividerWidth = typedArray.getDimensionPixelSizeOrThrow(R.styleable.EditorEditText_tableRowDividerWidth),
+                rowDividerColor = typedArray.getColorOrThrow(R.styleable.EditorEditText_tableRowDividerColor),
+                backgroundDrawable = typedArray.getDrawableOrThrow(R.styleable.EditorEditText_tableBackgroundDrawable),
             )
         )
         typedArray.recycle()

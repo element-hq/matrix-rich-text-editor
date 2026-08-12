@@ -13,13 +13,16 @@ import android.util.AttributeSet
 import androidx.core.content.res.getDimensionPixelSizeOrThrow
 import androidx.core.content.res.getDrawableOrThrow
 import androidx.core.content.res.getFloatOrThrow
+import androidx.core.content.res.getColorOrThrow
 import io.element.android.wysiwyg.R
 import io.element.android.wysiwyg.view.CodeBlockStyleConfig
 import io.element.android.wysiwyg.view.InlineCodeStyleConfig
+import io.element.android.wysiwyg.view.TableStyleConfig
 
 internal class EditorStyledTextViewAttributeReader(context: Context, attrs: AttributeSet?) {
     internal val inlineCodeStyleConfig: InlineCodeStyleConfig
     internal val codeBlockStyleConfig: CodeBlockStyleConfig
+    internal val tableStyleConfig: TableStyleConfig
 
     init {
         val typedArray = context.theme.obtainStyledAttributes(
@@ -42,6 +45,12 @@ internal class EditorStyledTextViewAttributeReader(context: Context, attrs: Attr
             verticalPadding = typedArray.getDimensionPixelSizeOrThrow(R.styleable.EditorStyledTextView_codeBlockVerticalPadding),
             relativeTextSize = typedArray.getFloatOrThrow(R.styleable.EditorStyledTextView_codeBlockRelativeTextSize),
             backgroundDrawable = typedArray.getDrawableOrThrow(R.styleable.EditorStyledTextView_codeBlockBackgroundDrawable),
+        )
+        tableStyleConfig = TableStyleConfig(
+            leadingMargin = typedArray.getDimensionPixelSizeOrThrow(R.styleable.EditorStyledTextView_tableLeadingMargin),
+            rowDividerWidth = typedArray.getDimensionPixelSizeOrThrow(R.styleable.EditorStyledTextView_tableRowDividerWidth),
+            rowDividerColor = typedArray.getColorOrThrow(R.styleable.EditorStyledTextView_tableRowDividerColor),
+            backgroundDrawable = typedArray.getDrawableOrThrow(R.styleable.EditorStyledTextView_tableBackgroundDrawable),
         )
         typedArray.recycle()
     }

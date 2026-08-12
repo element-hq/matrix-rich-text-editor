@@ -33,12 +33,14 @@ import io.element.android.wysiwyg.compose.InlineCodeStyle
 import io.element.android.wysiwyg.compose.PillStyle
 import io.element.android.wysiwyg.compose.R
 import io.element.android.wysiwyg.compose.RichTextEditorStyle
+import io.element.android.wysiwyg.compose.TableStyle
 import io.element.android.wysiwyg.compose.TextStyle
 import io.element.android.wysiwyg.view.BulletListStyleConfig
 import io.element.android.wysiwyg.view.CodeBlockStyleConfig
 import io.element.android.wysiwyg.view.InlineCodeStyleConfig
 import io.element.android.wysiwyg.view.PillStyleConfig
 import io.element.android.wysiwyg.view.StyleConfig
+import io.element.android.wysiwyg.view.TableStyleConfig
 import kotlin.math.roundToInt
 
 /**
@@ -79,6 +81,7 @@ internal fun RichTextEditorStyle.toStyleConfig(context: Context): StyleConfig = 
     inlineCode = inlineCode.toStyleConfig(context),
     codeBlock = codeBlock.toStyleConfig(context),
     pill = pill.toStyleConfig(),
+    table = table.toStyleConfig(context),
 )
 
 internal fun BulletListStyle.toStyleConfig(context: Context): BulletListStyleConfig =
@@ -115,6 +118,16 @@ internal fun CodeBlockStyle.toStyleConfig(context: Context): CodeBlockStyleConfi
 internal fun PillStyle.toStyleConfig(): PillStyleConfig = PillStyleConfig(
     backgroundColor = backgroundColor.toArgb(),
 )
+
+internal fun TableStyle.toStyleConfig(context: Context): TableStyleConfig {
+    val density = Density(context)
+    return TableStyleConfig(
+        leadingMargin = with(density) { leadingMargin.toPx().roundToInt() },
+        rowDividerWidth = with(density) { rowDividerWidth.toPx().roundToInt() },
+        rowDividerColor = rowDividerColor.toArgb(),
+        backgroundDrawable = background.drawable,
+    )
+}
 
 @Composable
 internal fun TextStyle.rememberTypeface(): State<Typeface> {

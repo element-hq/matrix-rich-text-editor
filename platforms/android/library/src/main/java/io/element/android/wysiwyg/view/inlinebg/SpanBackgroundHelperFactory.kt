@@ -10,8 +10,10 @@ package io.element.android.wysiwyg.view.inlinebg
 
 import io.element.android.wysiwyg.view.spans.CodeBlockSpan
 import io.element.android.wysiwyg.view.spans.InlineCodeSpan
+import io.element.android.wysiwyg.view.spans.TableSpan
 import io.element.android.wysiwyg.view.CodeBlockStyleConfig
 import io.element.android.wysiwyg.view.InlineCodeStyleConfig
+import io.element.android.wysiwyg.view.TableStyleConfig
 
 object SpanBackgroundHelperFactory {
     fun createInlineCodeBackgroundHelper(styleConfig: InlineCodeStyleConfig): SpanBackgroundHelper {
@@ -29,6 +31,15 @@ object SpanBackgroundHelperFactory {
     fun createCodeBlockBackgroundHelper(styleConfig: CodeBlockStyleConfig): SpanBackgroundHelper {
         return SpanBackgroundHelper(
             spanType = CodeBlockSpan::class.java,
+            horizontalPadding = 0,
+            verticalPadding = 0,
+            drawable = styleConfig.backgroundDrawable,
+        )
+    }
+
+    fun createTableBackgroundHelper(styleConfig: TableStyleConfig): SpanBackgroundHelper {
+        return SpanBackgroundHelper(
+            spanType = TableSpan::class.java,
             horizontalPadding = 0,
             verticalPadding = 0,
             drawable = styleConfig.backgroundDrawable,

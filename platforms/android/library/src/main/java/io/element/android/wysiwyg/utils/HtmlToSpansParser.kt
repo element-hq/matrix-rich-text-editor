@@ -31,6 +31,8 @@ import io.element.android.wysiwyg.view.spans.OrderedListSpan
 import io.element.android.wysiwyg.view.spans.PillSpan
 import io.element.android.wysiwyg.view.spans.PlainAtRoomMentionDisplaySpan
 import io.element.android.wysiwyg.view.spans.QuoteSpan
+import io.element.android.wysiwyg.view.spans.TableRowSpan
+import io.element.android.wysiwyg.view.spans.TableSpan
 import io.element.android.wysiwyg.view.spans.UnorderedListSpan
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Document
@@ -39,6 +41,12 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 import timber.log.Timber
 import kotlin.math.roundToInt
+
+/**
+ * Separator rendered between table cells, since Android's plain [Editable] text has no native
+ * grid layout to draw actual cell borders.
+ */
+private const val TABLE_CELL_SEPARATOR = " | "
 
 /**
  * Custom HTML to Span parser so we can customise what each HTML tag will be represented with in the
@@ -92,6 +100,10 @@ internal class HtmlToSpansParser(
             "blockquote" -> parseQuote(element)
             "p" -> parseParagraph(element)
             "br" -> parseLineBreak(element)
+            "table" -> parseTable(element)
+            "thead", "tbody" -> parseChildren(element, parseTextNodes = false)
+            "tr" -> parseTableRow(element)
+            "td", "th" -> parseTableCell(element)
             else -> if (LoggingConfig.enableDebugLogs) {
                 Timber.d("Unsupported tag: ${element.tagName()}")
             }
@@ -103,6 +115,66 @@ internal class HtmlToSpansParser(
     private fun SpannableStringBuilder.parseList(element: Element) {
         addLeadingLineBreakForBlockNode(element)
         parseChildren(element, parseTextNodes = false)
+    }
+
+    /**
+     * Renders a table as plain, editable text: cells are separated with [TABLE_CELL_SEPARATOR]
+     * and rows with a line break. Android's plain [Editable] text has no native grid layout, so
+     * there's no column alignment/vertical dividers - a [TableSpan] and per-row [TableRowSpan]s
+     * are attached so a bordered box and horizontal row-divider lines can be drawn around the
+     * text (see [io.element.android.wysiwyg.view.inlinebg.TableRowDividerRenderer] and the
+     * `table` [SpanBackgroundHelper][io.element.android.wysiwyg.view.inlinebg.SpanBackgroundHelper]
+     * created via [io.element.android.wysiwyg.view.inlinebg.SpanBackgroundHelperFactory]).
+     *
+     * Moving from one cell to the next (whether via a column or a row transition) always
+     * advances the [ComposerModel]'s position by exactly 1, even between two empty cells -
+     * unlike, say, paragraph-to-paragraph transitions, which are free. So exactly one character
+     * of each transition must be left real/untagged; any other decorative characters are tagged
+     * with [ExtraCharacterSpan] to keep editor <-> composer index mapping correct.
+     */
+    private fun SpannableStringBuilder.parseTable(element: Element) {
+        addLeadingLineBreakForBlockNode(element)
+        inSpans(TableSpan(leadingMargin = styleConfig.table.leadingMargin)) {
+            parseChildren(element, parseTextNodes = false)
+        }
+    }
+
+    private fun SpannableStringBuilder.parseTableRow(element: Element) {
+        val table = element.parents().firstOrNull { it.tagName() == "table" }
+        val isFirstRow = table?.select("tr")?.firstOrNull() == element
+        if (!isFirstRow) {
+            // This line break is the single real (untagged) character representing the
+            // cell-to-cell transition into the first cell of this row - see parseTable's kdoc.
+            append('\n')
+        }
+        // The row's span must start after the transition line break above, so the divider
+        // line drawn at its end lands on this row's own content, not the gap before it.
+        inSpans(TableRowSpan()) {
+            parseChildren(element, parseTextNodes = false)
+        }
+    }
+
+    private fun SpannableStringBuilder.parseTableCell(element: Element) {
+        val isFirstCellInRow = element.parent()?.children()
+            ?.firstOrNull { it.tagName() == "td" || it.tagName() == "th" } == element
+        if (!isFirstCellInRow) {
+            // Only 2 of these 3 characters are decorative/extra - the last one is left real,
+            // representing the cell-to-cell transition into this cell (see parseTable's kdoc).
+            val separatorStart = this.length
+            append(TABLE_CELL_SEPARATOR)
+            setSpan(ExtraCharacterSpan(), separatorStart, length - 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        parseChildren(element)
+        if (element.childNodes().isEmpty()) {
+            // Empty cell: add a placeholder so the cursor has somewhere to sit. Deliberately not
+            // using handleNbspInBlock here - it decides "am I empty" from the whole builder's
+            // state, which the cell separator above would throw off (it would see the separator
+            // and conclude this cell isn't the first content in the document), leading to a
+            // second, overlapping ExtraCharacterSpan and double-counted index math.
+            val start = this.length
+            append(NBSP)
+            setSpan(ExtraCharacterSpan(), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
     }
 
     private fun SpannableStringBuilder.parseTextNode(child: TextNode) {
@@ -441,6 +513,8 @@ internal class HtmlToSpansParser(
             // Blocks
             CodeBlockSpan::class.java,
             QuoteSpan::class.java,
+            TableSpan::class.java,
+            TableRowSpan::class.java,
         )
 
         fun Editable.removeFormattingSpans() = spans.flatMap { type ->
@@ -466,6 +540,7 @@ internal class HtmlToSpansParser(
         return tagName() in listOf(
             "p", "ul", "ol", "li", "hr", "pre", "blockquote", "div",
             "h1", "h2", "h3", "h4", "h5", "h6",
+            "table", "td", "th",
         )
     }
 }

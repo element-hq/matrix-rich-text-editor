@@ -28,6 +28,7 @@ import io.element.android.wysiwyg.utils.RustCleanerTask
 import io.element.android.wysiwyg.view.StyleConfig
 import io.element.android.wysiwyg.view.inlinebg.SpanBackgroundHelper
 import io.element.android.wysiwyg.view.inlinebg.SpanBackgroundHelperFactory
+import io.element.android.wysiwyg.view.inlinebg.TableRowDividerRenderer
 import io.element.android.wysiwyg.view.spans.CustomMentionSpan
 import io.element.android.wysiwyg.view.spans.PillSpan
 import io.element.android.wysiwyg.view.spans.ReuseSourceSpannableFactory
@@ -54,6 +55,8 @@ open class EditorStyledTextView : AppCompatTextView {
 
     private lateinit var inlineCodeBgHelper: SpanBackgroundHelper
     private lateinit var codeBlockBgHelper: SpanBackgroundHelper
+    private lateinit var tableBgHelper: SpanBackgroundHelper
+    private lateinit var tableRowDividerRenderer: TableRowDividerRenderer
 
     /**
      * The [StyleConfig] used to style the spans generated from the HTML in this TextView.
@@ -180,6 +183,7 @@ open class EditorStyledTextView : AppCompatTextView {
         if (!isInit) return
         inlineCodeBgHelper.clearCachedPositions()
         codeBlockBgHelper.clearCachedPositions()
+        tableBgHelper.clearCachedPositions()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -187,6 +191,7 @@ open class EditorStyledTextView : AppCompatTextView {
             // The size changed, so the cached positions for the code renderers won't match anymore
             inlineCodeBgHelper.clearCachedPositions()
             codeBlockBgHelper.clearCachedPositions()
+            tableBgHelper.clearCachedPositions()
         }
 
         super.onSizeChanged(w, h, oldw, oldh)
@@ -205,6 +210,12 @@ open class EditorStyledTextView : AppCompatTextView {
             SpanBackgroundHelperFactory.createInlineCodeBackgroundHelper(styleConfig.inlineCode)
         codeBlockBgHelper =
             SpanBackgroundHelperFactory.createCodeBlockBackgroundHelper(styleConfig.codeBlock)
+        tableBgHelper =
+            SpanBackgroundHelperFactory.createTableBackgroundHelper(styleConfig.table)
+        tableRowDividerRenderer = TableRowDividerRenderer(
+            rowDividerWidth = styleConfig.table.rowDividerWidth,
+            rowDividerColor = styleConfig.table.rowDividerColor,
+        )
 
         htmlConverter = createHtmlConverter(styleConfig, mentionDisplayHandler)
     }
@@ -231,6 +242,8 @@ open class EditorStyledTextView : AppCompatTextView {
             canvas.withTranslation(totalPaddingLeft.toFloat(), totalPaddingTop.toFloat()) {
                 codeBlockBgHelper.draw(canvas, text as Spanned, layout)
                 inlineCodeBgHelper.draw(canvas, text as Spanned, layout)
+                tableBgHelper.draw(canvas, text as Spanned, layout)
+                tableRowDividerRenderer.draw(canvas, text as Spanned, layout)
             }
         }
         super.onDraw(canvas)

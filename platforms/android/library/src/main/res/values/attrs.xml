@@ -14,6 +14,10 @@
     <attr name="inlineCodeMultiLineBgRight" format="reference" />
     <attr name="inlineCodeRelativeTextSize" format="float" />
     <attr name="pillBackgroundColor" format="color" />
+    <attr name="tableLeadingMargin" format="dimension" />
+    <attr name="tableRowDividerWidth" format="dimension" />
+    <attr name="tableRowDividerColor" format="color" />
+    <attr name="tableBackgroundDrawable" format="reference" />
 
     <declare-styleable name="EditorEditText">
         <attr name="bulletGap" />
@@ -30,6 +34,10 @@
         <attr name="inlineCodeMultiLineBgRight" />
         <attr name="inlineCodeRelativeTextSize" />
         <attr name="pillBackgroundColor" />
+        <attr name="tableLeadingMargin" />
+        <attr name="tableRowDividerWidth" />
+        <attr name="tableRowDividerColor" />
+        <attr name="tableBackgroundDrawable" />
     </declare-styleable>
 
     <declare-styleable name="EditorStyledTextView">
@@ -45,5 +53,9 @@
         <attr name="inlineCodeMultiLineBgRight" />
         <attr name="inlineCodeRelativeTextSize" />
         <attr name="pillBackgroundColor" />
+        <attr name="tableLeadingMargin" />
+        <attr name="tableRowDividerWidth" />
+        <attr name="tableRowDividerColor" />
+        <attr name="tableBackgroundDrawable" />
     </declare-styleable>
 </resources>

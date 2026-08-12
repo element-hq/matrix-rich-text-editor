@@ -31,6 +31,7 @@ data class RichTextEditorStyle(
     val text: TextStyle,
     val cursor: CursorStyle,
     val link: LinkStyle,
+    val table: TableStyle,
 )
 
 data class BulletListStyle(
@@ -54,6 +55,13 @@ data class InlineCodeStyle(
 
 data class PillStyle(
     val backgroundColor: Color,
+)
+
+data class TableStyle(
+    val leadingMargin: Dp,
+    val rowDividerWidth: Dp,
+    val rowDividerColor: Color,
+    val background: CodeBackgroundStyle,
 )
 
 data class TextStyle(

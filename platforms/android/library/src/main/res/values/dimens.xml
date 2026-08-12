@@ -4,4 +4,6 @@
     <dimen name="inline_code_border_width">1dp</dimen>
     <dimen name="code_block_border_radius">2dp</dimen>
     <dimen name="code_block_border_width">1dp</dimen>
+    <dimen name="table_border_radius">2dp</dimen>
+    <dimen name="table_border_width">1dp</dimen>
 </resources>

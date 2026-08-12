@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent"/>
+    <stroke android:width="@dimen/table_border_width" android:color="@color/default_table_border"/>
+    <corners android:radius="@dimen/table_border_radius"/>
+</shape>

@@ -15,6 +15,7 @@ import io.element.android.wysiwyg.view.CodeBlockStyleConfig
 import io.element.android.wysiwyg.view.InlineCodeStyleConfig
 import io.element.android.wysiwyg.view.PillStyleConfig
 import io.element.android.wysiwyg.view.StyleConfig
+import io.element.android.wysiwyg.view.TableStyleConfig
 
 private val fakeDrawable = ColorDrawable()
 
@@ -40,5 +41,11 @@ internal fun createFakeStyleConfig() = StyleConfig(
     ),
     pill = PillStyleConfig(
         R.color.fake_color
+    ),
+    table = TableStyleConfig(
+        leadingMargin = 0,
+        rowDividerWidth = 1,
+        rowDividerColor = R.color.fake_color,
+        backgroundDrawable = fakeDrawable,
     )
 )

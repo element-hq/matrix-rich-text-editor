@@ -47,6 +47,7 @@ import io.element.android.wysiwyg.utils.RustErrorCollector
 import io.element.android.wysiwyg.view.StyleConfig
 import io.element.android.wysiwyg.view.inlinebg.SpanBackgroundHelper
 import io.element.android.wysiwyg.view.inlinebg.SpanBackgroundHelperFactory
+import io.element.android.wysiwyg.view.inlinebg.TableRowDividerRenderer
 import io.element.android.wysiwyg.view.models.InlineFormat
 import io.element.android.wysiwyg.view.models.LinkAction
 import io.element.android.wysiwyg.view.spans.ReuseSourceSpannableFactory
@@ -71,6 +72,8 @@ class EditorEditText : AppCompatEditText {
 
     private lateinit var inlineCodeBgHelper: SpanBackgroundHelper
     private lateinit var codeBlockBgHelper: SpanBackgroundHelper
+    private lateinit var tableBgHelper: SpanBackgroundHelper
+    private lateinit var tableRowDividerRenderer: TableRowDividerRenderer
 
     private val viewModel: EditorViewModel by viewModel(
         viewModelInitializer = {
@@ -304,6 +307,11 @@ class EditorEditText : AppCompatEditText {
 
         inlineCodeBgHelper = SpanBackgroundHelperFactory.createInlineCodeBackgroundHelper(styleConfig.inlineCode)
         codeBlockBgHelper = SpanBackgroundHelperFactory.createCodeBlockBackgroundHelper(styleConfig.codeBlock)
+        tableBgHelper = SpanBackgroundHelperFactory.createTableBackgroundHelper(styleConfig.table)
+        tableRowDividerRenderer = TableRowDividerRenderer(
+            rowDividerWidth = styleConfig.table.rowDividerWidth,
+            rowDividerColor = styleConfig.table.rowDividerColor,
+        )
 
         htmlConverter = createHtmlConverter(styleConfig, mentionDisplayHandler)
         if (forceNewRendering) {
@@ -699,6 +707,8 @@ class EditorEditText : AppCompatEditText {
             canvas.withTranslation(totalPaddingLeft.toFloat(), totalPaddingTop.toFloat()) {
                 inlineCodeBgHelper.draw(canvas, text as Spanned, layout)
                 codeBlockBgHelper.draw(canvas, text as Spanned, layout)
+                tableBgHelper.draw(canvas, text as Spanned, layout)
+                tableRowDividerRenderer.draw(canvas, text as Spanned, layout)
             }
         }
         super.onDraw(canvas)

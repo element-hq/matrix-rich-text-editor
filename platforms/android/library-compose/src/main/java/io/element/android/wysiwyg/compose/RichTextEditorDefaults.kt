@@ -58,6 +58,7 @@ object RichTextEditorDefaults {
      * @param text A custom style for text displayed in the editor.
      * @param cursor A custom style for the cursor for API 29 and above.
      * @param link A custom style for links.
+     * @param table A custom style for tables.
      */
     @Composable
     fun style(
@@ -68,6 +69,7 @@ object RichTextEditorDefaults {
         text: TextStyle = textStyle(),
         cursor: CursorStyle = cursorStyle(),
         link: LinkStyle = linkStyle(),
+        table: TableStyle = tableStyle(),
     ): RichTextEditorStyle = RichTextEditorStyle(
         bulletList = bulletList,
         codeBlock = codeBlock,
@@ -76,6 +78,7 @@ object RichTextEditorDefaults {
         text = text,
         cursor = cursor,
         link = link,
+        table = table,
     )
 
     /**
@@ -204,6 +207,46 @@ object RichTextEditorDefaults {
         color: Color = Color.Blue,
     ) = LinkStyle(
         color = color,
+    )
+
+    /**
+     * Creates the default table style for [RichTextEditor].
+     *
+     * @param leadingMargin The leading margin to apply
+     * @param rowDividerWidth The width of the divider line drawn between rows
+     * @param rowDividerColor The color of the divider line drawn between rows
+     * @param background The border/background style to apply to the whole table
+     */
+    @Composable
+    fun tableStyle(
+        leadingMargin: Dp = 4.dp,
+        rowDividerWidth: Dp = 1.dp,
+        rowDividerColor: Color = MaterialTheme.colorScheme.outlineVariant,
+        background: CodeBackgroundStyle = tableBackgroundStyle(),
+    ) = TableStyle(
+        leadingMargin = leadingMargin,
+        rowDividerWidth = rowDividerWidth,
+        rowDividerColor = rowDividerColor,
+        background = background,
+    )
+
+    /**
+     * Creates a default table border/background: an outline only, no fill.
+     */
+    @Composable
+    fun tableBackgroundStyle(
+        borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
+        cornerRadius: Dp = defaultCodeCornerRadius,
+        borderWidth: Dp = defaultCodeBorderWidth,
+    ): CodeBackgroundStyle = CodeBackgroundStyle(
+        density = LocalDensity.current,
+        color = Color.Transparent,
+        borderColor = borderColor,
+        borderWidth = borderWidth,
+        cornerRadiusTopLeft = cornerRadius,
+        cornerRadiusTopRight = cornerRadius,
+        cornerRadiusBottomRight = cornerRadius,
+        cornerRadiusBottomLeft = cornerRadius,
     )
 
     /**
