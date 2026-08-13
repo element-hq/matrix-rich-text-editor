@@ -371,8 +371,14 @@ where
             // we are at the start of a list item.
             let parent_list_item_loc =
                 range.deepest_node_of_kind(ListItem, Some(&leaf.node_handle));
-            let parent_table_cell_loc =
-                range.deepest_node_of_kind(TableCell, Some(&leaf.node_handle));
+            // deepest_node_of_kind looks for a strict ancestor, so it misses the case
+            // where the leaf itself *is* an empty TableCell (its own location, not a
+            // descendant, ends up picked as the leaf when there's nothing inside it).
+            let parent_table_cell_loc = if leaf.kind == TableCell {
+                Some(leaf)
+            } else {
+                range.deepest_node_of_kind(TableCell, Some(&leaf.node_handle))
+            };
             if let Some(list_item_loc) = parent_list_item_loc {
                 if list_item_loc.start_offset == 0 {
                     self.do_backspace_in_list(&list_item_loc.node_handle)
@@ -380,12 +386,19 @@ where
                     self.do_backspace()
                 }
             } else if let Some(cell_loc) = parent_table_cell_loc {
-                if cell_loc.start_offset == 0
-                    && self.is_first_cell_of_entirely_empty_table(
+                if cell_loc.start_offset == 0 {
+                    if self.is_first_cell_of_entirely_empty_table(
                         &cell_loc.node_handle,
-                    )
-                {
-                    self.remove_table()
+                    ) {
+                        self.remove_table()
+                    } else {
+                        // At the start of a cell's content with nothing valid to
+                        // merge into - a cell's only siblings are other cells in
+                        // the same row, not mergeable block content like a
+                        // paragraph's previous sibling would be. Falling through to
+                        // do_backspace() here used to merge/remove the cell itself.
+                        ComposerUpdate::keep()
+                    }
                 } else {
                     self.do_backspace()
                 }

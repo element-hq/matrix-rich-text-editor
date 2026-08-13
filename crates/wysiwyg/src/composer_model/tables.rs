@@ -666,6 +666,39 @@ mod test {
     }
 
     #[test]
+    fn backspace_at_start_of_already_empty_cell_does_not_remove_it() {
+        // Regression test: backspacing while the cursor sits at the start of an
+        // already-empty cell (as happens naturally after backspacing away its last
+        // character) used to merge/remove the cell itself, shrinking the row.
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        model.replace_text("a".into());
+        model.move_to_next_cell();
+        model.replace_text("b".into());
+        model.backspace(); // empties the 2nd cell
+        model.backspace(); // cursor is now at the start of that empty cell
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>a</td><td>|</td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
+    fn backspace_at_start_of_non_empty_cell_does_nothing() {
+        let mut model = cm("|");
+        model.insert_table(1, 2);
+        model.replace_text("a".into());
+        model.move_to_next_cell();
+        model.replace_text("b".into());
+        model.move_to_previous_cell(); // cursor at the start of the 1st cell ("a")
+        model.backspace();
+        assert_eq!(
+            tx(&model),
+            "<table><tbody><tr><td>|a</td><td>b</td></tr></tbody></table>"
+        );
+    }
+
+    #[test]
     fn enter_in_empty_cell_inserts_line_break() {
         let mut model = cm("|");
         model.insert_table(1, 1);
@@ -689,4 +722,5 @@ mod test {
         );
     }
 }
+
 
