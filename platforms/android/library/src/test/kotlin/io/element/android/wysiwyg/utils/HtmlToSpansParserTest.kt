@@ -161,6 +161,44 @@ class HtmlToSpansParserTest {
     }
 
     @Test
+    fun testHeadings() {
+        val html = "<h1>One</h1><h2>Two</h2><h3>Three</h3><h4>Four</h4><h5>Five</h5><h6>Six</h6>"
+        val spanned = convertHtml(html)
+        assertThat(
+            spanned.dumpSpans().joinToString(",\n"), equalTo(
+                """
+                    One: android.text.style.StyleSpan (0-3) fl=#17,
+                    Two: android.text.style.StyleSpan (4-7) fl=#17,
+                    Three: android.text.style.StyleSpan (8-13) fl=#17,
+                    Four: android.text.style.StyleSpan (14-18) fl=#17,
+                    Five: android.text.style.StyleSpan (19-23) fl=#17,
+                    Six: android.text.style.StyleSpan (24-27) fl=#17
+                """.trimIndent()
+            )
+        )
+        assertThat(
+            spanned.toString(), equalTo("One\nTwo\nThree\nFour\nFive\nSix")
+        )
+    }
+
+    @Test
+    fun testHeadingFollowedByTextKeepsItsOwnLine() {
+        val html = """<h4><a href="https://element.io">Title</a></h4>submitted by someone"""
+        val spanned = convertHtml(html, isEditor = false)
+        assertThat(
+            spanned.dumpSpans().joinToString(",\n"), equalTo(
+                """
+                    Title: io.element.android.wysiwyg.view.spans.LinkSpan (0-5) fl=#17,
+                    Title: android.text.style.StyleSpan (0-5) fl=#17
+                """.trimIndent()
+            )
+        )
+        assertThat(
+            spanned.toString(), equalTo("Title\nsubmitted by someone")
+        )
+    }
+
+    @Test
     fun testEmptyParagraphs() {
         val html = "<p></p><p></p>"
         val spanned = convertHtml(html)

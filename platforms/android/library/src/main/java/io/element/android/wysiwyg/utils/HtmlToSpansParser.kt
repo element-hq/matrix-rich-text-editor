@@ -91,6 +91,7 @@ internal class HtmlToSpansParser(
             "pre" -> parseCodeBlock(element)
             "blockquote" -> parseQuote(element)
             "p" -> parseParagraph(element)
+            "h1", "h2", "h3", "h4", "h5", "h6" -> parseHeading(element)
             "br" -> parseLineBreak(element)
             else -> if (LoggingConfig.enableDebugLogs) {
                 Timber.d("Unsupported tag: ${element.tagName()}")
@@ -152,6 +153,15 @@ internal class HtmlToSpansParser(
         val start = this.length
         parseChildren(element)
         handleNbspInBlock(element, start, length)
+    }
+
+    private fun SpannableStringBuilder.parseHeading(element: Element) {
+        addLeadingLineBreakForBlockNode(element)
+        val start = this.length
+        inSpans(StyleSpan(Typeface.BOLD)) {
+            parseChildren(element)
+            handleNbspInBlock(element, start, length)
+        }
     }
 
     private fun SpannableStringBuilder.parseQuote(element: Element) {
