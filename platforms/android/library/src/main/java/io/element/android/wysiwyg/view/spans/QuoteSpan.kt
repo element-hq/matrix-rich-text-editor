@@ -79,16 +79,17 @@ class QuoteSpan : MetricAffectingSpan, LeadingMarginSpan {
         val right: Int
 
         if (dir > 0) {
-            // Left to right
+            // Left to right: `x` is the leading (left) edge of the line
             left = x + margin
-            right = x + margin + indicatorWidth
+            right = left + indicatorWidth
         } else {
-            // Right to left
-            left = x + margin - c.width - indicatorWidth
-            right = x + margin
+            // Right to left: `x` is the leading (right) edge of the line, so the margin and the
+            // indicator are laid out towards the left instead
+            right = x - margin
+            left = right - indicatorWidth
         }
 
-        rect = Rect(left, top, right, bottom)
+        rect.set(left, top, right, bottom)
         c.drawRect(rect, paint)
     }
 }
