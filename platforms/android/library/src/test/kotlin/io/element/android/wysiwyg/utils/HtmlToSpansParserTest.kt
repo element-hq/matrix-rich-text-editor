@@ -362,6 +362,31 @@ class HtmlToSpansParserTest {
         )
     }
 
+    @Test
+    fun testDetailsAndSummaryAreParsedAsBlocks() {
+        val spanned = convertHtml(
+            html = "<details><summary>Title</summary>Hidden body</details>",
+            isEditor = false,
+        )
+
+        assertThat(spanned.toString(), equalTo("Title\nHidden body"))
+        assertThat(
+            spanned.dumpSpans(), equalTo(
+                listOf("Title: android.text.style.StyleSpan (0-5) fl=#17")
+            )
+        )
+    }
+
+    @Test
+    fun testDetailsKeepsItsTextAndStartsItsOwnBlock() {
+        val spanned = convertHtml(
+            html = "<p>Before</p><details><summary>Title</summary>Body</details>",
+            isEditor = false,
+        )
+
+        assertThat(spanned.toString(), equalTo("Before\n\nTitle\nBody"))
+    }
+
     private fun convertHtml(
         html: String,
         isEditor: Boolean = true,
