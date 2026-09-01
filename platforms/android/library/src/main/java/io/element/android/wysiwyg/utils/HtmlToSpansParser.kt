@@ -83,7 +83,7 @@ internal class HtmlToSpansParser(
             "b", "strong" -> parseInlineFormatting(element, InlineFormat.Bold)
             "i", "em" -> parseInlineFormatting(element, InlineFormat.Italic)
             "u" -> parseInlineFormatting(element, InlineFormat.Underline)
-            "del" -> parseInlineFormatting(element, InlineFormat.StrikeThrough)
+            "del", "s", "strike" -> parseInlineFormatting(element, InlineFormat.StrikeThrough)
             // Note we're using a different method for inline code
             "code" -> parseInlineCode(element)
             "ul", "ol" -> parseList(element)
@@ -92,6 +92,8 @@ internal class HtmlToSpansParser(
             "blockquote" -> parseQuote(element)
             "p" -> parseParagraph(element)
             "h1", "h2", "h3", "h4", "h5", "h6" -> parseHeading(element)
+            "details" -> parseDetails(element)
+            "summary" -> parseSummary(element)
             "br" -> parseLineBreak(element)
             else -> if (LoggingConfig.enableDebugLogs) {
                 Timber.d("Unsupported tag: ${element.tagName()}")
@@ -156,6 +158,22 @@ internal class HtmlToSpansParser(
     }
 
     private fun SpannableStringBuilder.parseHeading(element: Element) {
+        addLeadingLineBreakForBlockNode(element)
+        val start = this.length
+        inSpans(StyleSpan(Typeface.BOLD)) {
+            parseChildren(element)
+            handleNbspInBlock(element, start, length)
+        }
+    }
+    
+    private fun SpannableStringBuilder.parseDetails(element: Element) {
+        addLeadingLineBreakForBlockNode(element)
+        val start = this.length
+        parseChildren(element)
+        handleNbspInBlock(element, start, length)
+    }
+
+    private fun SpannableStringBuilder.parseSummary(element: Element) {
         addLeadingLineBreakForBlockNode(element)
         val start = this.length
         inSpans(StyleSpan(Typeface.BOLD)) {
@@ -474,7 +492,7 @@ internal class HtmlToSpansParser(
      */
     fun Element.isBlockElement(): Boolean {
         return tagName() in listOf(
-            "p", "ul", "ol", "li", "hr", "pre", "blockquote", "div",
+            "p", "ul", "ol", "li", "hr", "pre", "blockquote", "div", "details", "summary",
             "h1", "h2", "h3", "h4", "h5", "h6",
         )
     }
