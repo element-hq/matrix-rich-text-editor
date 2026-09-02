@@ -111,13 +111,13 @@ dependencies {
 androidComponents {
     onVariants { variant ->
         val generatedSources = "build/generated/source/uniffi/${variant.name}/java"
-        if (file(generatedSources).exists()) {
-            variant.sources.kotlin?.addStaticSourceDirectory(generatedSources)
-            variant.sources.jniLibs?.addStaticSourceDirectory("jniLibs")
-        } else {
+        variant.sources.kotlin?.addStaticSourceDirectory(generatedSources)
+        variant.sources.jniLibs?.addStaticSourceDirectory("jniLibs")
+
+        if (!file(generatedSources).exists()) {
             logger.warn(
                 "UniFFI generated sources not found at $generatedSources. " +
-                    "Run `make android-bindings` from the repository root before building."
+                    "If the build fails, run `make android-bindings` from the repository root."
             )
         }
     }
@@ -162,6 +162,7 @@ androidComponents {
                     )
                 } else {
                     commandLine(
+                        "/usr/bin/env",
                         "cargo",
                         "uniffi-bindgen",
                         "generate",
