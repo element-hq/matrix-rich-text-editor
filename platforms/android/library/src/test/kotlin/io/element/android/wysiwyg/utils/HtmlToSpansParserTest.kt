@@ -401,6 +401,42 @@ class HtmlToSpansParserTest {
     }
 
     @Test
+    fun testNestedListDoesNotShiftTheNumberingOfTheOuterList() {
+        val html = "<ol><li>one</li><li>two<ul><li>nested</li></ul></li><li>three</li></ol>"
+        val spanned = convertHtml(html)
+
+        val orders = spanned.getSpans(0, spanned.length, OrderedListSpan::class.java)
+            .associate { spanned.substring(spanned.getSpanStart(it), spanned.getSpanEnd(it)) to it.order }
+        assertThat(orders["one"], equalTo(1))
+        assertThat(orders["two\nnested"], equalTo(2))
+        assertThat(orders["three"], equalTo(3))
+    }
+
+    @Test
+    fun testNestedOrderedListRestartsItsOwnNumbering() {
+        val html = "<ol><li>one<ol><li>nested one</li><li>nested two</li></ol></li><li>two</li></ol>"
+        val spanned = convertHtml(html)
+
+        // Keyed by the text each span covers, since an item's span also covers its nested list
+        val orders = spanned.getSpans(0, spanned.length, OrderedListSpan::class.java)
+            .associate { spanned.substring(spanned.getSpanStart(it), spanned.getSpanEnd(it)) to it.order }
+        assertThat(orders["one\nnested one\nnested two"], equalTo(1))
+        assertThat(orders["two"], equalTo(2))
+        assertThat(orders["nested one"], equalTo(1))
+        assertThat(orders["nested two"], equalTo(2))
+    }
+
+    @Test
+    fun testDivsAreParsedAsBlocks() {
+        val spanned = convertHtml(
+            html = "<div>First</div><div>Second</div>",
+            isEditor = false,
+        )
+
+        assertThat(spanned.toString(), equalTo("First\n\nSecond"))
+    }
+
+    @Test
     fun testDetailsAndSummaryAreParsedAsBlocks() {
         val spanned = convertHtml(
             html = "<details><summary>Title</summary>Hidden body</details>",

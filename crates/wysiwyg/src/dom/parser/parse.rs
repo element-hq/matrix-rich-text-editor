@@ -734,6 +734,15 @@ mod sys {
         }
 
         #[test]
+        fn parse_text_wrapped_over_several_lines() {
+            // A line wrapped by the sender collapses to a single space, and no
+            // character on either side of the newline may be lost
+            let dom: Dom<Utf16String> =
+                HtmlParser::default().parse("<p>glass\nhouse</p>").unwrap();
+            assert_eq!(dom.to_html().to_string(), "<p>glass house</p>");
+        }
+
+        #[test]
         fn parse_nested_tags() {
             assert_that!("<b><em>ZZ</em></b>").roundtrips();
             assert_that!("X<b>Y<em>ZZ</em>0</b>1").roundtrips();
@@ -1556,7 +1565,7 @@ fn convert_text<S: UnicodeString>(
         let contents = &surrounding_indent.replace_all(contents, "");
 
         // Replace any internal indentation with a single space
-        let internal_indent = Regex::new(r"s*\n\s*").unwrap();
+        let internal_indent = Regex::new(r"\s*\n\s*").unwrap();
         let contents = &internal_indent.replace_all(contents, " ");
 
         for (i, part) in contents.split("@room").enumerate() {

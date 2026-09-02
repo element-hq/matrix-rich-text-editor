@@ -90,7 +90,7 @@ internal class HtmlToSpansParser(
             "li" -> parseListItem(element)
             "pre" -> parseCodeBlock(element)
             "blockquote" -> parseQuote(element)
-            "p" -> parseParagraph(element)
+            "p", "div" -> parseParagraph(element)
             "h1", "h2", "h3", "h4", "h5", "h6" -> parseHeading(element)
             "details" -> parseDetails(element)
             "summary" -> parseSummary(element)
@@ -173,6 +173,11 @@ internal class HtmlToSpansParser(
         handleNbspInBlock(element, start, length)
     }
 
+    /**
+     * The summary of a `details` element is the only part of it that is always visible, so it's
+     * rendered in bold to tell it apart from the contents that follow it. This matches what the
+     * browser default stylesheet does with `summary`.
+     */
     private fun SpannableStringBuilder.parseSummary(element: Element) {
         addLeadingLineBreakForBlockNode(element)
         val start = this.length
@@ -236,7 +241,10 @@ internal class HtmlToSpansParser(
             "ol" -> {
                 val typeface = Typeface.defaultFromStyle(Typeface.NORMAL)
                 val textSize = 16.dpToPx()
-                val indexInList = listParent.select("li").indexOf(element)
+                // Only direct children count: a `select` here would also match the items of any
+                // nested list and shift the numbering of everything after it.
+                val siblingItems = listParent.children().filter { it.tagName() == "li" }
+                val indexInList = siblingItems.indexOf(element).coerceAtLeast(0)
                 val customOrder = listParent.attr("start").toIntOrNull()
                 val order = if (customOrder != null) {
                     customOrder + indexInList
