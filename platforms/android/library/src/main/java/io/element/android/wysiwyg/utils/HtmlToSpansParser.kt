@@ -83,7 +83,7 @@ internal class HtmlToSpansParser(
             "b", "strong" -> parseInlineFormatting(element, InlineFormat.Bold)
             "i", "em" -> parseInlineFormatting(element, InlineFormat.Italic)
             "u" -> parseInlineFormatting(element, InlineFormat.Underline)
-            "del" -> parseInlineFormatting(element, InlineFormat.StrikeThrough)
+            "del", "s", "strike" -> parseInlineFormatting(element, InlineFormat.StrikeThrough)
             // Note we're using a different method for inline code
             "code" -> parseInlineCode(element)
             "ul", "ol" -> parseList(element)
@@ -91,6 +91,7 @@ internal class HtmlToSpansParser(
             "pre" -> parseCodeBlock(element)
             "blockquote" -> parseQuote(element)
             "p", "div" -> parseParagraph(element)
+            "h1", "h2", "h3", "h4", "h5", "h6" -> parseHeading(element)
             "details" -> parseDetails(element)
             "summary" -> parseSummary(element)
             "br" -> parseLineBreak(element)
@@ -156,6 +157,15 @@ internal class HtmlToSpansParser(
         handleNbspInBlock(element, start, length)
     }
 
+    private fun SpannableStringBuilder.parseHeading(element: Element) {
+        addLeadingLineBreakForBlockNode(element)
+        val start = this.length
+        inSpans(StyleSpan(Typeface.BOLD)) {
+            parseChildren(element)
+            handleNbspInBlock(element, start, length)
+        }
+    }
+    
     private fun SpannableStringBuilder.parseDetails(element: Element) {
         addLeadingLineBreakForBlockNode(element)
         val start = this.length

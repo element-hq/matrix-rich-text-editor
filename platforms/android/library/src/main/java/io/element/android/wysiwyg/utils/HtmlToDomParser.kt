@@ -14,8 +14,9 @@ object HtmlToDomParser {
 
     private val safeList = Safelist()
         .addTags(
-            "a", "b", "strong", "i", "em", "u", "del", "code", "ul", "ol", "li", "pre",
-            "blockquote", "p", "br", "div", "details", "summary"
+            "a", "b", "strong", "i", "em", "u", "del", "s", "strike", "code", "ul", "ol", "li",
+            "pre", "blockquote", "p", "br", "div", "h1", "h2", "h3", "h4", "h5", "h6", "details",
+            "summary",
         )
         .addAttributes("a", "href", "data-mention-type", "contenteditable")
         .addAttributes("ol", "start")
