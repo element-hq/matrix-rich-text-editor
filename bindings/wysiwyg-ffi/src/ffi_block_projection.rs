@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-use wysiwyg::{AttributeSet, BlockKind, BlockProjection, DomHandle, InlineRun, InlineRunKind, ListType};
+use wysiwyg::{
+    AttributeSet, BlockKind, BlockProjection, DomHandle, InlineRun,
+    InlineRunKind, ListType,
+};
 
 /// Serialise a `DomHandle` to a compact comma-separated index string, e.g. "0,2,1".
 pub(crate) fn handle_to_string(handle: &DomHandle) -> String {
@@ -27,8 +30,14 @@ pub struct FfiAttributeSet {
 
 #[derive(uniffi::Enum, Clone, Debug)]
 pub enum FfiInlineRunKind {
-    Text { text: String, attributes: FfiAttributeSet },
-    Mention { url: String, display_text: String },
+    Text {
+        text: String,
+        attributes: FfiAttributeSet,
+    },
+    Mention {
+        url: String,
+        display_text: String,
+    },
     LineBreak,
 }
 
@@ -110,8 +119,12 @@ impl From<&BlockKind> for FfiBlockKind {
             BlockKind::Quote => Self::Quote,
             BlockKind::CodeBlock => Self::CodeBlock,
             BlockKind::ListItem { list_type, depth } => match list_type {
-                ListType::Ordered => Self::ListItemOrdered { depth: *depth as u32 },
-                ListType::Unordered => Self::ListItemUnordered { depth: *depth as u32 },
+                ListType::Ordered => Self::ListItemOrdered {
+                    depth: *depth as u32,
+                },
+                ListType::Unordered => Self::ListItemUnordered {
+                    depth: *depth as u32,
+                },
             },
             BlockKind::Generic => Self::Generic,
         }

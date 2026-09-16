@@ -54,10 +54,7 @@ pub enum InlineRunKind {
     /// An atomic @-mention.  `text_len()` in the DOM is always 1 UTF-16 code
     /// unit; the display text is carried here for the iOS renderer to use as
     /// the pill label.
-    Mention {
-        url: String,
-        display_text: String,
-    },
+    Mention { url: String, display_text: String },
     /// A `<br>` — one UTF-16 code unit.
     LineBreak,
 }
@@ -120,10 +117,7 @@ pub(crate) struct WalkContext {
 
 impl WalkContext {
     /// Return a new context for the children of `container`.
-    fn entering<S: UnicodeString>(
-        &self,
-        container: &ContainerNode<S>,
-    ) -> Self {
+    fn entering<S: UnicodeString>(&self, container: &ContainerNode<S>) -> Self {
         let mut ctx = self.clone();
         match container.kind() {
             ContainerNodeKind::CodeBlock => ctx.in_code_block = true,
@@ -149,7 +143,10 @@ impl WalkContext {
         // should still emit ListItem blocks so the renderer can add markers.
         if self.list_depth > 0 {
             return BlockKind::ListItem {
-                list_type: self.list_type.clone().unwrap_or(ListType::Unordered),
+                list_type: self
+                    .list_type
+                    .clone()
+                    .unwrap_or(ListType::Unordered),
                 depth: self.list_depth,
             };
         }
@@ -281,8 +278,7 @@ fn walk_block_node<S: UnicodeString>(
         return;
     };
 
-    let has_block_children =
-        c.children().iter().any(|ch| ch.is_block_node());
+    let has_block_children = c.children().iter().any(|ch| ch.is_block_node());
 
     if has_block_children {
         // Structural block — descend with updated context.
@@ -353,14 +349,12 @@ fn collect_inline_runs<S: UnicodeString>(
         }
         DomNode::Mention(m) => {
             let (url, display) = match m.kind() {
-                MentionNodeKind::MatrixUri { mention } => (
-                    mention.uri().to_string(),
-                    m.display_text().to_string(),
-                ),
-                MentionNodeKind::AtRoom => (
-                    "@room".to_string(),
-                    m.display_text().to_string(),
-                ),
+                MentionNodeKind::MatrixUri { mention } => {
+                    (mention.uri().to_string(), m.display_text().to_string())
+                }
+                MentionNodeKind::AtRoom => {
+                    ("@room".to_string(), m.display_text().to_string())
+                }
             };
             runs.push(InlineRun {
                 node_handle: m.handle().clone(),
@@ -403,18 +397,17 @@ fn merge_adjacent_runs(runs: &mut Vec<InlineRun>) {
     while i + 1 < runs.len() {
         let can_merge = match (&runs[i].kind, &runs[i + 1].kind) {
             (
-                InlineRunKind::Text {
-                    attributes: a1, ..
-                },
-                InlineRunKind::Text {
-                    attributes: a2, ..
-                },
+                InlineRunKind::Text { attributes: a1, .. },
+                InlineRunKind::Text { attributes: a2, .. },
             ) => a1 == a2,
             _ => false,
         };
         if can_merge {
             let next = runs.remove(i + 1);
-            let InlineRunKind::Text { text: next_text, .. } = next.kind else {
+            let InlineRunKind::Text {
+                text: next_text, ..
+            } = next.kind
+            else {
                 unreachable!()
             };
             let InlineRunKind::Text { text, .. } = &mut runs[i].kind else {

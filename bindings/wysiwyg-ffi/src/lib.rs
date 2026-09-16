@@ -27,7 +27,8 @@ use std::sync::Arc;
 
 pub use crate::ffi_action_state::ActionState;
 pub use crate::ffi_block_projection::{
-    FfiAttributeSet, FfiBlockKind, FfiBlockProjection, FfiInlineRun, FfiInlineRunKind,
+    FfiAttributeSet, FfiBlockKind, FfiBlockProjection, FfiInlineRun,
+    FfiInlineRunKind,
 };
 pub use crate::ffi_composer_action::ComposerAction;
 pub use crate::ffi_composer_model::Attribute;

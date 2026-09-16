@@ -44,8 +44,10 @@ fn single_paragraph_projection() {
     assert_eq!(blocks[0].start_utf16, 0);
     assert_eq!(blocks[0].end_utf16, 5);
     assert_eq!(blocks[0].inline_runs.len(), 1);
-    let InlineRunKind::Text { ref text, ref attributes } =
-        blocks[0].inline_runs[0].kind
+    let InlineRunKind::Text {
+        ref text,
+        ref attributes,
+    } = blocks[0].inline_runs[0].kind
     else {
         panic!("expected Text run");
     };
@@ -86,8 +88,10 @@ fn adjacent_runs_with_same_attrs_are_merged() {
     let blocks = projections(&model);
     assert_eq!(blocks.len(), 1);
     assert_eq!(blocks[0].inline_runs.len(), 1);
-    let InlineRunKind::Text { ref text, ref attributes } =
-        blocks[0].inline_runs[0].kind
+    let InlineRunKind::Text {
+        ref text,
+        ref attributes,
+    } = blocks[0].inline_runs[0].kind
     else {
         panic!("expected Text run");
     };
@@ -97,8 +101,7 @@ fn adjacent_runs_with_same_attrs_are_merged() {
 
 #[test]
 fn adjacent_runs_with_different_attrs_not_merged() {
-    let model =
-        model_from_html("<p><strong>foo</strong><em>bar</em></p>");
+    let model = model_from_html("<p><strong>foo</strong><em>bar</em></p>");
     let blocks = projections(&model);
     assert_eq!(blocks[0].inline_runs.len(), 2);
 }
@@ -144,7 +147,7 @@ fn code_block_kind() {
 fn code_block_multiline_produces_single_block() {
     // A multi-line <pre><code> collapses into a single CodeBlock with \n in the text.
     let model = model_from_html(
-        "<pre><code>if snapshot {\n\treturn true\n}</code></pre>"
+        "<pre><code>if snapshot {\n\treturn true\n}</code></pre>",
     );
     let blocks = projections(&model);
     assert_eq!(blocks.len(), 1);
@@ -200,7 +203,8 @@ fn ordered_list_items() {
 
 #[test]
 fn list_item_offsets_contiguous() {
-    let model = model_from_html("<ul><li><p>ab</p></li><li><p>cd</p></li></ul>");
+    let model =
+        model_from_html("<ul><li><p>ab</p></li><li><p>cd</p></li></ul>");
     let blocks = projections(&model);
     assert_eq!(blocks[0].start_utf16, 0);
     assert_eq!(blocks[0].end_utf16, 2);
@@ -223,19 +227,15 @@ fn projection_offsets_after_structural_edit_enter() {
 
 #[test]
 fn link_url_in_attribute_set() {
-    let model = model_from_html(
-        r#"<p><a href="https://example.com">link</a></p>"#,
-    );
+    let model =
+        model_from_html(r#"<p><a href="https://example.com">link</a></p>"#);
     let blocks = projections(&model);
     let InlineRunKind::Text { ref attributes, .. } =
         blocks[0].inline_runs[0].kind
     else {
         panic!("expected Text run");
     };
-    assert_eq!(
-        attributes.link_url.as_deref(),
-        Some("https://example.com")
-    );
+    assert_eq!(attributes.link_url.as_deref(), Some("https://example.com"));
 }
 
 #[test]
@@ -269,8 +269,10 @@ fn inline_only_root_with_bold() {
     assert_eq!(blocks.len(), 1);
     // Three runs: plain "This is ", bold "bold", plain " text"
     assert_eq!(blocks[0].inline_runs.len(), 3);
-    let InlineRunKind::Text { ref text, ref attributes } =
-        blocks[0].inline_runs[1].kind
+    let InlineRunKind::Text {
+        ref text,
+        ref attributes,
+    } = blocks[0].inline_runs[1].kind
     else {
         panic!("expected Text run");
     };
