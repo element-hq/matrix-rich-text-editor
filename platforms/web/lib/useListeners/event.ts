@@ -21,7 +21,7 @@ import {
     selectContent,
     textNodeNeedsExtraOffset,
 } from '../dom';
-import { renderProjections, BlockProjection } from '../blockProjection';
+import { renderProjections, type BlockProjection } from '../blockProjection';
 import { computePrefixSuffixDiff } from '../inlineReconciliation';
 import {
     type BlockType,
@@ -211,10 +211,19 @@ export function handleInput(
 
         if (repl) {
             // Use projection-based rendering instead of innerHTML assignment.
-            const projections = (composerModel as any).get_block_projections?.() as BlockProjection[] | undefined;
+            const projections = (
+                composerModel as any
+            ).get_block_projections?.() as BlockProjection[] | undefined;
             if (projections) {
-                committedTextRef.current = renderProjections(projections, editor);
-                selectContent(editor, repl.start_utf16_codeunit, repl.end_utf16_codeunit);
+                committedTextRef.current = renderProjections(
+                    projections,
+                    editor,
+                );
+                selectContent(
+                    editor,
+                    repl.start_utf16_codeunit,
+                    repl.end_utf16_codeunit,
+                );
             } else {
                 // Fallback to legacy HTML path if projection API unavailable.
                 replaceEditor(
@@ -227,7 +236,11 @@ export function handleInput(
             testUtilities.setEditorHtml(repl.replacement_html);
         } else if (sel) {
             // Selection-only update: just move the cursor.
-            selectContent(editor, sel.start_utf16_codeunit, sel.end_utf16_codeunit);
+            selectContent(
+                editor,
+                sel.start_utf16_codeunit,
+                sel.end_utf16_codeunit,
+            );
         }
         editor.focus();
 
@@ -291,7 +304,9 @@ export function reconcileNative(
     );
 
     // Re-render from the updated model and sync cursor from Rust's selection.
-    const projections = (composerModel as any).get_block_projections?.() as BlockProjection[] | undefined;
+    const projections = (composerModel as any).get_block_projections?.() as
+        | BlockProjection[]
+        | undefined;
     let content: string | undefined;
     if (projections) {
         committedTextRef.current = renderProjections(projections, editor);
@@ -300,7 +315,8 @@ export function reconcileNative(
         const textUpdate = rustUpdate.text_update();
         const repl = textUpdate.replace_all;
         const sel = textUpdate.select;
-        const cursorStart = repl?.start_utf16_codeunit ?? sel?.start_utf16_codeunit;
+        const cursorStart =
+            repl?.start_utf16_codeunit ?? sel?.start_utf16_codeunit;
         const cursorEnd = repl?.end_utf16_codeunit ?? sel?.end_utf16_codeunit;
         if (cursorStart !== undefined && cursorEnd !== undefined) {
             selectContent(editor, cursorStart, cursorEnd);
@@ -319,7 +335,10 @@ export function reconcileNative(
  * DOM text offset.  A boundary is crossed when we move past a text node that
  * has a block-level ancestor (`<p>`, `<li>`, `<pre>`, `<blockquote>`).
  */
-function domTextOffsetToModelOffset(editor: HTMLElement, textOffset: number): number {
+function domTextOffsetToModelOffset(
+    editor: HTMLElement,
+    textOffset: number,
+): number {
     // Collect text nodes in document order.
     const textNodes: Node[] = [];
     (function collect(n: Node): void {

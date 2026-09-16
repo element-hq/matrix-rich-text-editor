@@ -13,7 +13,12 @@ import {
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { isClipboardEvent, isInputEvent } from './assert';
-import { handleInput, handleKeyDown, handleSelectionChange, reconcileNative } from './event';
+import {
+    handleInput,
+    handleKeyDown,
+    handleSelectionChange,
+    reconcileNative,
+} from './event';
 import {
     type FormattingFunctions,
     type AllActionStates,
@@ -51,7 +56,7 @@ export function useListeners(
         suggestion: null,
     });
 
-    const plainTextContentRef = useRef<string>();
+    const plainTextContentRef = useRef<string>(undefined);
     // committedTextRef tracks the last plain text rendered into the editor via
     // renderProjections(), used by reconcileNative() for prefix/suffix diffs.
     const committedTextRef = useRef<string>('');
@@ -140,10 +145,11 @@ export function useListeners(
                         composerModel,
                         committedTextRef,
                     );
-                    if (reconcileResult?.content !== undefined) {
+                    const reconciledContent = reconcileResult?.content;
+                    if (reconciledContent !== undefined) {
                         setState((prevState) => ({
                             ...prevState,
-                            content: reconcileResult.content,
+                            content: reconciledContent,
                         }));
                     }
                 }

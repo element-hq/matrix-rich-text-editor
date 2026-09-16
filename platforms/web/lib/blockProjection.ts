@@ -96,7 +96,10 @@ export function renderProjections(
         const block = projections[i];
         const kind = block.kind;
 
-        if (kind.type === 'listItemOrdered' || kind.type === 'listItemUnordered') {
+        if (
+            kind.type === 'listItemOrdered' ||
+            kind.type === 'listItemUnordered'
+        ) {
             const ordered = kind.type === 'listItemOrdered';
             const depth = kind.depth;
 
@@ -112,7 +115,8 @@ export function renderProjections(
                 currentListDepth = depth;
                 // Indent nested lists via margin.
                 if (depth > 1) {
-                    (currentListEl as HTMLElement).style.paddingLeft = `${(depth - 1) * 24}px`;
+                    (currentListEl as HTMLElement).style.paddingLeft =
+                        `${(depth - 1) * 24}px`;
                 }
             }
 

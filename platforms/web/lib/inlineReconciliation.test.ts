@@ -102,7 +102,10 @@ describe('computePrefixSuffixDiff', () => {
     it('handles surrogate pairs (emoji) correctly', () => {
         // 😀 is U+1F600, encoded as two UTF-16 code units: 0xD83D 0xDE00
         const emoji = '\uD83D\uDE00';
-        const result = computePrefixSuffixDiff(`hello${emoji}`, `hello${emoji}world`);
+        const result = computePrefixSuffixDiff(
+            `hello${emoji}`,
+            `hello${emoji}world`,
+        );
         expect(result).toEqual({
             replaceStart: 7, // 'hello' (5) + emoji (2 UTF-16 units)
             replaceEnd: 7,
