@@ -187,6 +187,17 @@ impl ComposerModel {
         )
     }
 
+    pub fn replace_html(
+        &mut self,
+        new_html: &str,
+        external_source: HtmlSource,
+    ) -> ComposerUpdate {
+        ComposerUpdate::from(self.inner.replace_html(
+            Utf16String::from_str(new_html),
+            external_source.into(),
+        ))
+    }
+
     /// Replace the UTF-16 range `[start_utf16_codeunit, end_utf16_codeunit)` with
     /// `new_text`.  Used by the web reconciliation path after a prefix/suffix diff.
     pub fn replace_text_in(
