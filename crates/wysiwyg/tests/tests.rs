@@ -176,6 +176,18 @@ fn quote_block_kind() {
 }
 
 #[test]
+fn quote_with_inline_children_is_projected_as_quote() {
+    // HTML received from other clients may not wrap quote content in <p>.
+    let model = model_from_html("<blockquote>quoted</blockquote>");
+    let blocks = projections(&model);
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].kind, BlockKind::Quote);
+    assert!(blocks[0].in_quote);
+    assert_eq!(blocks[0].start_utf16, 0);
+    assert_eq!(blocks[0].end_utf16, 6);
+}
+
+#[test]
 fn unordered_list_items() {
     use wysiwyg::ListType;
     let model = model_from_html("<ul><li><p>a</p></li><li><p>b</p></li></ul>");

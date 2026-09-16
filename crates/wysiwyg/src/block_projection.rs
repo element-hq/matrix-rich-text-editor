@@ -280,14 +280,19 @@ fn walk_block_node<S: UnicodeString>(
 
     let has_block_children = c.children().iter().any(|ch| ch.is_block_node());
 
+    // The container's own kind applies to its content whether it holds
+    // further blocks or inline nodes directly: `<blockquote>text</blockquote>`
+    // (as received from other clients) has no `<p>` wrapper but is still a
+    // quote.
+    let child_ctx = context.entering(c);
+
     if has_block_children {
         // Structural block — descend with updated context.
-        let child_ctx = context.entering(c);
         walk_container(c, cursor, &child_ctx, projections);
     } else {
         // Leaf content block — emit a projection.
         let start = *cursor;
-        let kind = context.derive_kind(c);
+        let kind = child_ctx.derive_kind(c);
         let mut runs: Vec<InlineRun> = Vec::new();
         for child in c.children() {
             collect_inline_runs(
@@ -301,7 +306,7 @@ fn walk_block_node<S: UnicodeString>(
         projections.push(BlockProjection {
             block_id: c.handle().clone(),
             kind,
-            in_quote: context.in_quote,
+            in_quote: child_ctx.in_quote,
             start_utf16: start,
             end_utf16: *cursor,
             inline_runs: runs,
