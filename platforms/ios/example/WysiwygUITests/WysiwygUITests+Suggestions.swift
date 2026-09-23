@@ -16,7 +16,7 @@ extension WysiwygUITests {
         assertMatchingPill("Alice")
         // Mention is replaced by a pill view, so there
         // is only the space after it in the field.
-        assertTextViewContent("￼\u{00A0}")
+        assertTextViewContent("￼ ")
         assertTreeEquals(
             """
             ├>mention "Alice", https://matrix.to/#/@alice:matrix.org
@@ -43,7 +43,7 @@ extension WysiwygUITests {
         textView.typeTextCharByChar("/inv")
         XCTAssertTrue(button(.inviteCommandButton).exists)
         button(.inviteCommandButton).tap()
-        assertTextViewContent("/invite\u{00A0}")
+        assertTextViewContent("/invite ")
         assertTreeEquals(
             """
             └>"/invite "

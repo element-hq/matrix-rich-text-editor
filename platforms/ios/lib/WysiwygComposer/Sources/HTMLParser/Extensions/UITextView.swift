@@ -37,7 +37,100 @@ public extension UITextView {
             layer.sublayers?[0].insertSublayer(styleLayer, at: UInt32(layer.sublayers?.count ?? 0))
         }
     }
+
+    /// Draw list markers (bullets, ordinals) in the paragraph gutter.
+    ///
+    /// Markers are provided as a side-channel array (not in the attributed string)
+    /// so the text offsets stay in 1-to-1 correspondence with the Rust model.
+    /// Each marker carries its character index so we can find the correct
+    /// line-fragment rect even for empty list-item paragraphs.
+    ///
+    /// Uses a dedicated container CALayer so markers are reliably removed
+    /// and recreated on every update — no possibility of stale layers.
+    func drawListMarkers(_ markers: [ListMarkerInfo]) {
+        // Disable implicit Core Animation actions so layers appear/disappear
+        // instantly without crossfade or position animations.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+
+        // Add markers to the scrollable text-container layer so they move with
+        // the text content during scrolling.
+        let hostLayer = layer.sublayers?.first ?? layer
+
+        // Lazy-create a dedicated container layer the first time.
+        let container: CALayer
+        if let existing = hostLayer.sublayers?.first(where: { $0.name == listMarkerContainerLayerName }) {
+            container = existing
+            // Remove ALL previous marker sublayers.
+            container.sublayers?.forEach { $0.removeFromSuperlayer() }
+        } else {
+            container = CALayer()
+            container.name = listMarkerContainerLayerName
+            // Make the container non-interactive and covering the full view.
+            container.zPosition = 10
+            hostLayer.addSublayer(container)
+        }
+
+        // Keep the container frame up-to-date with the text view bounds.
+        container.frame = hostLayer.bounds
+
+        guard !markers.isEmpty else { return }
+
+        // Force a full layout pass so line-fragment rects reflect the current
+        // attributed text (important right after attributedText has been set).
+        layoutIfNeeded()
+        layoutManager.ensureLayout(for: textContainer)
+
+        let textLen = attributedText.length
+        // `displayScale` is 0 while the view is not attached to a screen (e.g. in unit tests).
+        let contentsScale = max(traitCollection.displayScale, 1)
+
+        for marker in markers {
+            let lineRect: CGRect
+
+            if marker.characterIndex >= textLen {
+                // Empty trailing paragraph — use the extra line fragment rect
+                // which represents the line after a trailing newline.
+                let extra = layoutManager.extraLineFragmentRect
+                if extra != .zero {
+                    lineRect = extra
+                } else {
+                    continue
+                }
+            } else {
+                let glyphIndex = layoutManager.glyphIndexForCharacter(at: marker.characterIndex)
+                lineRect = layoutManager.lineFragmentRect(forGlyphAt: glyphIndex, effectiveRange: nil)
+            }
+
+            // Build the marker layer.
+            let markerStr = NSAttributedString(
+                string: marker.text,
+                attributes: [
+                    .font: marker.font,
+                    .foregroundColor: marker.color,
+                ]
+            )
+            let markerSize = markerStr.size()
+
+            // Right-align the marker just before the headIndent boundary,
+            // with a small gap (4pt) between marker and content.
+            // Coordinates are in text-container space (same as lineRect).
+            let x = marker.headIndent - markerSize.width - 4
+            let y = lineRect.origin.y
+
+            let markerLayer = ListMarkerLayer(string: markerStr,
+                                              frame: CGRect(x: x, y: y,
+                                                            width: markerSize.width,
+                                                            height: markerSize.height),
+                                              contentsScale: contentsScale)
+            container.addSublayer(markerLayer)
+        }
+    }
 }
+
+/// Name of the layer hosting the list marker layers, so it can be found again on the next update.
+private let listMarkerContainerLayerName = "ListMarkerContainer"
 
 private final nonisolated class BackgroundStyleLayer: CALayer {
     override init() {
@@ -52,6 +145,25 @@ private final nonisolated class BackgroundStyleLayer: CALayer {
         borderWidth = style.borderWidth
         borderColor = style.borderColor.cgColor
         cornerRadius = style.cornerRadius
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
+/// A text layer that renders a list marker (bullet or ordinal) in the gutter.
+private final nonisolated class ListMarkerLayer: CATextLayer {
+    override init() {
+        super.init()
+    }
+
+    init(string: NSAttributedString, frame: CGRect, contentsScale: CGFloat) {
+        super.init()
+        self.frame = frame
+        self.string = string
+        isWrapped = false
+        self.contentsScale = contentsScale
     }
 
     required init?(coder: NSCoder) {

@@ -190,7 +190,7 @@ struct UITextViewWrapper: UIViewRepresentable {
                                      functionName: #function)
             return change
         }
-        
+
         func textViewDidChange(_ textView: UITextView) {
             Logger.textView.logDebug(
                 [
@@ -199,6 +199,10 @@ struct UITextViewWrapper: UIViewRepresentable {
                 ],
                 functionName: #function
             )
+            if textView.markedTextRange != nil {
+                textView.invalidateIntrinsicContentSize()
+                return
+            }
             didUpdateText()
             textView.toggleAutocorrectionIfNeeded()
             textView.invalidateIntrinsicContentSize()
@@ -207,6 +211,11 @@ struct UITextViewWrapper: UIViewRepresentable {
         func textViewDidChangeSelection(_ textView: UITextView) {
             Logger.textView.logDebug([textView.logSelection],
                                      functionName: #function)
+            // During IME composition (marked text), selection changes are transient.
+            // Let composition finish, then reconciliation will resync selection.
+            if textView.markedTextRange != nil {
+                return
+            }
             select(textView.selectedRange)
         }
         
