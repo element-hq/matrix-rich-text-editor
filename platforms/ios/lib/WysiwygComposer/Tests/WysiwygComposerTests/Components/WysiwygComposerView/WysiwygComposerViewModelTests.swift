@@ -25,15 +25,12 @@ struct WysiwygComposerViewModelTests {
 
         let emptyPublisher = viewModel.$isContentEmpty.removeDuplicates().dropFirst()
         let becameNonEmpty = await nextValue(of: emptyPublisher) {
-            _ = viewModel.replaceText(range: .zero, replacementText: "Test")
-            viewModel.textView.attributedText = viewModel.attributedContent.text
+            simulateTyping("Test", in: .zero)
         }
         #expect(becameNonEmpty == false)
 
         let becameEmpty = await nextValue(of: emptyPublisher) {
-            _ = viewModel.replaceText(range: .init(location: 0, length: viewModel.attributedContent.text.length),
-                                      replacementText: "")
-            viewModel.textView.attributedText = viewModel.attributedContent.text
+            simulateTyping("", in: NSRange(location: 0, length: viewModel.attributedContent.text.length))
         }
         #expect(becameEmpty == true)
     }
@@ -82,14 +79,15 @@ struct WysiwygComposerViewModelTests {
     }
 
     @Test func newlineIsNotAccepted() {
+        // Enter is driven through Rust directly (model.enter()),
+        // so replaceText returns false to prevent UIKit from also applying it.
         let shouldChange = viewModel.replaceText(range: .zero,
                                                  replacementText: "\n")
         #expect(!shouldChange)
     }
 
     @Test func reconciliateModel() {
-        _ = viewModel.replaceText(range: .zero,
-                                  replacementText: "wa")
+        simulateTyping("wa", in: .zero)
         #expect(viewModel.attributedContent.text.string == "wa")
         #expect(viewModel.attributedContent.selection == NSRange(location: 2, length: 0))
         reconciliate(to: "わ", selectedRange: NSRange(location: 1, length: 0))
@@ -98,14 +96,14 @@ struct WysiwygComposerViewModelTests {
     }
 
     @Test func reconciliateRestoresSelection() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "I\'m")
+        simulateTyping("I\'m", in: .zero)
         #expect(viewModel.attributedContent.selection == NSRange(location: 3, length: 0))
         reconciliate(to: "I’m", selectedRange: NSRange(location: 3, length: 0))
         #expect(viewModel.attributedContent.selection == NSRange(location: 3, length: 0))
 
         viewModel.clearContent()
 
-        _ = viewModel.replaceText(range: .zero, replacementText: "Some text")
+        simulateTyping("Some text", in: .zero)
         viewModel.select(range: .zero)
         #expect(viewModel.attributedContent.selection == .zero)
         reconciliate(to: "Some test", selectedRange: .zero)
@@ -113,9 +111,7 @@ struct WysiwygComposerViewModelTests {
     }
 
     @Test func plainTextMode() {
-        _ = viewModel.replaceText(range: .zero,
-                                  replacementText: "Some bold text")
-        viewModel.textView.attributedText = NSAttributedString(string: "Some bold text")
+        simulateTyping("Some bold text", in: .zero)
         viewModel.select(range: .init(location: 10, length: 4))
         viewModel.apply(.bold)
 
@@ -129,26 +125,22 @@ struct WysiwygComposerViewModelTests {
         #expect(viewModel.content.html == "Some bold <strong>text</strong>")
     }
 
-    @Test func replaceTextAfterLinkIsNotAccepted() {
+    @Test func replaceTextAfterLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 4, length: 0), replacementText: "abc")
-        #expect(!result)
+        // UIKit owns the edit, reconciliation places text outside the link.
+        simulateTyping("abc", in: .init(location: 4, length: 0))
         #expect(viewModel.content.html == "<a href=\"https://element.io\">test</a>abc")
-        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
     }
 
-    @Test func replaceTextPartiallyInsideAndAfterLinkIsNotAccepted() {
+    @Test func replaceTextPartiallyInsideAndAfterLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 3, length: 1), replacementText: "abc")
-        #expect(!result)
+        simulateTyping("abc", in: .init(location: 3, length: 1))
         #expect(viewModel.content.html == "<a href=\"https://element.io\">tes</a>abc")
-        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text) == true)
     }
 
-    @Test func replaceTextInsideLinkIsAccepted() {
+    @Test func replaceTextInsideLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        let result = viewModel.replaceText(range: .init(location: 2, length: 0), replacementText: "abc")
-        #expect(result)
+        simulateTyping("abc", in: .init(location: 2, length: 0))
         #expect(viewModel.content.html == "<a href=\"https://element.io\">teabcst</a>")
     }
 
@@ -239,6 +231,27 @@ extension WysiwygComposerViewModelTests {
 // MARK: - Helpers
 
 extension WysiwygComposerViewModelTests {
+    /// Simulate the full UIKit typing cycle: replaceText → text view update → didUpdateText.
+    /// If replaceText returns false (e.g. backspace, enter — handled by Rust directly),
+    /// skips the UIKit text mutation since Rust already updated the text view.
+    ///
+    /// - Parameters:
+    ///   - text: Replacement text (use empty string for deletions).
+    ///   - range: The range being replaced in the text view.
+    func simulateTyping(_ text: String, in range: NSRange) {
+        let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: text)
+        if shouldAcceptChange {
+            let mutable = NSMutableAttributedString(attributedString: viewModel.textView.attributedText)
+            mutable.replaceCharacters(in: range, with: text)
+            viewModel.textView.attributedText = mutable
+            viewModel.textView.selectedRange = NSRange(
+                location: range.location + (text as NSString).length,
+                length: 0
+            )
+            viewModel.didUpdateText()
+        }
+    }
+
     /// Mock typing at given location.
     ///
     /// - Parameters:
@@ -248,14 +261,7 @@ extension WysiwygComposerViewModelTests {
         guard location <= viewModel.textView.attributedText.length else {
             fatalError("Invalid location index")
         }
-
-        let range = NSRange(location: location, length: 0)
-        let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: text)
-        if shouldAcceptChange {
-            // Force apply since the text view should've updated by itself
-            viewModel.applyAtributedContent()
-            viewModel.didUpdateText()
-        }
+        simulateTyping(text, in: NSRange(location: location, length: 0))
     }
 
     /// Mock typing trailing text.
@@ -276,8 +282,12 @@ extension WysiwygComposerViewModelTests {
         let range: NSRange = location == 0 ? .zero : NSRange(location: location - 1, length: 1)
         let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: "")
         if shouldAcceptChange {
-            // Force apply since the text view should've updated by itself
-            viewModel.applyAtributedContent()
+            let mutable = NSMutableAttributedString(attributedString: viewModel.textView.attributedText)
+            if range.length > 0 {
+                mutable.replaceCharacters(in: range, with: "")
+            }
+            viewModel.textView.attributedText = mutable
+            viewModel.textView.selectedRange = NSRange(location: range.location, length: 0)
             viewModel.didUpdateText()
         }
     }

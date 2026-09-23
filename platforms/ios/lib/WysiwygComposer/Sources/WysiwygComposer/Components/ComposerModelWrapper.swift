@@ -34,6 +34,9 @@ protocol ComposerModelWrapperProtocol {
     func actionStates() -> [ComposerAction: ActionState]
     func getLinkAction() -> LinkAction
 
+    /// Block projection API
+    func getBlockProjections() -> [FfiBlockProjection]
+
     // Extensions
     func apply(_ action: ComposerAction) -> ComposerUpdate
     var reversedActions: Set<ComposerAction> { get }
@@ -162,6 +165,12 @@ final class ComposerModelWrapper: ComposerModelWrapperProtocol {
     
     func getMentionsState() -> MentionsState {
         model.getMentionsState()
+    }
+
+    // MARK: Block projection API
+
+    func getBlockProjections() -> [FfiBlockProjection] {
+        model.getBlockProjections()
     }
 
     // MARK: Extensions

@@ -129,6 +129,8 @@ extension WysiwygUITests {
         setupKeyboard(.japaneseKana)
 
         app.typeTextCharByCharUsingKeyboard("は")
+        // Confirm the IME composition so the text is committed to the Rust model.
+        app.buttons["確定"].tap()
         assertTextViewContent("は")
         assertTreeEquals(
             """
