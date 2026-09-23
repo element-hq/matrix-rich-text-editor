@@ -22,10 +22,8 @@ extension WysiwygComposerTests {
             .assertSelection(start: 8, end: 12)
             .execute {
                 // Constructed attributed string sets bold on the selected range.
-                guard let attributed = try? HTMLParser.parse(html: $0.getContentAsHtml()) else {
-                    Issue.record("Parsing unexpectedly failed")
-                    return
-                }
+                let (attributed, _) = ProjectionRenderer(style: .standard)
+                    .render(projections: $0.getBlockProjections())
                 attributed.enumerateTypedAttribute(.font, in: .init(location: 8, length: 4)) { (font: UIFont, range, _) in
                     #expect(range == .init(location: 8, length: 4))
                     #expect(font.fontDescriptor.symbolicTraits.contains(.traitBold))

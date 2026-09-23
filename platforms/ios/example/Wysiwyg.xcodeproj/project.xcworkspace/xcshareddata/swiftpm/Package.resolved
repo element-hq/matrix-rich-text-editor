@@ -1,24 +1,6 @@
 {
   "pins" : [
     {
-      "identity" : "dtcoretext",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Cocoanetics/DTCoreText",
-      "state" : {
-        "revision" : "b664664825da565b4c2b7a17dbe2369f68ae43d9",
-        "version" : "1.6.26"
-      }
-    },
-    {
-      "identity" : "dtfoundation",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Cocoanetics/DTFoundation.git",
-      "state" : {
-        "revision" : "76062513434421cb6c8a1ae1d4f8368a7ebc2da3",
-        "version" : "1.7.18"
-      }
-    },
-    {
       "identity" : "swift-custom-dump",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-custom-dump",

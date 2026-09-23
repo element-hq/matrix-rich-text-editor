@@ -31,9 +31,7 @@ extension WysiwygUITests {
         // Double tap results in selecting the last word.
         textView.doubleTap()
         deleteKey.tap()
-        // Note: iOS is removing the whitespace right after the emoji, even though it reports
-        // through `shouldChangeTextIn` that it is removing only the 3 last chars.
-        assertTextViewContent("abcde 🥳")
+        assertTextViewContent("abcde 🥳 ")
 
         // Triple tap selects the entire line.
         textView.tap(withNumberOfTaps: 3, numberOfTouches: 1)

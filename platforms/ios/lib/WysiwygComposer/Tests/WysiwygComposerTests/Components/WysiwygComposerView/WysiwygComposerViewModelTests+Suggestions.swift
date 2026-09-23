@@ -14,12 +14,12 @@ extension WysiwygComposerViewModelTests {
     @Test func atSuggestionsArePublished() async {
         let publisher = viewModel.$suggestionPattern.removeDuplicates().dropFirst()
         let pattern = await nextValue(of: publisher) {
-            _ = viewModel.replaceText(range: .zero, replacementText: "@ali")
+            simulateTyping("@ali", in: .zero)
         }
         #expect(pattern == SuggestionPattern(key: .at, text: "ali", start: 0, end: 4))
 
         let pattern2 = await nextValue(of: publisher) {
-            _ = viewModel.replaceText(range: .init(location: 4, length: 0), replacementText: "ce")
+            simulateTyping("ce", in: .init(location: 4, length: 0))
         }
         #expect(pattern2 == SuggestionPattern(key: .at, text: "alice", start: 0, end: 6))
     }
@@ -27,7 +27,7 @@ extension WysiwygComposerViewModelTests {
     @Test func hashSuggestionsArePublished() async {
         let publisher = viewModel.$suggestionPattern.removeDuplicates().dropFirst()
         let pattern = await nextValue(of: publisher) {
-            _ = viewModel.replaceText(range: .zero, replacementText: "#room")
+            simulateTyping("#room", in: .zero)
         }
         #expect(pattern == SuggestionPattern(key: .hash, text: "room", start: 0, end: 5))
     }
@@ -35,13 +35,13 @@ extension WysiwygComposerViewModelTests {
     @Test func slashSuggestionArePublished() async {
         let publisher = viewModel.$suggestionPattern.removeDuplicates().dropFirst()
         let pattern = await nextValue(of: publisher) {
-            _ = viewModel.replaceText(range: .zero, replacementText: "/inv")
+            simulateTyping("/inv", in: .zero)
         }
         #expect(pattern == SuggestionPattern(key: .slash, text: "inv", start: 0, end: 4))
     }
 
     @Test func atSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "@ali")
+        simulateTyping("@ali", in: .zero)
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
         #expect(viewModel.content.html == """
         <a href="https://matrix.to/#/@alice:matrix.org">Alice</a>\u{00A0}
@@ -49,7 +49,7 @@ extension WysiwygComposerViewModelTests {
     }
 
     @Test func atRoomSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "@ro")
+        simulateTyping("@ro", in: .zero)
         viewModel.setAtRoomMention()
         #expect(viewModel.content.html == """
         @room\u{00A0}
@@ -57,29 +57,27 @@ extension WysiwygComposerViewModelTests {
     }
 
     @Test func atMentionWithNoSuggestion() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 4))
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
-        // Text is not removed, and the
-        // mention is added after the text
+        // Selected text is replaced by the mention
         #expect(viewModel.content.html == """
-        Text<a href="https://matrix.to/#/@alice:matrix.org">Alice</a>\u{00A0}
+        <a href="https://matrix.to/#/@alice:matrix.org">Alice</a>\u{00A0}
         """)
     }
 
     @Test func atRoomMentionWithNoSuggestion() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 4))
         viewModel.setAtRoomMention()
-        // Text is not removed, and the
-        // mention is added after the text
+        // Selected text is replaced by the mention
         #expect(viewModel.content.html == """
-        Text@room\u{00A0}
+        @room\u{00A0}
         """)
     }
 
     @Test func atMentionWithNoSuggestionAtLeading() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 0))
         viewModel.setMention(url: "https://matrix.to/#/@alice:matrix.org", name: "Alice", mentionType: .user)
         // Text is not removed, and the mention is added before the text
@@ -89,7 +87,7 @@ extension WysiwygComposerViewModelTests {
     }
 
     @Test func atRoomMentionWithNoSuggestionAtLeading() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 0))
         viewModel.setAtRoomMention()
         // Text is not removed, and the mention is added before the text
@@ -99,7 +97,7 @@ extension WysiwygComposerViewModelTests {
     }
 
     @Test func hashSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "#roo")
+        simulateTyping("#roo", in: .zero)
         viewModel.setMention(url: "https://matrix.to/#/#room1:matrix.org", name: "Room 1", mentionType: .room)
         #expect(viewModel.content.html == """
         <a href="https://matrix.to/#/#room1:matrix.org">#room1:matrix.org</a>\u{00A0}
@@ -107,16 +105,17 @@ extension WysiwygComposerViewModelTests {
     }
 
     @Test func hashMentionWithNoSuggestion() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 4))
         viewModel.setMention(url: "https://matrix.to/#/#room1:matrix.org", name: "Room 1", mentionType: .room)
+        // Selected text is replaced by the mention
         #expect(viewModel.content.html == """
-        Text<a href="https://matrix.to/#/#room1:matrix.org">#room1:matrix.org</a>\u{00A0}
+        <a href="https://matrix.to/#/#room1:matrix.org">#room1:matrix.org</a>\u{00A0}
         """)
     }
 
     @Test func hashMentionWithNoSuggestionAtLeading() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "Text")
+        simulateTyping("Text", in: .zero)
         viewModel.select(range: .init(location: 0, length: 0))
         viewModel.setMention(url: "https://matrix.to/#/#room1:matrix.org", name: "Room 1", mentionType: .room)
         #expect(viewModel.content.html == """
@@ -125,7 +124,7 @@ extension WysiwygComposerViewModelTests {
     }
 
     @Test func slashSuggestionCanBeUsed() {
-        _ = viewModel.replaceText(range: .zero, replacementText: "/inv")
+        simulateTyping("/inv", in: .zero)
         viewModel.setCommand(name: "/invite")
         #expect(viewModel.content.html == """
         /invite\u{00A0}
