@@ -13,7 +13,12 @@ import {
 } from '@vector-im/matrix-wysiwyg-wasm';
 
 import { isClipboardEvent, isInputEvent } from './assert';
-import { handleInput, handleKeyDown, handleSelectionChange } from './event';
+import {
+    handleInput,
+    handleKeyDown,
+    handleSelectionChange,
+    reconcileNative,
+} from './event';
 import {
     type FormattingFunctions,
     type AllActionStates,
@@ -52,6 +57,9 @@ export function useListeners(
     });
 
     const plainTextContentRef = useRef<string>(undefined);
+    // committedTextRef tracks the last plain text rendered into the editor via
+    // renderProjections(), used by reconcileNative() for prefix/suffix diffs.
+    const committedTextRef = useRef<string>('');
 
     const [areListenersReady, setAreListenersReady] = useState(false);
 
@@ -75,7 +83,7 @@ export function useListeners(
             return;
         }
 
-        const _handleInput = (e: WysiwygInputEvent): void => {
+        const _handleInput = (e: WysiwygInputEvent): boolean => {
             try {
                 const res = handleInput(
                     e,
@@ -85,6 +93,7 @@ export function useListeners(
                     testUtilities,
                     formattingFunctions,
                     state.suggestion,
+                    committedTextRef,
                     inputEventProcessor,
                     emojiSuggestions,
                 );
@@ -113,10 +122,12 @@ export function useListeners(
                     });
                     plainTextContentRef.current =
                         composerModel.get_content_as_plain_text();
+                    return true;
                 }
             } catch {
                 onError(plainTextContentRef.current);
             }
+            return false;
         };
 
         // React uses SyntheticEvent (https://reactjs.org/docs/events.html) and
@@ -125,7 +136,23 @@ export function useListeners(
         // Also skip this if we are composing IME such as inputting accents or CJK
         const onInput = (e: Event): void => {
             if (isInputEvent(e) && !e.isComposing) {
-                _handleInput(e);
+                const handled = _handleInput(e);
+                // If processInput did not intercept this event (no Rust update),
+                // use reconcileNative() to sync the plain-text diff to Rust.
+                if (!handled) {
+                    const reconcileResult = reconcileNative(
+                        editorNode,
+                        composerModel,
+                        committedTextRef,
+                    );
+                    const reconciledContent = reconcileResult?.content;
+                    if (reconciledContent !== undefined) {
+                        setState((prevState) => ({
+                            ...prevState,
+                            content: reconciledContent,
+                        }));
+                    }
+                }
             }
         };
 
@@ -236,6 +263,7 @@ export function useListeners(
         inputEventProcessor,
         onError,
         plainTextContentRef,
+        committedTextRef,
         state.suggestion,
     ]);
 
