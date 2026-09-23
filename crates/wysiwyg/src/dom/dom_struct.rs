@@ -326,6 +326,59 @@ where
         self.document.handle()
     }
 
+    // ── Block projection API ──────────────────────────────────────────────
+
+    /// Returns a flat projection of all blocks and their inline content.
+    ///
+    /// Nested formatting containers (`<em><strong>`) are flattened into
+    /// [`crate::block_projection::AttributeSet`] values — the underlying DOM
+    /// tree is **not** modified.
+    ///
+    /// All offsets are UTF-16 code units, consistent with [`Self::find_range`],
+    /// [`Self::replace_text_in`], and the FFI `select()` / `replace_text_in()`
+    /// methods.
+    pub fn get_block_projections(
+        &self,
+    ) -> Vec<crate::block_projection::BlockProjection> {
+        let mut projections = Vec::new();
+        let mut cursor = 0usize;
+        let context = crate::block_projection::WalkContext::default();
+        crate::block_projection::walk_container(
+            self.document(),
+            &mut cursor,
+            &context,
+            &mut projections,
+        );
+        projections
+    }
+
+    /// Returns the [`DomHandle`] of the block node that contains
+    /// `offset_utf16`, or `None` if the offset is out of range.
+    ///
+    /// Scans the projection list (which already encodes the correct
+    /// separator-aware offsets) to find which block contains
+    /// `offset_utf16`.  Separators between blocks are attributed to the
+    /// preceding block.
+    pub fn block_at_offset(
+        &self,
+        offset_utf16: usize,
+    ) -> Option<crate::block_projection::BlockId> {
+        let projections = self.get_block_projections();
+        if projections.is_empty() {
+            return None;
+        }
+        // Find the first block that contains the offset.
+        // A separator sits between block[i].end_utf16 and block[i+1].start_utf16;
+        // we attribute it to block[i] by using an inclusive end comparison.
+        for p in &projections {
+            if offset_utf16 >= p.start_utf16 && offset_utf16 <= p.end_utf16 {
+                return Some(p.block_id.clone());
+            }
+        }
+        // Out-of-range: clamp to the last block.
+        projections.last().map(|p| p.block_id.clone())
+    }
+
     pub fn find_ancestor_list_item_or_self(
         &self,
         child_handle: &DomHandle,
