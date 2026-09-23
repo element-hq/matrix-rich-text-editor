@@ -66,7 +66,12 @@ describe('WysiwygViewModel', () => {
             expect(snapshot.content).toBe('');
             expect(snapshot.messageContent).toBe('');
             expect(snapshot.suggestion).toBeNull();
-            expect(snapshot.render).toEqual({ html: '', start: 0, end: 0 });
+            expect(snapshot.render).toMatchObject({
+                html: '',
+                blocks: [],
+                start: 0,
+                end: 0,
+            });
             expect(snapshot.actionStates.bold).toBe('enabled');
             expect(snapshot.actionStates.undo).toBe('disabled');
         });
@@ -138,11 +143,12 @@ describe('WysiwygViewModel', () => {
             const snapshot = vm.getSnapshot();
             expect(snapshot.content).toBe('hello');
             expect(snapshot.messageContent).toBe('hello');
-            expect(snapshot.render).toEqual({
+            expect(snapshot.render).toMatchObject({
                 html: 'hello',
                 start: 5,
                 end: 5,
             });
+            expect(snapshot.render?.blocks).toHaveLength(1);
         });
 
         it('publishes a new render object for every model rewrite', async () => {
@@ -406,6 +412,34 @@ describe('WysiwygViewModel', () => {
             const vm = await makeReadyViewModel();
             vm.setContentFromMarkdown('**bold**');
             expect(vm.getSnapshot().content).toBe('<strong>bold</strong>');
+        });
+    });
+
+    describe('native edit reconciliation', () => {
+        it('reports whether the model handled an input', async () => {
+            const vm = await makeReadyViewModel();
+            expect(vm.handleInput(inputEvent('insertText', 'a'))).toBe(true);
+            vi.spyOn(console, 'error').mockImplementation(() => undefined);
+            expect(vm.handleInput(inputEvent('insertFromDrop'))).toBe(false);
+        });
+
+        it('reports an input the processor suppressed as unhandled', async () => {
+            const vm = await makeReadyViewModel({
+                inputEventProcessor: () => null,
+                editorRef: { current: document.createElement('div') },
+            });
+            expect(vm.handleInput(inputEvent('insertText', 'a'))).toBe(false);
+        });
+
+        it('replaces a text range and re-publishes the whole content', async () => {
+            const vm = await makeReadyViewModel();
+            vm.insertText('helo');
+            const before = vm.getSnapshot().render;
+            vm.replaceTextIn('l', 2, 2);
+            const snapshot = vm.getSnapshot();
+            expect(snapshot.content).toBe('hello');
+            expect(snapshot.render).not.toBe(before);
+            expect(snapshot.render?.html).toBe('hello');
         });
     });
 

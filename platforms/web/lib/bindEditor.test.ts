@@ -61,7 +61,7 @@ describe('bindEditor', () => {
 
     it('renders initial content once the model is ready, without taking focus', async () => {
         const { editor } = await makeBoundEditor('<em>hi</em>');
-        expect(editor.innerHTML).toBe('<em>hi</em><br>');
+        expect(editor.innerHTML).toBe('<div><em>hi</em></div>');
         expect(document.activeElement).not.toBe(editor);
     });
 
@@ -71,14 +71,14 @@ describe('bindEditor', () => {
         await vm.ready;
         const editor = makeEditor();
         cleanups.push(bindEditor(vm, editor));
-        expect(editor.innerHTML).toBe('late<br>');
+        expect(editor.innerHTML).toBe('<div>late</div>');
     });
 
     it('forwards input events to the model and renders the result', async () => {
         const { vm, editor } = await makeBoundEditor();
         typeText(editor, 'abc');
         expect(vm.getSnapshot().content).toBe('abc');
-        expect(editor.innerHTML).toBe('abc<br>');
+        expect(editor.innerHTML).toBe('<div>abc</div>');
     });
 
     it('ignores input events that are part of an IME composition', async () => {
@@ -104,9 +104,9 @@ describe('bindEditor', () => {
     it('renders actions invoked on the view model', async () => {
         const { vm, editor } = await makeBoundEditor();
         vm.insertText('hello');
-        expect(editor.innerHTML).toBe('hello<br>');
+        expect(editor.innerHTML).toBe('<div>hello</div>');
         vm.setContentFromHtml('<strong>replaced</strong>');
-        expect(editor.innerHTML).toBe('<strong>replaced</strong><br>');
+        expect(editor.innerHTML).toBe('<div><strong>replaced</strong></div>');
     });
 
     it('forwards user selection changes to the model', async () => {
@@ -114,7 +114,7 @@ describe('bindEditor', () => {
         typeText(editor, 'hello');
         changeSelection(editor, 0, 5);
         vm.bold();
-        expect(editor.innerHTML).toBe('<strong>hello</strong><br>');
+        expect(editor.innerHTML).toBe('<div><strong>hello</strong></div>');
     });
 
     it('ignores the selectionchange echo of its own render', async () => {
@@ -135,6 +135,32 @@ describe('bindEditor', () => {
             new KeyboardEvent('keydown', { ctrlKey: true, key: 'b' }),
         );
         expect(vm.getSnapshot().actionStates.bold).toBe('reversed');
+    });
+
+    it('reconciles an edit the model did not intercept', async () => {
+        const { vm, editor } = await makeBoundEditor();
+        typeText(editor, 'helo');
+        // The browser applies an edit of a kind the model has no handler for
+        // (e.g. a drop) and then fires `input`.
+        const textNode = editor.querySelector('div')!.firstChild!;
+        textNode.textContent = 'hello';
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        editor.dispatchEvent(
+            new InputEvent('input', { inputType: 'insertFromDrop' }),
+        );
+        expect(vm.getSnapshot().content).toBe('hello');
+        expect(editor.innerHTML).toBe('<div>hello</div>');
+    });
+
+    it('does nothing when an unhandled input left the text unchanged', async () => {
+        const { vm, editor } = await makeBoundEditor();
+        typeText(editor, 'hello');
+        const replaceTextIn = vi.spyOn(vm, 'replaceTextIn');
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        editor.dispatchEvent(
+            new InputEvent('input', { inputType: 'insertFromDrop' }),
+        );
+        expect(replaceTextIn).not.toHaveBeenCalled();
     });
 
     it('stops forwarding events after unbind', async () => {

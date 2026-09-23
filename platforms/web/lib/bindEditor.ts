@@ -7,9 +7,15 @@ Please see LICENSE in the repository root for full details.
 
 import {
     type EditorRender,
+    type EditorSelection,
     type WysiwygViewModel,
 } from './WysiwygViewModel.js';
 import { getCurrentSelection, selectContent } from './dom.js';
+import { renderProjections } from './blockProjection.js';
+import {
+    computePrefixSuffixDiff,
+    domTextOffsetToModelOffset,
+} from './inlineReconciliation.js';
 import { isClipboardEvent, isInputEvent } from './useListeners/assert.js';
 import { type WysiwygInputEvent } from './types.js';
 
@@ -17,7 +23,9 @@ import { type WysiwygInputEvent } from './types.js';
  * Connect a contenteditable element to a {@link WysiwygViewModel}.
  *
  * This is the only place that touches the editor's DOM: it forwards browser
- * events to the view model and applies `snapshot.render` back to the element.
+ * events to the view model, renders `snapshot.render` into the element from
+ * the model's block projection, and pushes edits the model did not intercept
+ * back into it with a prefix/suffix diff of the editor's text.
  *
  * @returns a function that removes the listeners and subscription.
  */
@@ -26,6 +34,10 @@ export function bindEditor(
     editor: HTMLElement,
 ): () => void {
     let lastRender: EditorRender | null = null;
+    let lastSelection: EditorSelection | null = null;
+    // Plain text of the editor as last rendered from the model. Comparing
+    // the live text against it yields the edit to reconcile.
+    let committedText = '';
     // True while we are rewriting the editor, so that a selectionchange
     // dispatched synchronously mid-rewrite cannot feed half-written DOM
     // state back into the model.
@@ -35,13 +47,14 @@ export function bindEditor(
     // that echo, not a user action.
     let expectedSelection: [number, number] | null = null;
 
-    const applyRender = (render: EditorRender, focus: boolean): void => {
-        lastRender = render;
+    const applySelection = (
+        selection: EditorSelection,
+        focus: boolean,
+    ): void => {
         isRendering = true;
-        expectedSelection = [render.start, render.end];
+        expectedSelection = [selection.start, selection.end];
         try {
-            editor.innerHTML = render.html + '<br />';
-            selectContent(editor, render.start, render.end);
+            selectContent(editor, selection.start, selection.end);
             if (focus && document.activeElement !== editor) {
                 editor.focus();
             }
@@ -50,9 +63,36 @@ export function bindEditor(
         }
     };
 
+    const applyRender = (render: EditorRender, focus: boolean): void => {
+        lastRender = render;
+        isRendering = true;
+        try {
+            committedText = renderProjections(render.blocks, editor);
+        } finally {
+            isRendering = false;
+        }
+        applySelection(render, focus);
+    };
+
+    /**
+     * The browser changed the editor's text without the model being
+     * involved. Work out the minimal edit and push it into the model, which
+     * re-renders the editor from its own state.
+     */
+    const reconcile = (): void => {
+        const liveText = editor.textContent ?? '';
+        if (liveText === committedText) return;
+        const diff = computePrefixSuffixDiff(committedText, liveText);
+        vm.replaceTextIn(
+            diff.replacement,
+            domTextOffsetToModelOffset(editor, diff.replaceStart),
+            domTextOffsetToModelOffset(editor, diff.replaceEnd),
+        );
+    };
+
     const onInput = (e: Event): void => {
         if (isInputEvent(e) && !e.isComposing) {
-            vm.handleInput(e as WysiwygInputEvent);
+            if (!vm.handleInput(e as WysiwygInputEvent)) reconcile();
         }
     };
 
@@ -136,10 +176,15 @@ export function bindEditor(
 
     const initial = vm.getSnapshot().render;
     if (initial) onRenderChanged(initial);
+    lastSelection = vm.getSnapshot().selection;
 
     const unsubscribe = vm.subscribe(() => {
-        const render = vm.getSnapshot().render;
+        const { render, selection } = vm.getSnapshot();
         if (render && render !== lastRender) onRenderChanged(render);
+        if (selection && selection !== lastSelection) {
+            lastSelection = selection;
+            applySelection(selection, true);
+        }
     });
 
     return (): void => {
