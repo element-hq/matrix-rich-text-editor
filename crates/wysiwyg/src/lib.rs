@@ -5,6 +5,7 @@
 // Please see LICENSE in the repository root for full details.
 
 mod action_state;
+pub mod block_projection;
 mod char;
 mod composer_action;
 mod composer_model;
@@ -55,3 +56,8 @@ pub use crate::suggestion_pattern::SuggestionPattern;
 pub use crate::text_update::ReplaceAll;
 pub use crate::text_update::Selection;
 pub use crate::text_update::TextUpdate;
+
+// Block projection public API
+pub use crate::block_projection::{
+    AttributeSet, BlockId, BlockKind, BlockProjection, InlineRun, InlineRunKind,
+};
