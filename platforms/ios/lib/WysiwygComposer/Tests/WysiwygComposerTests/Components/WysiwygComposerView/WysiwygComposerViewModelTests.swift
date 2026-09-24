@@ -183,6 +183,22 @@ struct WysiwygComposerViewModelTests {
         #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text))
     }
 
+    @Test func caretKeepsQuoteIndentOnEmptyQuoteLine() {
+        mockTrailingTyping("quote")
+        viewModel.apply(.quote)
+        viewModel.enter()
+        let style = viewModel.textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
+        #expect(style?.firstLineHeadIndent == viewModel.parserStyle.quoteBlockStyle.padding.horizontal)
+    }
+
+    @Test func caretKeepsCodeBlockIndentOnEmptyCodeLine() {
+        mockTrailingTyping("code")
+        viewModel.apply(.codeBlock)
+        viewModel.enter()
+        let style = viewModel.textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
+        #expect(style?.firstLineHeadIndent == viewModel.parserStyle.codeBlockStyle.padding.horizontal)
+    }
+
     @Test func crashRecoveryUsesLatestPlainText() {
         viewModel.setHtmlContent("<strong>Some <em>text</em></strong>")
         // Force a crash

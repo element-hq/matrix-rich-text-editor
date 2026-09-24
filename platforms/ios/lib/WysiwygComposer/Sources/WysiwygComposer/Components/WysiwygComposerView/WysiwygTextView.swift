@@ -45,7 +45,12 @@ public class WysiwygTextView: UITextView {
     /// Guard against re-entrant drawListMarkers calls (e.g. layoutIfNeeded
     /// inside drawListMarkers triggers layoutSubviews which calls drawListMarkers).
     private var isDrawingMarkers = false
-    
+
+    /// Paragraph style that `updateListMarkers` installed in `typingAttributes` for the list
+    /// item the caret is in, so it can be removed again without touching a paragraph style
+    /// set elsewhere (`apply` sets the quote or code block style at the caret).
+    private var listTypingParagraphStyle: NSParagraphStyle?
+
     private let flusher = WysiwygPillsFlusher()
     
     public convenience init() {
@@ -120,19 +125,35 @@ public class WysiwygTextView: UITextView {
         isDrawingMarkers = true
         drawListMarkers(markers)
         isDrawingMarkers = false
+        updateTypingParagraphStyle(for: markers)
+    }
 
-        // Find the marker whose paragraph the cursor is currently in
-        // and update typingAttributes to match its indentation.
-        let cursorPos = selectedRange.location
-        if let activeMarker = markers.last(where: { $0.characterIndex <= cursorPos }) {
+    /// Give typed text the indentation of the list item the caret is in. A marker belongs
+    /// to the paragraph it starts, so a caret in a paragraph after the list is not indented.
+    /// Only a style installed here is ever removed here: `apply` sets the paragraph style of
+    /// quotes and code blocks for the caret right before this runs, and that must survive.
+    private func updateTypingParagraphStyle(for markers: [ListMarkerInfo]) {
+        let paragraphStart = caretParagraphStart
+        if let marker = markers.first(where: { $0.characterIndex == paragraphStart }) {
             let para = NSMutableParagraphStyle()
-            para.firstLineHeadIndent = activeMarker.headIndent
-            para.headIndent = activeMarker.headIndent
+            para.firstLineHeadIndent = marker.headIndent
+            para.headIndent = marker.headIndent
             typingAttributes[.paragraphStyle] = para
-        } else if markers.isEmpty {
-            // Exited list context — remove any list paragraph style.
-            typingAttributes.removeValue(forKey: .paragraphStyle)
+            listTypingParagraphStyle = para
+        } else if let installed = listTypingParagraphStyle {
+            if let current = typingAttributes[.paragraphStyle] as? NSParagraphStyle, current.isEqual(installed) {
+                typingAttributes.removeValue(forKey: .paragraphStyle)
+            }
+            listTypingParagraphStyle = nil
         }
+    }
+
+    /// Start of the paragraph the caret is in; the text length when the caret sits in the
+    /// empty paragraph after a trailing newline.
+    private var caretParagraphStart: Int {
+        let string = attributedText.string as NSString
+        let location = min(selectedRange.location, string.length)
+        return string.paragraphRange(for: NSRange(location: location, length: 0)).location
     }
 
     func apply(_ content: WysiwygComposerAttributedContent, committed: inout NSAttributedString) {
