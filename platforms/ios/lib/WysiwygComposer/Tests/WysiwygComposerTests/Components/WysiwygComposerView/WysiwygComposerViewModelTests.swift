@@ -127,21 +127,44 @@ struct WysiwygComposerViewModelTests {
 
     @Test func replaceTextAfterLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
-        // UIKit owns the edit, reconciliation places text outside the link.
+        // UIKit owns the edit and continues the link style; reconciliation places the text
+        // outside the link and restyles the text view to match.
         simulateTyping("abc", in: .init(location: 4, length: 0))
         #expect(viewModel.content.html == "<a href=\"https://element.io\">test</a>abc")
+        #expect(viewModel.textView.attributedText.attribute(.link, at: 4, effectiveRange: nil) == nil)
+        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text))
+        #expect(viewModel.textView.selectedRange == NSRange(location: 7, length: 0))
     }
 
     @Test func replaceTextPartiallyInsideAndAfterLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
         simulateTyping("abc", in: .init(location: 3, length: 1))
         #expect(viewModel.content.html == "<a href=\"https://element.io\">tes</a>abc")
+        #expect(viewModel.textView.attributedText.attribute(.link, at: 3, effectiveRange: nil) == nil)
+        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text))
+    }
+
+    @Test func replaceTextBeforeLink() {
+        viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
+        simulateTyping("a", in: .zero)
+        #expect(viewModel.content.html == "a<a href=\"https://element.io\">test</a>")
+        #expect(viewModel.textView.attributedText.attribute(.link, at: 0, effectiveRange: nil) == nil)
+        #expect(viewModel.textView.attributedText.attribute(.link, at: 1, effectiveRange: nil) != nil)
     }
 
     @Test func replaceTextInsideLink() {
         viewModel.applyLinkOperation(.createLink(urlString: "https://element.io", text: "test"))
         simulateTyping("abc", in: .init(location: 2, length: 0))
         #expect(viewModel.content.html == "<a href=\"https://element.io\">teabcst</a>")
+    }
+
+    @Test func replaceTextAfterInlineCodeStaysInCode() throws {
+        viewModel.setHtmlContent("<code>test</code>")
+        // Both UIKit and Rust extend inline code, so no restyling is needed here.
+        simulateTyping("a", in: .init(location: 4, length: 0))
+        #expect(viewModel.content.html == "<code>testa</code>")
+        let font = try #require(viewModel.textView.attributedText.attribute(.font, at: 4, effectiveRange: nil) as? UIFont)
+        #expect(font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace))
     }
 
     @Test func crashRecoveryUsesLatestPlainText() {
@@ -242,7 +265,12 @@ extension WysiwygComposerViewModelTests {
         let shouldAcceptChange = viewModel.replaceText(range: range, replacementText: text)
         if shouldAcceptChange {
             let mutable = NSMutableAttributedString(attributedString: viewModel.textView.attributedText)
-            mutable.replaceCharacters(in: range, with: text)
+            // Like UIKit, give the new text the attributes of the character before it (the one
+            // after it at the start of the text), except for a text attachment, which is never
+            // carried over.
+            var attributes = inheritedTypingAttributes(in: mutable, for: range)
+            attributes.removeValue(forKey: .attachment)
+            mutable.replaceCharacters(in: range, with: NSAttributedString(string: text, attributes: attributes))
             viewModel.textView.attributedText = mutable
             viewModel.textView.selectedRange = NSRange(
                 location: range.location + (text as NSString).length,
@@ -250,6 +278,14 @@ extension WysiwygComposerViewModelTests {
             )
             viewModel.didUpdateText()
         }
+    }
+
+    /// Attributes UIKit would give text typed over `range`: those of the character before
+    /// the range, or after it at the start of the text, or the typing attributes when empty.
+    private func inheritedTypingAttributes(in text: NSAttributedString, for range: NSRange) -> [NSAttributedString.Key: Any] {
+        guard text.length > 0 else { return viewModel.textView.typingAttributes }
+        let index = range.location > 0 ? range.location - 1 : 0
+        return text.attributes(at: min(index, text.length - 1), effectiveRange: nil)
     }
 
     /// Mock typing at given location.

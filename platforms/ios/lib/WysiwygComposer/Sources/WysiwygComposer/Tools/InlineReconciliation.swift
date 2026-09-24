@@ -5,7 +5,7 @@
 // Please see LICENSE in the repository root for full details.
 //
 
-import Foundation
+import UIKit
 
 // MARK: - Data types
 
@@ -63,4 +63,64 @@ public func computePrefixSuffixDiff(old: String, new: String) -> InlineDiff {
         replaceEnd: replaceEnd,
         replacement: replacement
     )
+}
+
+// MARK: - Inline style check
+
+/// Whether `displayed` and `rendered` disagree, anywhere in `range`, on the attributes that
+/// visibly mark inline formatting: the link, the inline-code background and the font's
+/// bold / italic / monospace traits.
+///
+/// UIKit gives typed text the attributes of its neighbour, so text typed at the edge of a
+/// link is displayed as part of the link although the model puts it outside. Only these
+/// attributes are compared, and fonts only by their traits, so that attributes UIKit adds on
+/// its own do not register as a mismatch. A missing font on either side is not a mismatch
+/// either: it only happens for attributed strings built without attributes.
+func hasInlineStyleMismatch(displayed: NSAttributedString,
+                            rendered: NSAttributedString,
+                            in range: NSRange) -> Bool {
+    guard range.length > 0,
+          displayed.length == rendered.length,
+          range.upperBound <= displayed.length else {
+        return false
+    }
+
+    var index = range.location
+    while index < range.upperBound {
+        var displayedRange = NSRange()
+        var renderedRange = NSRange()
+        let displayedAttrs = displayed.attributes(at: index, longestEffectiveRange: &displayedRange, in: range)
+        let renderedAttrs = rendered.attributes(at: index, longestEffectiveRange: &renderedRange, in: range)
+
+        if linkIdentifier(displayedAttrs[.link]) != linkIdentifier(renderedAttrs[.link]) {
+            return true
+        }
+        if (displayedAttrs[.backgroundColor] as? UIColor) != (renderedAttrs[.backgroundColor] as? UIColor) {
+            return true
+        }
+        if let displayedFont = displayedAttrs[.font] as? UIFont,
+           let renderedFont = renderedAttrs[.font] as? UIFont,
+           inlineTraits(of: displayedFont) != inlineTraits(of: renderedFont) {
+            return true
+        }
+
+        index = min(displayedRange.upperBound, renderedRange.upperBound)
+    }
+    return false
+}
+
+/// `.link` values can be a `URL` or a `String`; compare them by their text.
+private func linkIdentifier(_ value: Any?) -> String? {
+    switch value {
+    case let url as URL:
+        return url.absoluteString
+    case let string as String:
+        return string
+    default:
+        return nil
+    }
+}
+
+private func inlineTraits(of font: UIFont) -> UIFontDescriptor.SymbolicTraits {
+    font.fontDescriptor.symbolicTraits.intersection([.traitBold, .traitItalic, .traitMonoSpace])
 }

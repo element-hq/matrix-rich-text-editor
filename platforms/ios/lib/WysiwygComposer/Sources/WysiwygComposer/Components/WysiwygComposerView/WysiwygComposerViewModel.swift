@@ -590,6 +590,12 @@ private extension WysiwygComposerViewModel {
     /// Because ProjectionRenderer guarantees 1:1 UTF-16 offset mapping,
     /// the diff offsets can be sent directly to Rust without any HTML-range
     /// translation.
+    ///
+    /// UIKit gives typed text the attributes of its neighbour, so text typed at
+    /// the edge of a link or a mention is displayed as part of it although Rust
+    /// places it outside. Rust's rendering is authoritative: when the text view
+    /// disagrees with it over the range that just changed, the rendered content
+    /// is pushed back to the text view.
     func reconcileNative() {
         guard !textView.isDictationRunning else { return }
         let oldText = committedAttributedText.string
@@ -603,6 +609,18 @@ private extension WysiwygComposerViewModel {
             end: UInt32(diff.replaceEnd)
         )
         applyUpdate(update, skipTextViewUpdate: true)
+
+        let changedRange = NSRange(location: diff.replaceStart, length: diff.replacement.utf16.count)
+        if hasInlineStyleMismatch(displayed: textView.attributedText,
+                                  rendered: attributedContent.text,
+                                  in: changedRange) {
+            Logger.viewModel.logDebug(["Restyle \(changedRange)"], functionName: #function)
+            // Keep UIKit's caret: it is the position resynced to Rust below.
+            var corrected = attributedContent
+            corrected.selection = textView.selectedRange
+            textView.apply(corrected, committed: &committedAttributedText)
+            updateCompressedHeightIfNeeded()
+        }
 
         // Resync cursor — 1:1 UTF-16 offsets thanks to ProjectionRenderer.
         let sel = textView.selectedRange
