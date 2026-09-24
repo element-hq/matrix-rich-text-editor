@@ -167,6 +167,22 @@ struct WysiwygComposerViewModelTests {
         #expect(font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace))
     }
 
+    @Test func mentionIsOneCodeUnitInTextView() {
+        viewModel.setHtmlContent("<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a> hi")
+        // Mention (1) + " hi" (3): text view offsets equal model offsets.
+        #expect(viewModel.textView.attributedText.length == 4)
+        simulateTyping("!", in: .init(location: 4, length: 0))
+        #expect(viewModel.content.html == "<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a> hi!")
+    }
+
+    @Test func replaceTextAfterMentionIsNotStyledAsLink() {
+        viewModel.setHtmlContent("<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a>")
+        simulateTyping("a", in: .init(location: 1, length: 0))
+        #expect(viewModel.content.html == "<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a>a")
+        #expect(viewModel.textView.attributedText.attribute(.link, at: 1, effectiveRange: nil) == nil)
+        #expect(viewModel.textView.attributedText.isEqual(to: viewModel.attributedContent.text))
+    }
+
     @Test func crashRecoveryUsesLatestPlainText() {
         viewModel.setHtmlContent("<strong>Some <em>text</em></strong>")
         // Force a crash

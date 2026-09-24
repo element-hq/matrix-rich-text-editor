@@ -145,15 +145,53 @@ struct ProjectionRendererTests {
         #expect(font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace), "Code block should use a monospaced font")
     }
 
-    @Test func mentionFallbackProducesLinkAttribute() {
-        let run = FfiInlineRun(nodeId: "0", startUtf16: 0, endUtf16: 1,
-                               kind: .mention(url: "https://matrix.to/#/@alice:example.com", displayText: "Alice"))
-        let block = FfiBlockProjection(blockId: "0", kind: .paragraph, inQuote: false,
-                                       startUtf16: 0, endUtf16: 1, inlineRuns: [run])
-        let result = renderer.renderBlock(block)
-        #expect(result.string == "Alice")
+    /// A paragraph starting with a mention (one code unit in the model), optionally followed by text.
+    private func mention(followedBy text: String? = nil) -> FfiBlockProjection {
+        let url = "https://matrix.to/#/@alice:example.com"
+        var runs = [FfiInlineRun(nodeId: "0,0", startUtf16: 0, endUtf16: 1,
+                                 kind: .mention(url: url, displayText: "Alice"))]
+        var end: UInt32 = 1
+        if let text {
+            end += UInt32(text.utf16.count)
+            let attrs = FfiAttributeSet(bold: false, italic: false, strikeThrough: false,
+                                        underline: false, inlineCode: false, linkUrl: nil)
+            runs.append(FfiInlineRun(nodeId: "0,1", startUtf16: 1, endUtf16: end,
+                                     kind: .text(text: text, attributes: attrs)))
+        }
+        return FfiBlockProjection(blockId: "0", kind: .paragraph, inQuote: false,
+                                  startUtf16: 0, endUtf16: end, inlineRuns: runs)
+    }
+
+    @Test func mentionWithoutReplacerIsOneCodeUnit() {
+        let result = renderer.renderBlock(mention())
+        #expect(result.length == 1, "A mention is one code unit in the model and must stay one code unit in the text")
+        #expect(result.attribute(.attachment, at: 0, effectiveRange: nil) != nil,
+                "The placeholder draws the display text as an attachment")
         #expect(result.attribute(.link, at: 0, effectiveRange: nil) != nil,
-                "Mention without replacer should fall back to a link attribute")
+                "The placeholder keeps the mention link")
+    }
+
+    @Test func textAfterMentionKeepsItsModelOffsets() {
+        let result = renderer.renderBlock(mention(followedBy: " hi"))
+        #expect(result.length == 4)
+        #expect((result.string as NSString).substring(from: 1) == " hi")
+    }
+
+    @Test func oneCodeUnitPillFromReplacerIsUsed() {
+        let renderer = ProjectionRenderer(style: .standard, mentionReplacer: OneUnitPillReplacer())
+        let result = renderer.renderBlock(mention())
+        #expect(result.length == 1)
+        #expect(result.attribute(OneUnitPillReplacer.marker, at: 0, effectiveRange: nil) != nil,
+                "The host's pill is used as is")
+    }
+}
+
+/// A host pill: one code unit, marked so a test can tell it apart from the placeholder.
+private struct OneUnitPillReplacer: HTMLMentionReplacer {
+    static var marker: NSAttributedString.Key { .init("TestPillMarker") }
+
+    func replacementForMention(_ url: String, text: String) -> NSAttributedString? {
+        NSAttributedString(string: "\u{FFFC}", attributes: [.attachment: NSTextAttachment(), Self.marker: text])
     }
 }
 

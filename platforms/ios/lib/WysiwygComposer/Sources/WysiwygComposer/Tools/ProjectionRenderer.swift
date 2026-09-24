@@ -168,13 +168,10 @@ public struct ProjectionRenderer {
                 result.append(NSAttributedString(string: displayText, attributes: runAttrs))
 
             case let .mention(url, displayText):
-                let pill = mentionReplacer?.replacementForMention(url, text: displayText)
-                    ?? NSAttributedString(
-                        string: displayText,
-                        attributes: [.link: URL(string: url) as Any,
-                                     .foregroundColor: style.linkColor]
-                    )
-                result.append(pill)
+                result.append(mentionAttributedString(url: url,
+                                                      displayText: displayText,
+                                                      blockKind: block.kind,
+                                                      inQuote: block.inQuote))
 
             case .lineBreak:
                 result.append(NSAttributedString(
@@ -354,5 +351,58 @@ public struct ProjectionRenderer {
             para.paragraphSpacing = 0
         }
         return para
+    }
+
+    // MARK: - Mentions
+
+    /// A mention is one UTF-16 code unit in the Rust model, so it must be exactly one code
+    /// unit here as well: everything after it (selection, reconciliation) is addressed by
+    /// offset. Hosts render mentions through `mentionReplacer`; when there is none, or its
+    /// pill has the wrong length, a one-unit placeholder showing the display text is used.
+    private func mentionAttributedString(url: String,
+                                         displayText: String,
+                                         blockKind: FfiBlockKind,
+                                         inQuote: Bool) -> NSAttributedString {
+        if let pill = mentionReplacer?.replacementForMention(url, text: displayText) {
+            if pill.length == 1 {
+                return pill
+            }
+            assertionFailure("Mention replacement for \(url) must be one UTF-16 code unit, got \(pill.length)")
+        }
+        return mentionPlaceholder(url: url, displayText: displayText, blockKind: blockKind, inQuote: inQuote)
+    }
+
+    /// One-unit stand-in for a mention: an object replacement character carrying a text
+    /// attachment that draws the display text in the link colour, plus the link itself so
+    /// that tapping it still opens the permalink.
+    ///
+    /// The attachment image is rendered once, with the current trait collection; hosts that
+    /// need pills to follow appearance changes should provide a `mentionReplacer`.
+    private func mentionPlaceholder(url: String,
+                                    displayText: String,
+                                    blockKind: FfiBlockKind,
+                                    inQuote: Bool) -> NSAttributedString {
+        var attrs = baseAttributes(for: blockKind, inQuote: inQuote)
+        let font = (attrs[.font] as? UIFont) ?? UIFont.preferredFont(forTextStyle: .body)
+        attrs[.attachment] = mentionPlaceholderAttachment(displayText: displayText, font: font)
+        attrs[.foregroundColor] = style.linkColor
+        if let link = URL(string: url) {
+            attrs[.link] = link
+        }
+        return NSAttributedString(string: "\u{FFFC}", attributes: attrs)
+    }
+
+    private func mentionPlaceholderAttachment(displayText: String, font: UIFont) -> NSTextAttachment {
+        let label = NSAttributedString(string: displayText,
+                                       attributes: [.font: font, .foregroundColor: style.linkColor])
+        let size = label.size()
+        let bounds = CGRect(x: 0, y: 0, width: ceil(size.width), height: ceil(size.height))
+        let image = UIGraphicsImageRenderer(bounds: bounds).image { _ in
+            label.draw(in: bounds)
+        }
+        let attachment = NSTextAttachment(image: image)
+        // Sit the image on the line's baseline so the drawn text lines up with its neighbours.
+        attachment.bounds = CGRect(x: 0, y: font.descender, width: bounds.width, height: bounds.height)
+        return attachment
     }
 }
