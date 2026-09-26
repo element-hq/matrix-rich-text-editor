@@ -47,6 +47,7 @@ kotlin {
 dependencies {
     implementation(project(":library"))
     implementation(project(":library-compose"))
+    implementation(project(":library-compose-new"))
 
     implementation(libs.timber)
 

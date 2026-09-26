@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 rootProject.name = "RichTextEditor"
-include(":example-view", ":example-compose", ":library", ":library-compose", ":test")
+include(":example-view", ":example-compose", ":library", ":library-compose", ":library-compose-new", ":test")
