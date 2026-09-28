@@ -148,6 +148,20 @@ fn entering_with_entire_selection_across_multiple_nodes_deletes_list() {
 }
 
 #[test]
+fn entering_at_start_of_list_item_keeps_the_cursor_with_its_text() {
+    let mut model = cm("<ol><li>abcd</li><li>|ef</li></ol>");
+    model.enter();
+    assert_eq!(tx(&model), "<ol><li>abcd</li><li></li><li>|ef</li></ol>");
+}
+
+#[test]
+fn entering_at_start_of_first_list_item_keeps_the_cursor_with_its_text() {
+    let mut model = cm("<ol><li>|abcd</li></ol>");
+    model.enter();
+    assert_eq!(tx(&model), "<ol><li></li><li>|abcd</li></ol>");
+}
+
+#[test]
 fn entering_with_entire_selection_with_formatting() {
     let mut model = cm("<ol><li><b>{abcd}|</b></li></ol>");
     model.enter();

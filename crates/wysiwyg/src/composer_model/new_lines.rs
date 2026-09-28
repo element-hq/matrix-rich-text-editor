@@ -161,6 +161,8 @@ where
                         &block_location.node_handle,
                         DomNode::new_list_item(Vec::new()),
                     );
+                    // Keep the cursor with the text that moved to the next item
+                    self.state.advance_selection();
                 } else {
                     let first_leaf = first_leaf.unwrap();
                     let mut sub_tree = self.state.dom.split_sub_tree_from(
