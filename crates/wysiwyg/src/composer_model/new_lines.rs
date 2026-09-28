@@ -36,9 +36,11 @@ where
             return self.create_update_replace_all();
         }
 
-        // If the selection covered several characters, remove them first
-        if range.is_selection() {
+        // If the selection covered several characters, remove them first and
+        // start over: the range and its locations are no longer valid.
+        if s != e {
             self.do_replace_text(S::default());
+            return self.do_enter();
         }
 
         let block_location = range.deepest_block_node(None).expect(

@@ -3,12 +3,72 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-//! Replacing a selection spanning several block nodes should behave as
-//! deleting the selection first and then typing.
+//! Replacing a selection spanning several block nodes, either by typing or
+//! pressing enter, should behave as deleting the selection first.
 
 use widestring::Utf16String;
 
 use crate::tests::testutils_composer_model::{cm, tx};
+
+// region: enter
+
+#[test]
+fn enter_with_selection_across_paragraphs() {
+    let mut model = cm("<p>a{bc</p><p>de}|f</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>a</p><p>|f</p>");
+}
+
+#[test]
+fn enter_with_selection_of_a_whole_paragraph() {
+    let mut model = cm("<p>{abc}|</p><p>def</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>&nbsp;</p><p>&nbsp;|</p><p>def</p>");
+}
+
+#[test]
+fn enter_with_selection_of_a_whole_paragraph_and_the_start_of_the_next_one() {
+    let mut model = cm("<p>{abc</p><p>d}|ef</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>&nbsp;</p><p>|ef</p>");
+}
+
+#[test]
+fn enter_with_selection_ending_at_the_end_of_the_content() {
+    let mut model = cm("<p>abc</p><p>{def}|</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>abc</p><p>&nbsp;</p><p>&nbsp;|</p>");
+}
+
+#[test]
+fn enter_with_selection_across_list_items() {
+    let mut model = cm("<ul><li>o{ne</li><li>tw}|o</li></ul>");
+    model.enter();
+    assert_eq!(tx(&model), "<ul><li>o</li><li>|o</li></ul>");
+}
+
+#[test]
+fn enter_with_selection_of_a_line_break_between_paragraphs() {
+    let mut model = cm("<p>abc{</p><p>}|def</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>abc</p><p>|def</p>");
+}
+
+#[test]
+fn enter_with_selection_of_an_empty_list_item() {
+    let mut model = cm("<ul><li>a{</li><li>}|</li><li>b</li></ul>");
+    model.enter();
+    assert_eq!(tx(&model), "<ul><li>a</li><li>|</li><li>b</li></ul>");
+}
+
+#[test]
+fn enter_with_selection_within_a_paragraph() {
+    let mut model = cm("<p>a{b}|c</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>a</p><p>|c</p>");
+}
+
+// endregion
 
 // region: replace_text
 
