@@ -388,6 +388,15 @@ mod sys {
                         )?;
                         self.current_path.remove(cur_path_idx);
                     }
+                    "a" if Self::is_at_room_mention_link(child) => {
+                        // `@room` mentions don't have a valid mention URI,
+                        // they're identified by their `data-mention-type`
+                        self.current_path.push(DomNodeKind::Mention);
+                        node.append_child(DomNode::Mention(
+                            DomNode::new_at_room_mention(vec![]),
+                        ));
+                        self.current_path.remove(cur_path_idx);
+                    }
                     "a" => {
                         let is_mention = child.attrs.iter().any(|(k, v)| {
                             k == &String::from("href")
@@ -533,6 +542,10 @@ mod sys {
                 Vec::new(),
                 attributes,
             ))
+        }
+
+        fn is_at_room_mention_link(link: &PaNodeContainer) -> bool {
+            link.get_attr("data-mention-type") == Some("at-room")
         }
 
         fn new_mention<S>(
@@ -1774,6 +1787,12 @@ mod js {
 
                             let is_mention =
                                 Mention::is_valid_uri(&url.to_string());
+                            // `@room` mentions don't have a valid mention URI,
+                            // they're identified by their `data-mention-type`
+                            let is_at_room_mention = node
+                                .unchecked_ref::<Element>()
+                                .get_attribute("data-mention-type")
+                                .is_some_and(|t| t == "at-room");
                             let text = node.child_nodes().get(0);
                             let has_text = match text.clone() {
                                 Some(node) => {
@@ -1781,7 +1800,11 @@ mod js {
                                 }
                                 None => false,
                             };
-                            if has_text && is_mention {
+                            if is_at_room_mention {
+                                dom.append_child(DomNode::Mention(
+                                    DomNode::new_at_room_mention(attributes),
+                                ));
+                            } else if has_text && is_mention {
                                 dom.append_child(
                                     DomNode::Mention(
                                         DomNode::new_mention(

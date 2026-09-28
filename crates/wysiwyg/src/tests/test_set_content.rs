@@ -236,3 +236,33 @@ fn set_content_from_markdown_ordered_list_with_start() {
     model.set_content_from_markdown(&utf16("3. First")).unwrap();
     assert_eq!(tx(&model), "<ol start=\"3\"><li>First|</li></ol>");
 }
+
+#[test]
+fn set_content_from_html_with_at_room_mention_round_trips() {
+    let mut model = cm("|");
+    model.insert_at_room_mention(vec![]);
+    let html = model.get_content_as_html();
+
+    let mut restored = cm("|");
+    restored.set_content_from_html(&html).unwrap();
+    assert_eq!(restored.get_content_as_html(), html);
+    assert_eq!(
+        restored.to_tree(),
+        // The trailing space is parsed back as a non-breaking one, as usual
+        "\n├>mention \"@room\"\n└>\"\u{a0}\"\n"
+    );
+}
+
+#[test]
+fn set_content_from_html_with_at_room_mention_link() {
+    let mut model = cm("|");
+    model
+        .set_content_from_html(&utf16(
+            "<p>hi <a data-mention-type=\"at-room\" href=\"#\">@room</a></p>",
+        ))
+        .unwrap();
+    assert_eq!(
+        tx(&model),
+        "<p>hi <a data-mention-type=\"at-room\" href=\"#\" contenteditable=\"false\">@room</a>|</p>"
+    );
+}
