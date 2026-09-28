@@ -57,6 +57,7 @@ where
         self.assert_invariants();
 
         let length = new_text.len();
+        let end = self.remove_empty_blocks_inside_range(start, end);
         let range = self.find_range(start, end);
         let (start_block, end_block) =
             self.top_most_block_nodes_in_range(start, &range);
@@ -152,6 +153,47 @@ where
 
         #[cfg(any(test, feature = "assert-invariants"))]
         self.assert_invariants();
+    }
+
+    /// Empty block nodes inside the start..end range have no text to replace,
+    /// so replacing the text in the range wouldn't delete them and they'd be
+    /// merged with the block where the range starts instead of the one where
+    /// it ends. Remove them first.
+    ///
+    /// Returns the new end of the range, since each removed block node also
+    /// removes the separator between it and the previous one.
+    fn remove_empty_blocks_inside_range(
+        &mut self,
+        start: usize,
+        end: usize,
+    ) -> usize {
+        if start >= end {
+            return end;
+        }
+        let range = self.find_range(start, end);
+        let mut to_remove: Vec<DomHandle> = range
+            .locations
+            .iter()
+            .filter(|location| {
+                location.kind.is_block_kind()
+                    && !location.node_handle.is_root()
+                    && start < location.position
+                    && location.position < end
+                    && self.lookup_node(&location.node_handle).has_no_text()
+            })
+            .map(|location| location.node_handle.clone())
+            .collect();
+        if to_remove.is_empty() {
+            return end;
+        }
+        let length_before = self.text_len();
+        // Remove the last nodes first so the handles of the others are
+        // still valid. This also removes any children before their parents.
+        to_remove.sort();
+        for handle in to_remove.iter().rev() {
+            self.remove(handle);
+        }
+        end - (length_before - self.text_len())
     }
 
     /// Returns true if the start..end range contains the end of a block node,

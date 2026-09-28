@@ -208,3 +208,42 @@ fn enter_in_empty_nested_list_item_of_an_item_without_text() {
 }
 
 // endregion
+
+// region: deleting
+
+#[test]
+fn deleting_selection_across_list_items_containing_an_empty_one() {
+    let mut model = cm("<ul><li>{a</li><li></li><li>b}|</li></ul>");
+    model.backspace();
+    assert_eq!(tx(&model), "<ul><li>|</li></ul>");
+}
+
+#[test]
+fn deleting_selection_across_empty_paragraphs() {
+    let mut model = cm("<p>{a</p><p></p><p>b}|</p>");
+    model.backspace();
+    assert_eq!(tx(&model), "<p>&nbsp;|</p>");
+}
+
+#[test]
+fn deleting_selection_from_the_middle_across_an_empty_list_item() {
+    let mut model = cm("<ul><li>a{b</li><li></li><li>c}|d</li></ul>");
+    model.backspace();
+    assert_eq!(tx(&model), "<ul><li>a|d</li></ul>");
+}
+
+#[test]
+fn deleting_selection_from_the_end_of_a_list_item_across_an_empty_one() {
+    let mut model = cm("<ul><li>a{</li><li></li><li>b}|</li></ul>");
+    model.backspace();
+    assert_eq!(tx(&model), "<ul><li>a|</li></ul>");
+}
+
+#[test]
+fn deleting_selection_from_the_end_of_a_paragraph_across_empty_ones() {
+    let mut model = cm("<p>a{</p><p></p><p></p><p>b}|</p>");
+    model.backspace();
+    assert_eq!(tx(&model), "<p>a|</p>");
+}
+
+// endregion
