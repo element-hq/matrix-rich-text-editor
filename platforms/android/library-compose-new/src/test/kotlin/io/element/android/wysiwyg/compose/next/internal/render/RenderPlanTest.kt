@@ -51,24 +51,42 @@ class RenderPlanTest {
     }
 
     @Test
-    fun `line breaks are replaced by zero width spaces keeping the same length`() {
+    fun `lines with the same indentation are in the same paragraph`() {
         val plan = plan("<p>ab</p><p>c</p>")
-        assertEquals("ab${ZWSP}c", plan.visualText())
-        assertEquals(4, plan.visualLength)
-        assertEquals(listOf(0 to 3, 3 to 4), plan.paragraphStyles.map { it.start to it.end })
+        assertEquals("ab\nc", plan.visualText())
+        assertEquals(listOf(0 to 4), plan.paragraphStyles.map { it.start to it.end })
+        assertEquals(emptySet<Int>(), plan.paragraphBreaks)
     }
 
     @Test
-    fun `empty last line gets a zero width space`() {
+    fun `line breaks between paragraphs are replaced by zero width spaces keeping the same length`() {
+        val plan = plan("<ul><li>a</li><li>b</li></ul><p>c</p>")
+        assertEquals("a\nb${ZWSP}c", plan.visualText())
+        assertEquals(5, plan.visualLength)
+        assertEquals(listOf(0 to 4, 4 to 5), plan.paragraphStyles.map { it.start to it.end })
+        assertEquals(setOf(3), plan.paragraphBreaks)
+    }
+
+    @Test
+    fun `empty last line in the same paragraph gets a zero width space`() {
+        // Otherwise the paragraph indentation wouldn't apply to it
         val plan = plan("<ul><li>a</li><li></li></ul>")
-        assertEquals("a$ZWSP$ZWSP", plan.visualText())
-        assertEquals(listOf(0 to 2, 2 to 3), plan.paragraphStyles.map { it.start to it.end })
-        // Each list item has a marker at the start of its paragraph, before the indentation
+        assertEquals("a\n$ZWSP", plan.visualText())
+        assertEquals(listOf(0 to 3), plan.paragraphStyles.map { it.start to it.end })
+        // Each list item has a marker at the start of its line, before the indentation
         assertEquals(
             listOf(0 to ListMarker.Bullet(0), 2 to ListMarker.Bullet(0)),
             plan.decorations.filterIsInstance<Decoration.Marker>().map { it.offset to it.marker },
         )
         assertEquals(16f, plan.decorations.filterIsInstance<Decoration.Marker>().first().endX)
+    }
+
+    @Test
+    fun `empty last line in a new paragraph gets a zero width space`() {
+        val plan = plan("<p>a</p><ul><li></li></ul>")
+        assertEquals("a$ZWSP$ZWSP", plan.visualText())
+        assertEquals(listOf(0 to 2, 2 to 3), plan.paragraphStyles.map { it.start to it.end })
+        assertEquals(listOf(2), plan.decorations.filterIsInstance<Decoration.Marker>().map { it.offset })
     }
 
     @Test
@@ -109,7 +127,7 @@ class RenderPlanTest {
     @Test
     fun `blocks decorations cover their lines`() {
         val plan = plan("<p>a</p><blockquote><p>b</p><p>c</p></blockquote><pre><code>d</code></pre>")
-        assertEquals("a${ZWSP}b${ZWSP}c${ZWSP}d", plan.visualText())
+        assertEquals("a${ZWSP}b\nc${ZWSP}d", plan.visualText())
         val bar = plan.decorations.filterIsInstance<Decoration.Bar>().single()
         assertEquals(2 to 6, bar.start to bar.end)
         val code = plan.decorations.filterIsInstance<Decoration.BlockBackground>().single()

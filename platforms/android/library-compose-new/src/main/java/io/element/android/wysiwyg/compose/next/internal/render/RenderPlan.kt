@@ -29,19 +29,20 @@ import io.element.android.wysiwyg.compose.next.internal.document.ListMarker
 import io.element.android.wysiwyg.compose.next.internal.document.RichTextDocument
 
 /**
- * Zero width space, used to replace line breaks in the displayed text.
+ * Zero width space, used to replace line breaks between paragraphs in the displayed text.
  */
-internal const val ZWSP = "​"
+internal const val ZWSP = "\u200B"
 
 /**
  * Describes how to display a [RichTextDocument]: how its logical text must be transformed into
  * the *visual* text and which styles and decorations apply to it.
  *
- * Every line of the document is displayed as its own paragraph (so it can have its own
- * indentation). Compose already starts a new line for each paragraph and a line break at the end
- * of a paragraph would add an extra empty line, so line breaks are replaced by [ZWSP] characters.
+ * Consecutive lines with the same indentation are displayed as a single paragraph, keeping their
+ * line breaks. When the indentation changes a new paragraph must start, but Compose already
+ * starts a new line for each paragraph and a line break at the end of a paragraph would add an
+ * extra empty line, so the line break between paragraphs is replaced by a [ZWSP] character.
  * Since this replacement has the same length, it doesn't affect the indexes: only mentions and
- * empty last lines change the length of the visual text.
+ * an empty last line change the length of the visual text.
  *
  * All the ranges in [paragraphStyles], [spanStyles] and [decorations] use visual text indexes.
  */
@@ -54,6 +55,9 @@ internal class RenderPlan(
     val paragraphStyles: List<AnnotatedString.Range<ParagraphStyle>>,
     val spanStyles: List<AnnotatedString.Range<SpanStyle>>,
     val decorations: List<Decoration>,
+    /** Logical indexes of the line breaks replaced by [ZWSP] because they end a paragraph. */
+    val paragraphBreaks: Set<Int>,
+    val mapper: OffsetMapper,
 )
 
 @Immutable
@@ -96,9 +100,20 @@ internal class RenderPlanBuilder(
         val decorations = mutableListOf<Decoration>()
         val styled = mutableListOf<Styled>()
 
-        // Replace line breaks
-        text.forEachIndexed { index, char ->
-            if (char == '\n') edits += TextEdit(index, index + 1, ZWSP)
+        // Group consecutive lines with the same indentation in the same paragraph
+        val lineIndents = document.lines.map { indentPx(it.indents) }
+        val paragraphs = mutableListOf<IntRange>()
+        var firstLine = 0
+        for (index in 1..document.lines.size) {
+            if (index == document.lines.size || lineIndents[index] != lineIndents[firstLine]) {
+                paragraphs += firstLine until index
+                firstLine = index
+            }
+        }
+        // Replace the line breaks between paragraphs
+        val paragraphBreaks = paragraphs.dropLast(1).map { document.lines[it.last].end }.toSet()
+        for (index in paragraphBreaks) {
+            edits += TextEdit(index, index + 1, ZWSP)
         }
         // Replace mention placeholders with their display text
         val mentionDisplays = document.mentions.map { mention ->
@@ -106,7 +121,10 @@ internal class RenderPlanBuilder(
             edits += TextEdit(mention.offset, mention.offset + 1, display.text.ifEmpty { mention.text.ifEmpty { "@" } })
             mention to display
         }
-        // An empty last line needs some content to be styled and to have the cursor placed in it
+        // An empty last line needs some content so its paragraph's indentation applies to it and
+        // the cursor is placed after it: Android doesn't apply leading margins to the empty line
+        // after a trailing line break. This character only exists in the visual text, the text
+        // field maps the cursor and selection around it.
         val lastLine = document.lines.last()
         if (lastLine.start == lastLine.end) {
             edits += TextEdit(text.length, text.length, ZWSP)
@@ -116,36 +134,37 @@ internal class RenderPlanBuilder(
         val mapper = OffsetMapper(edits)
         val visualLength = mapper.mapEnd(text.length)
 
-        // Paragraphs, one per line
-        val paragraphRanges = document.lines.mapIndexed { index, line ->
+        // The visual range of each line, including its line break
+        val lineRanges = document.lines.mapIndexed { index, line ->
             val start = mapper.mapStart(line.start)
-            // A paragraph ends where the next one starts, right after the line break
+            // A line ends where the next one starts, right after the line break
             val end = if (index == document.lines.lastIndex) visualLength else mapper.mapStart(line.end + 1)
             start to end
         }
-        val paragraphStyles = document.lines.mapIndexed { index, line ->
-            val (start, end) = paragraphRanges[index]
-            val indentPx = indentPx(line.indents)
+        val paragraphStyles = paragraphs.map { lines ->
+            val indentPx = lineIndents[lines.first]
             val paragraphStyle = if (indentPx > 0f) {
                 val indent = with(density) { indentPx.toSp() }
                 ParagraphStyle(textIndent = TextIndent(firstLine = indent, restLine = indent))
             } else {
                 ParagraphStyle()
             }
+            AnnotatedString.Range(paragraphStyle, lineRanges[lines.first].first, lineRanges[lines.last].second)
+        }
+        document.lines.forEachIndexed { index, line ->
             line.marker?.let { marker ->
-                val endX = indentPx - with(density) { style.list.markerGap.toPx() }
-                decorations += Decoration.Marker(start, marker, endX, style.list.markerColor)
+                val endX = lineIndents[index] - with(density) { style.list.markerGap.toPx() }
+                decorations += Decoration.Marker(lineRanges[index].first, marker, endX, style.list.markerColor)
             }
             if (line.isCode && line.end > line.start) {
                 styled += Styled(line.start, line.end, style.codeBlock.spanStyle)
             }
-            AnnotatedString.Range(paragraphStyle, start, end)
         }
 
         // Blocks
         for (block in document.blocks) {
-            val start = paragraphRanges[block.firstLine].first
-            val end = paragraphRanges[block.lastLine].second
+            val start = lineRanges[block.firstLine].first
+            val end = lineRanges[block.lastLine].second
             val x = indentPx(block.outerIndents)
             decorations += when (block.kind) {
                 BlockKind.Quote -> Decoration.Bar(
@@ -198,6 +217,8 @@ internal class RenderPlanBuilder(
             paragraphStyles = paragraphStyles,
             spanStyles = mergeSpanStyles(styled, mapper),
             decorations = decorations,
+            paragraphBreaks = paragraphBreaks,
+            mapper = mapper,
         )
     }
 

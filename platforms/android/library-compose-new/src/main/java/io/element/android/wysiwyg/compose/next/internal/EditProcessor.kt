@@ -81,23 +81,32 @@ internal class EditProcessor(
             newStart = minOf(newStart, range.min)
             newEnd = maxOf(newEnd, range.max)
         }
-        val edit = minimalEdit(
-            old = buffer.originalText,
-            new = buffer.asCharSequence(),
-            oldStart = originalStart,
-            oldEnd = originalEnd,
-            newStart = newStart,
-            newEnd = newEnd,
-        )
+        val originalSelection = buffer.originalSelection
+        val replacesSelection = !originalSelection.collapsed &&
+            originalStart == originalSelection.min && originalEnd == originalSelection.max
+        val edit = if (replacesSelection) {
+            // Typing over a selection: replace all of it, even if the new text shares a prefix or
+            // suffix with it, so the new text gets the formatting at the start of the selection.
+            TextEdit(originalStart, originalEnd, buffer.asCharSequence().substring(newStart, newEnd))
+        } else {
+            minimalEdit(
+                old = buffer.originalText,
+                new = buffer.asCharSequence(),
+                oldStart = originalStart,
+                oldEnd = originalEnd,
+                newStart = newStart,
+                newEnd = newEnd,
+            )
+        }
         if (edit == null) {
             syncComposerSelection(buffer.selection)
             return
         }
 
         // Make sure the composer's selection is where the edit happened
-        syncComposerSelection(buffer.originalSelection)
+        syncComposerSelection(originalSelection)
         val result = Result()
-        applyEdit(edit, buffer.originalSelection, result)
+        applyEdit(edit, originalSelection, result)
         writeResult(buffer, result, preferBufferSelection = true)
     }
 
@@ -125,34 +134,38 @@ internal class EditProcessor(
     private fun applyEdit(edit: TextEdit, originalSelection: TextRange, result: Result) {
         val (start, end, replacement) = edit
         if (replacement.isEmpty()) {
-            val update = session.update {
-                val isSingleChar = end - start == 1
-                when {
-                    // Use backspace/delete when possible, so the composer can apply its special
-                    // behaviours (i.e. removing list items or mentions)
-                    isSingleChar && originalSelection.collapsed && originalSelection.start == end -> backspace()
-                    isSingleChar && originalSelection.collapsed && originalSelection.start == start -> delete()
-                    originalSelection.min == start && originalSelection.max == end -> backspace()
-                    else -> deleteIn(start.toUInt(), end.toUInt())
-                }
-            }
-            consume(update, result)
+            consume(deleteRange(start, end, originalSelection), result)
             return
         }
 
-        // New lines must be added as new paragraphs using `enter`
         val segments = replacement.split('\n')
         val first = segments.first()
-        if (first.isNotEmpty() || start != end) {
+        if (first.isEmpty() && start != end) {
+            // i.e. pressing enter with some text selected
+            consume(deleteRange(start, end, originalSelection), result)
+        } else if (first.isNotEmpty()) {
             consume(session.update { replaceTextIn(first, start.toUInt(), end.toUInt()) }, result)
         } else {
             syncComposerSelection(TextRange(start))
         }
+        // New lines must be added as new paragraphs using `enter`
         for (segment in segments.drop(1)) {
             consume(session.update { enter() }, result)
             if (segment.isNotEmpty()) {
                 consume(session.update { replaceText(segment) }, result)
             }
+        }
+    }
+
+    private fun deleteRange(start: Int, end: Int, originalSelection: TextRange): ComposerUpdate? = session.update {
+        val isSingleChar = end - start == 1
+        when {
+            // Use backspace/delete when possible, so the composer can apply its special
+            // behaviours (i.e. removing list items or mentions)
+            isSingleChar && originalSelection.collapsed && originalSelection.start == end -> backspace()
+            isSingleChar && originalSelection.collapsed && originalSelection.start == start -> delete()
+            originalSelection.min == start && originalSelection.max == end -> backspace()
+            else -> deleteIn(start.toUInt(), end.toUInt())
         }
     }
 

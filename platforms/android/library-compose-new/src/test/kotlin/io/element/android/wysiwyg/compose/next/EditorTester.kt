@@ -9,6 +9,7 @@ package io.element.android.wysiwyg.compose.next
 
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.ui.text.TextRange
+import io.element.android.wysiwyg.compose.next.internal.document.HtmlDocumentParser
 import io.element.android.wysiwyg.compose.next.internal.isLooselyEqualTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -91,6 +92,18 @@ internal class EditorTester(initialHtml: String = "") : AutoCloseable {
         }
     }
 
+    /** Deletes forwards like the delete key: [count] code units or the selected text. */
+    fun forwardDelete(count: Int = 1) = userEdit {
+        val current = selection
+        if (current.collapsed) {
+            replace(current.start, current.start + count, "")
+            selection = TextRange(current.start)
+        } else {
+            replace(current.min, current.max, "")
+            selection = TextRange(current.min)
+        }
+    }
+
     fun select(start: Int, end: Int = start) {
         state.textFieldState.edit { selection = TextRange(start, end) }
         // Done by a snapshotFlow in the composable
@@ -103,7 +116,17 @@ internal class EditorTester(initialHtml: String = "") : AutoCloseable {
             "Text field '$text' doesn't match document '${state.document.text}'",
             text.isLooselyEqualTo(state.document.text),
         )
-        assertEquals("Selection doesn't match the composer's one", state.composerSelection(), selection)
+        assertEquals(
+            "Selection doesn't match the composer's one",
+            state.composerSelection(),
+            TextRange(selection.min, selection.max),
+        )
+        // The composer's actual content must match the text field too, not only the last update
+        val composerText = HtmlDocumentParser.parse(state.composerHtml().orEmpty()) { state.getPlainText() }.text
+        assertTrue(
+            "Text field '$text' doesn't match the composer's content '$composerText'",
+            text.isLooselyEqualTo(composerText),
+        )
     }
 
     override fun close() = state.close()

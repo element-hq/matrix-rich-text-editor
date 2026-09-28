@@ -217,6 +217,22 @@ class RichTextEditorState internal constructor(
         getCurrentDomState().let { TextRange(it.start.toInt(), it.end.toInt()) }
     }
 
+    /** The current HTML of the Rust composer, for testing purposes. */
+    internal fun composerHtml(): String? = session.query(null) { getContentAsHtml() }
+
+    /**
+     * Backspace with the cursor at the start of the content doesn't modify the text field, so it
+     * never reaches the input transformation, but the composer can still modify the content, i.e.
+     * turning the first list item into a paragraph.
+     *
+     * @return whether the key press was handled.
+     */
+    internal fun onBackspaceAtStart(): Boolean {
+        if (selection != TextRange.Zero) return false
+        perform { backspace() }
+        return true
+    }
+
     internal fun onSelectionChanged(selection: TextRange) {
         processor.syncComposerSelection(selection)
     }
