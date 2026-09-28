@@ -3,12 +3,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
+use crate::dom::nodes::container_node::ContainerNodeKind;
 use crate::dom::nodes::dom_node::DomNodeKind;
 use crate::dom::nodes::dom_node::DomNodeKind::{
     Generic, Link, List, ListItem, Paragraph,
 };
+use crate::dom::nodes::ContainerNode;
 use crate::dom::{Dom, DomLocation};
-use crate::{ComposerModel, ComposerUpdate, DomNode, UnicodeString};
+use crate::{
+    ComposerModel, ComposerUpdate, DomHandle, DomNode, ListType, Location,
+    UnicodeString,
+};
 
 impl<S> ComposerModel<S>
 where
@@ -110,8 +115,17 @@ where
                 if list_item_has_no_text {
                     let list_handle =
                         block_location.node_handle.parent_handle();
+                    let list_item_index =
+                        block_location.node_handle.index_in_parent();
                     // Remove the current list item
                     let li = self.state.dom.remove(&block_location.node_handle);
+                    let DomNode::Container(list_item) = li else {
+                        panic!("List item is not a container")
+                    };
+                    // The items after the current one must stay after it
+                    let trailing_list =
+                        self.split_list_at(&list_handle, list_item_index);
+                    let mut moved_list_item_handle = None;
 
                     if let Some(ancestor_list_handle) =
                         self.find_closest_ancestor_of_kind(&list_handle, List)
@@ -123,18 +137,34 @@ where
                             .index_in_parent();
                         let insert_at = ancestor_list_handle
                             .child_handle(new_item_index + 1);
+                        let li = if let Some(trailing_list) = trailing_list {
+                            // Keep the following items nested in the new one
+                            DomNode::new_list_item(vec![
+                                DomNode::new_paragraph(
+                                    list_item.take_children(),
+                                ),
+                                trailing_list,
+                            ])
+                        } else {
+                            DomNode::Container(list_item)
+                        };
                         self.state.dom.insert_at(&insert_at, li);
+                        moved_list_item_handle = Some(insert_at);
                     } else {
                         // Otherwise, add new paragraph after the current list
-                        let DomNode::Container(list_item) = li else {
-                            panic!("List item is not a container")
-                        };
                         // A list item without text might still contain some formatting nodes that
                         // should be transferred to the new paragraph.
                         self.state.dom.insert_at(
                             &list_handle.next_sibling(),
                             DomNode::new_paragraph(list_item.take_children()),
                         );
+                        // And then the rest of the items in a new list
+                        if let Some(trailing_list) = trailing_list {
+                            self.state.dom.insert_at(
+                                &list_handle.next_sibling().next_sibling(),
+                                trailing_list,
+                            );
+                        }
                     }
                     // If list becomes empty, remove it too
                     if self.state.dom.lookup_container(&list_handle).is_empty()
@@ -157,6 +187,15 @@ where
                                 &list_handle.prev_sibling(),
                             );
                         }
+                    }
+                    // The moved list item may be preceded by a new line now
+                    // (i.e. if its parent list item had no text), so put the
+                    // cursor at its actual position.
+                    if let Some(handle) = moved_list_item_handle {
+                        let position =
+                            self.state.dom.location_for_node(&handle).position;
+                        self.state.start = Location::from(position);
+                        self.state.end = self.state.start;
                     }
                 } else if block_location.start_offset == 0 {
                     self.state.dom.insert_at(
@@ -190,6 +229,51 @@ where
             ),
         }
         self.create_update_replace_all()
+    }
+
+    /// Removes the items from `index` onwards from the list at `list_handle`
+    /// and returns a new list of the same type containing them, if any. An
+    /// ordered list keeps its numbering.
+    fn split_list_at(
+        &mut self,
+        list_handle: &DomHandle,
+        index: usize,
+    ) -> Option<DomNode<S>> {
+        let DomNode::Container(list) =
+            self.state.dom.lookup_node_mut(list_handle)
+        else {
+            panic!("List is not a container")
+        };
+        if list.children().len() <= index {
+            return None;
+        }
+        let mut items = Vec::new();
+        while list.children().len() > index {
+            items.push(list.remove_child(index));
+        }
+        let ContainerNodeKind::List(list_type) = list.kind().clone() else {
+            panic!("List container is not a list")
+        };
+        let attributes = match list_type {
+            ListType::Ordered => {
+                let start = list
+                    .attributes()
+                    .and_then(|attrs| {
+                        attrs.iter().find(|(key, _)| key.to_string() == "start")
+                    })
+                    .and_then(|(_, value)| value.to_string().parse().ok())
+                    .unwrap_or(1usize);
+                // The removed item was number `start + index`
+                Some(vec![(
+                    "start".into(),
+                    (start + index + 1).to_string().as_str().into(),
+                )])
+            }
+            ListType::Unordered => list.attributes().cloned(),
+        };
+        Some(DomNode::Container(ContainerNode::new_list(
+            list_type, items, attributes,
+        )))
     }
 
     fn do_new_line_in_paragraph(

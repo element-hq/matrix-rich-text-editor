@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 // Please see LICENSE in the repository root for full details.
 
-//! Replacing a selection spanning several block nodes, either by typing or
-//! pressing enter, should behave as deleting the selection first.
+//! Editing selections spanning several block nodes, which should behave as
+//! deleting the selection first, and editing around empty list items.
 
 use widestring::Utf16String;
 
@@ -155,6 +155,56 @@ fn replace_text_in_across_list_items() {
     let mut model = cm("<ul><li>|one</li><li>two</li></ul>");
     model.replace_text_in(Utf16String::from("x"), 1, 5);
     assert_eq!(tx(&model), "<ul><li>ox|wo</li></ul>");
+}
+
+// endregion
+
+// region: enter in empty list items
+
+#[test]
+fn enter_in_empty_list_item_followed_by_other_items_splits_the_list() {
+    let mut model = cm("<ul><li>a</li><li>|</li><li>b</li></ul>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<ul><li>a</li></ul><p>&nbsp;|</p><ul><li>b</li></ul>"
+    );
+}
+
+#[test]
+fn enter_in_empty_ordered_list_item_followed_by_other_items_keeps_numbering() {
+    let mut model = cm("<ol start=\"3\"><li>a</li><li>|</li><li>b</li></ol>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<ol start=\"3\"><li>a</li></ol><p>&nbsp;|</p><ol start=\"5\"><li>b</li></ol>"
+    );
+}
+
+#[test]
+fn enter_in_empty_nested_list_item_followed_by_other_items_keeps_them_nested() {
+    let mut model =
+        cm("<ol><li><p>a</p><ul><li>|</li><li>c</li></ul></li><li>d</li></ol>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<ol><li>a</li><li><p>&nbsp;|</p><ul><li>c</li></ul></li><li>d</li></ol>"
+    );
+}
+
+#[test]
+fn enter_in_last_empty_nested_list_item() {
+    let mut model =
+        cm("<ol><li><p>a</p><ul><li>|</li></ul></li><li>d</li></ol>");
+    model.enter();
+    assert_eq!(tx(&model), "<ol><li>a</li><li>|</li><li>d</li></ol>");
+}
+
+#[test]
+fn enter_in_empty_nested_list_item_of_an_item_without_text() {
+    let mut model = cm("<ol><li><ul><li>|</li></ul></li><li>d</li></ol>");
+    model.enter();
+    assert_eq!(tx(&model), "<ol><li></li><li>|</li><li>d</li></ol>");
 }
 
 // endregion
