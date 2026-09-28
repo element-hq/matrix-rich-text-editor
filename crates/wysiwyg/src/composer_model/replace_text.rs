@@ -212,6 +212,14 @@ where
                     self.do_enter();
                 }
             }
+        } else if !new_text.is_empty()
+            && self.state.dom.range_crosses_block_boundary(start, end)
+        {
+            // Replacing a range spanning several block nodes doesn't merge
+            // them properly, so delete the range first and then insert the
+            // new text, which is what the user would expect anyway.
+            self.do_replace_text_in(S::default(), start, end);
+            self.do_replace_text_in(new_text, start, start);
         } else {
             let len = new_text.len();
             self.state.dom.replace_text_in(new_text, start, end);

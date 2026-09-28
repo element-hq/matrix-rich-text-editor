@@ -154,6 +154,31 @@ where
         self.assert_invariants();
     }
 
+    /// Returns true if the start..end range contains the end of a block node,
+    /// that is, if replacing it would need merging several block nodes.
+    pub(crate) fn range_crosses_block_boundary(
+        &self,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if start >= end {
+            return false;
+        }
+        let range = self.find_range(start, end);
+        range.locations.iter().any(|location| {
+            if !location.kind.is_block_kind()
+                || location.node_handle.is_root()
+                || location.length == 0
+            {
+                return false;
+            }
+            // The length of a block node includes the separator after it, so
+            // this is the position of that separator
+            let separator = location.position + location.length - 1;
+            start <= separator && separator < end
+        })
+    }
+
     /// Removes paragraph from the closest list item ancestor, if
     /// it exists and if it is an only child.
     fn remove_list_item_child_paragraph_if_needed(
