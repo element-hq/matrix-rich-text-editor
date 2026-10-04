@@ -50,12 +50,12 @@
     "node.cjs"
   ],
   "devDependencies": {
-    "@babel/cli": "^7.23.5",
-    "@babel/plugin-transform-modules-commonjs": "^7.25.9",
+    "@babel/cli": "^8.0.0",
+    "@babel/plugin-transform-modules-commonjs": "^8.0.0",
     "@types/node": "^24.0.0",
     "jest": "^30.0.0",
     "typedoc": "^0.28.0",
-    "typescript": "^6.0.0",
+    "typescript": "^7.0.0",
     "wasm-pack": "^0.15.0"
   },
   "engines": {
