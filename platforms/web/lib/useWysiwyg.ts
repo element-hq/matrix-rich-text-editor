@@ -6,7 +6,11 @@ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE in the repository root for full details.
 */
 
-import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef } from 'react';
+import {
+    useCreateAutoDisposedViewModel,
+    useViewModel,
+} from '@element-hq/web-shared-components';
 
 import {
     type AllActionStates,
@@ -15,13 +19,26 @@ import {
     type MappedSuggestion,
     type TraceAction,
 } from './types.js';
-import { useFormattingFunctions } from './useFormattingFunctions';
-import { useComposerModel } from './useComposerModel';
-import { useListeners } from './useListeners';
+import { WysiwygViewModel } from './WysiwygViewModel.js';
+import { useWysiwygEditor } from './useWysiwygEditor.js';
 import { useTestCases } from './useTestCases';
-import { mapSuggestion } from './suggestion.js';
+import { refreshComposerView } from './dom.js';
 
 export { richToPlain, plainToRich } from './conversion';
+export { initOnce } from './initOnce.js';
+
+// MVVM API
+export { WysiwygViewModel } from './WysiwygViewModel.js';
+export type {
+    EditorRef,
+    EditorRender,
+    WysiwygTestHooks,
+    WysiwygViewActions,
+    WysiwygViewModelProps,
+    WysiwygViewSnapshot,
+} from './WysiwygViewModel.js';
+export { bindEditor } from './bindEditor.js';
+export { useWysiwygEditor } from './useWysiwygEditor.js';
 
 function useEditorFocus(
     editorRef: RefObject<HTMLElement | null>,
@@ -36,18 +53,6 @@ function useEditorFocus(
     }, [editorRef, isAutoFocusEnabled]);
 }
 
-function useEditor(): React.MutableRefObject<HTMLDivElement | null> {
-    const ref = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-        if (!ref.current?.childElementCount) {
-            ref.current?.appendChild(document.createElement('br'));
-        }
-    }, [ref]);
-
-    return ref;
-}
-
 export type WysiwygProps = {
     isAutoFocusEnabled?: boolean;
     inputEventProcessor?: InputEventProcessor;
@@ -59,6 +64,8 @@ export type UseWysiwyg = {
     ref: RefObject<HTMLDivElement | null>;
     isWysiwygReady: boolean;
     wysiwyg: FormattingFunctions;
+    /** The view model behind this hook, for consumers migrating to MVVM. */
+    viewModel: WysiwygViewModel;
     content: string | null;
     actionStates: AllActionStates;
     debug: {
@@ -71,67 +78,74 @@ export type UseWysiwyg = {
     messageContent: string | null;
 };
 
-function getEmojiKeys(emojiSuggestions?: Map<string, string>): string[] {
-    const keys = emojiSuggestions?.keys();
-    return keys ? Array.from(keys) : [];
-}
-
+/**
+ * React facade over {@link WysiwygViewModel}: creates the view model for the
+ * lifetime of the component, binds the editor element behind `ref` to it,
+ * and exposes the snapshot as plain values.
+ *
+ * `initialContent` is read once, when the view model is created. Later
+ * changes to `inputEventProcessor` and `emojiSuggestions` are forwarded.
+ */
 export function useWysiwyg(wysiwygProps?: WysiwygProps): UseWysiwyg {
-    const ref = useEditor();
+    const ref = useRef<HTMLDivElement | null>(null);
     const modelRef = useRef<HTMLDivElement>(null);
-    const [emojiKeys, setEmojiKeys] = useState(
-        getEmojiKeys(wysiwygProps?.emojiSuggestions),
+
+    const vm = useCreateAutoDisposedViewModel(
+        () =>
+            new WysiwygViewModel({
+                initialContent: wysiwygProps?.initialContent,
+                inputEventProcessor: wysiwygProps?.inputEventProcessor,
+                emojiSuggestions: wysiwygProps?.emojiSuggestions,
+                editorRef: ref,
+            }),
     );
+
+    const inputEventProcessor = wysiwygProps?.inputEventProcessor;
     useEffect(() => {
-        setEmojiKeys(getEmojiKeys(wysiwygProps?.emojiSuggestions));
-    }, [wysiwygProps?.emojiSuggestions]);
+        vm.setInputEventProcessor(inputEventProcessor);
+    }, [vm, inputEventProcessor]);
 
-    const { composerModel, onError } = useComposerModel(
-        ref,
-        wysiwygProps?.initialContent,
-        emojiKeys,
-    );
-    const { testRef, utilities: testUtilities } = useTestCases(
-        ref,
-        composerModel,
-    );
+    const emojiSuggestions = wysiwygProps?.emojiSuggestions;
+    useEffect(() => {
+        vm.setEmojiSuggestions(emojiSuggestions);
+    }, [vm, emojiSuggestions]);
 
-    const formattingFunctions = useFormattingFunctions(ref, composerModel);
-
-    const { content, actionStates, areListenersReady, suggestion } =
-        useListeners(
-            ref,
-            modelRef,
-            composerModel,
-            testUtilities,
-            formattingFunctions,
-            onError,
-            wysiwygProps?.inputEventProcessor,
-            wysiwygProps?.emojiSuggestions,
-        );
-
+    useWysiwygEditor(vm, ref);
     useEditorFocus(ref, wysiwygProps?.isAutoFocusEnabled);
 
-    const memoisedMappedSuggestion = useMemo(
-        () => mapSuggestion(suggestion),
-        [suggestion],
+    const snapshot = useViewModel(vm);
+
+    // Debug tooling for the demo app: test-case recorder and model tree.
+    const { testRef, utilities } = useTestCases(
+        ref,
+        snapshot.isReady ? vm.composerModel : null,
     );
+    useEffect(() => {
+        vm.setTestHooks(utilities);
+    }, [vm, utilities]);
+    useEffect(() => {
+        if (snapshot.render) utilities.setEditorHtml(snapshot.render.html);
+    }, [snapshot.render, utilities]);
+    useEffect(() => {
+        if (modelRef.current && vm.composerModel) {
+            refreshComposerView(modelRef.current, vm.composerModel);
+        }
+    }, [snapshot, vm]);
 
     return {
         ref,
-        isWysiwygReady: areListenersReady,
-        wysiwyg: formattingFunctions,
-        content,
-        actionStates,
+        isWysiwygReady: snapshot.isReady,
+        wysiwyg: vm,
+        viewModel: vm,
+        content: snapshot.content,
+        actionStates: snapshot.actionStates,
         debug: {
             modelRef,
             testRef,
-            resetTestCase: testUtilities.onResetTestCase,
-            traceAction: testUtilities.traceAction,
+            resetTestCase: utilities.onResetTestCase,
+            traceAction: utilities.traceAction,
         },
-        suggestion: memoisedMappedSuggestion,
-        messageContent: composerModel?.get_content_as_message_html() ?? null,
+        suggestion: snapshot.suggestion,
+        messageContent: snapshot.messageContent,
     };
 }
-
-export { initOnce } from './useComposerModel.js';

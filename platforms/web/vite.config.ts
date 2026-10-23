@@ -18,12 +18,15 @@ export default defineConfig({
         dts({
             include: [
                 'lib/useWysiwyg.ts',
-                'lib/useComposerModel.ts',
+                'lib/initOnce.ts',
                 'lib/conversion.ts',
                 'lib/types.ts',
                 'lib/constants.ts',
                 'lib/useListeners/types.ts',
                 'lib/useTestCases/types.ts',
+                'lib/WysiwygViewModel.ts',
+                'lib/bindEditor.ts',
+                'lib/useWysiwygEditor.ts',
             ],
             rollupTypes: true,
             copyDtsFiles: true,
@@ -74,13 +77,21 @@ export default defineConfig({
         rollupOptions: {
             // make sure to externalize deps that shouldn't be bundled
             // into your library
-            external: ['react', 'react-dom', '@vector-im/matrix-wysiwyg-wasm'],
+            external: [
+                'react',
+                'react-dom',
+                '@vector-im/matrix-wysiwyg-wasm',
+                '@element-hq/web-shared-components',
+            ],
             output: {
                 // Provide global variables to use in the UMD build
                 // for externalized deps
                 globals: {
                     'react': 'React',
                     'react-dom': 'ReactDOM',
+                    '@vector-im/matrix-wysiwyg-wasm': 'MatrixWysiwygWasm',
+                    '@element-hq/web-shared-components':
+                        'ElementWebSharedComponents',
                 },
             },
         },

@@ -9,7 +9,7 @@ Please see LICENSE in the repository root for full details.
 // rust generated bindings
 import { new_composer_model } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { initOnce } from './useComposerModel.js';
+import { initOnce } from './initOnce.js';
 
 const NEWLINE_CHAR = '\n';
 

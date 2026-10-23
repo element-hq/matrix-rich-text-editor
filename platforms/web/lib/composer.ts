@@ -28,13 +28,18 @@ import {
 } from './useListeners/assert';
 import { type TestUtilities } from './useTestCases/types';
 
+/**
+ * Offer an event to the consumer's `inputEventProcessor`. The processor is
+ * only invoked once an editor element exists, since it receives the element
+ * by contract.
+ */
 export function processEvent<T extends WysiwygEvent>(
     e: T,
     wysiwyg: Wysiwyg,
-    editor: HTMLElement,
+    editor: HTMLElement | null,
     inputEventProcessor?: InputEventProcessor,
 ): T | null {
-    if (inputEventProcessor) {
+    if (inputEventProcessor && editor) {
         return inputEventProcessor(e, wysiwyg, editor) as T | null;
     } else {
         return e;
@@ -46,7 +51,7 @@ export function processInput(
     composerModel: ComposerModel,
     action: TestUtilities['traceAction'],
     formattingFunctions: FormattingFunctions,
-    editor: HTMLElement,
+    editor: HTMLElement | null,
     suggestion: SuggestionPattern | null,
     inputEventProcessor?: InputEventProcessor,
     emojiSuggestions?: Map<string, string>,
@@ -196,6 +201,9 @@ export function processInput(
             );
             return action(composerModel.enter(), 'enter');
         case 'insertReplacementText': {
+            // The browser (e.g. spellcheck) has already rewritten the editor,
+            // so the model must be rebuilt from what is now in the DOM.
+            if (!editor) return;
             // Remove br tag
             const newContent = editor.innerHTML.slice(
                 0,
