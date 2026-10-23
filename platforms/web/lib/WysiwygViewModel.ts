@@ -35,6 +35,7 @@ import {
     type WysiwygInputEvent,
 } from './types.js';
 import { type AllowedMentionAttributes } from './useListeners/types.js';
+import { type BlockProjection } from './blockProjection.js';
 
 /**
  * Minimal, framework-agnostic shape of a ref to the contenteditable element.
@@ -44,17 +45,24 @@ export interface EditorRef {
     readonly current: HTMLElement | null;
 }
 
+/** A selection range in the model's UTF-16 code units. */
+export interface EditorSelection {
+    start: number;
+    end: number;
+}
+
 /**
  * What the editor element should display after the model last changed.
  * Produced by the view model, applied to the DOM by {@link bindEditor}.
  */
-export interface EditorRender {
-    /** HTML to place inside the editor element. */
+export interface EditorRender extends EditorSelection {
+    /**
+     * The document as a flat list of blocks and inline runs, carrying the
+     * model's own UTF-16 offsets. This is what the editor binding renders.
+     */
+    blocks: BlockProjection[];
+    /** The same content as HTML, for consumers that still need it. */
     html: string;
-    /** Selection start, in UTF-16 code units. */
-    start: number;
-    /** Selection end, in UTF-16 code units. */
-    end: number;
 }
 
 export interface WysiwygViewSnapshot {
@@ -74,6 +82,11 @@ export interface WysiwygViewSnapshot {
      * applies it. `null` until the model is ready.
      */
     render: EditorRender | null;
+    /**
+     * Where the model moved the caret without rewriting the content. A new
+     * object is published for each such move; `null` otherwise.
+     */
+    selection: EditorSelection | null;
 }
 
 /**
@@ -142,6 +155,7 @@ export class WysiwygViewModel
             actionStates: createDefaultActionStates(),
             suggestion: null,
             render: null,
+            selection: null,
         });
         this.disposables.track(() => this.freeModel());
         this.ready = this.initialise().catch((e: unknown) => {
@@ -185,9 +199,14 @@ export class WysiwygViewModel
     /**
      * Process an input event (native, synthetic or clipboard) against the
      * model and publish the resulting state.
+     *
+     * @returns whether the model handled the event. When it did not (an
+     * input type the model has no handler for, or one the
+     * `inputEventProcessor` suppressed), the browser's own edit is still in
+     * the DOM and the editor binding reconciles it via {@link replaceTextIn}.
      */
-    public handleInput(e: WysiwygInputEvent): void {
-        if (!this.model) return;
+    public handleInput(e: WysiwygInputEvent): boolean {
+        if (!this.model) return false;
         try {
             const update = processInput(
                 e,
@@ -199,9 +218,33 @@ export class WysiwygViewModel
                 this.props.inputEventProcessor,
                 this.props.emojiSuggestions,
             );
-            if (update) this.applyUpdate(update);
+            if (!update) return false;
+            this.applyUpdate(update);
+            return true;
         } catch {
             // The WASM model panicked; rebuild it with the last good content.
+            void this.initialise(this.plainText);
+            return true;
+        }
+    }
+
+    /**
+     * Replace the model text in `[start, end)` with `text`, in UTF-16 code
+     * units. Used by the editor binding to push an edit the browser already
+     * applied to the DOM (one the model did not intercept) into the model.
+     * The full content is re-published so the DOM is rebuilt from the model.
+     */
+    public replaceTextIn(text: string, start: number, end: number): void {
+        if (!this.model) return;
+        try {
+            this.testHooks.traceAction(
+                this.model.replace_text_in(text, start, end),
+                'replace_text_in',
+                text,
+                start,
+            );
+            this.syncFromModel();
+        } catch {
             void this.initialise(this.plainText);
         }
     }
@@ -394,19 +437,26 @@ export class WysiwygViewModel
         this.model = model;
         this.suggestionPattern = null;
         this.plainText = model.get_content_as_plain_text();
-        const html = model.get_content_as_html();
         this.snapshot.set({
             isReady: true,
-            content: html,
+            content: model.get_content_as_html(),
             messageContent: model.get_content_as_message_html(),
             actionStates: mapToAllActionStates(model.action_states()),
             suggestion: null,
-            render: {
-                html,
-                start: model.selection_start(),
-                end: model.selection_end(),
-            },
+            render: this.renderFromModel(),
+            selection: null,
         });
+    }
+
+    /** A render instruction for the model's whole current content. */
+    private renderFromModel(): EditorRender {
+        const model = this.model!;
+        return {
+            html: model.get_content_as_html(),
+            blocks: model.get_block_projections() as BlockProjection[],
+            start: model.selection_start(),
+            end: model.selection_end(),
+        };
     }
 
     private freeModel(): void {
@@ -421,7 +471,9 @@ export class WysiwygViewModel
     /** Publish the outcome of a `ComposerUpdate`. */
     private applyUpdate(update: ComposerUpdate): void {
         if (!this.model) return;
-        const replaceAll = update.text_update().replace_all;
+        const textUpdate = update.text_update();
+        const replaceAll = textUpdate.replace_all;
+        const select = textUpdate.select;
         const menuState = update.menu_state().update();
         const pattern =
             update.menu_action().suggestion()?.suggestion_pattern ?? null;
@@ -437,8 +489,14 @@ export class WysiwygViewModel
             partial.content = replaceAll.replacement_html;
             partial.render = {
                 html: replaceAll.replacement_html,
+                blocks: this.model.get_block_projections() as BlockProjection[],
                 start: replaceAll.start_utf16_codeunit,
                 end: replaceAll.end_utf16_codeunit,
+            };
+        } else if (select) {
+            partial.selection = {
+                start: select.start_utf16_codeunit,
+                end: select.end_utf16_codeunit,
             };
         }
         if (menuState) {
@@ -451,19 +509,15 @@ export class WysiwygViewModel
     /** Publish the model's full state after a wholesale content change. */
     private syncFromModel(): void {
         if (!this.model) return;
-        const html = this.model.get_content_as_html();
         this.suggestionPattern = null;
         this.plainText = this.model.get_content_as_plain_text();
+        const render = this.renderFromModel();
         this.snapshot.merge({
-            content: html,
+            content: render.html,
             messageContent: this.model.get_content_as_message_html(),
             actionStates: mapToAllActionStates(this.model.action_states()),
             suggestion: null,
-            render: {
-                html,
-                start: this.model.selection_start(),
-                end: this.model.selection_end(),
-            },
+            render,
         });
     }
 }
