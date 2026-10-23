@@ -6,6 +6,7 @@
 // Please see LICENSE in the repository root for full details.
 //
 
+import HTMLParser
 import UIKit
 
 /// An internal delegate for the `WysiwygTextView`, used to bring paste and key commands events
@@ -38,6 +39,18 @@ public class WysiwygTextView: UITextView {
     
     public var mentionDisplayHelper: MentionDisplayHelper?
     
+    /// List markers to draw in the paragraph gutter (not part of text content).
+    var listMarkers: [ListMarkerInfo] = []
+
+    /// Guard against re-entrant drawListMarkers calls (e.g. layoutIfNeeded
+    /// inside drawListMarkers triggers layoutSubviews which calls drawListMarkers).
+    private var isDrawingMarkers = false
+
+    /// Paragraph style that `updateListMarkers` installed in `typingAttributes` for the list
+    /// item the caret is in, so it can be removed again without touching a paragraph style
+    /// set elsewhere (`apply` sets the quote or code block style at the caret).
+    private var listTypingParagraphStyle: NSParagraphStyle?
+
     private let flusher = WysiwygPillsFlusher()
     
     public convenience init() {
@@ -103,6 +116,46 @@ public class WysiwygTextView: UITextView {
     ///
     /// - Parameters:
     ///   - content: Content to apply.
+    /// Update list markers and redraw them. Called from the view model
+    /// whenever the model changes, regardless of whether the full text
+    /// view update is skipped. Also updates typingAttributes so the
+    /// cursor sits at the correct indented position.
+    func updateListMarkers(_ markers: [ListMarkerInfo]) {
+        listMarkers = markers
+        isDrawingMarkers = true
+        drawListMarkers(markers)
+        isDrawingMarkers = false
+        updateTypingParagraphStyle(for: markers)
+    }
+
+    /// Give typed text the indentation of the list item the caret is in. A marker belongs
+    /// to the paragraph it starts, so a caret in a paragraph after the list is not indented.
+    /// Only a style installed here is ever removed here: `apply` sets the paragraph style of
+    /// quotes and code blocks for the caret right before this runs, and that must survive.
+    private func updateTypingParagraphStyle(for markers: [ListMarkerInfo]) {
+        let paragraphStart = caretParagraphStart
+        if let marker = markers.first(where: { $0.characterIndex == paragraphStart }) {
+            let para = NSMutableParagraphStyle()
+            para.firstLineHeadIndent = marker.headIndent
+            para.headIndent = marker.headIndent
+            typingAttributes[.paragraphStyle] = para
+            listTypingParagraphStyle = para
+        } else if let installed = listTypingParagraphStyle {
+            if let current = typingAttributes[.paragraphStyle] as? NSParagraphStyle, current.isEqual(installed) {
+                typingAttributes.removeValue(forKey: .paragraphStyle)
+            }
+            listTypingParagraphStyle = nil
+        }
+    }
+
+    /// Start of the paragraph the caret is in; the text length when the caret sits in the
+    /// empty paragraph after a trailing newline.
+    private var caretParagraphStart: Int {
+        let string = attributedText.string as NSString
+        let location = min(selectedRange.location, string.length)
+        return string.paragraphRange(for: NSRange(location: location, length: 0)).location
+    }
+
     func apply(_ content: WysiwygComposerAttributedContent, committed: inout NSAttributedString) {
         guard content.text.length == 0
             || content.text != attributedText
@@ -112,15 +165,36 @@ public class WysiwygTextView: UITextView {
         performWithoutDelegate {
             // Update committed text at the same time we update the text view.
             committed = content.text
+            // listMarkers are updated via updateListMarkers() in applyUpdate,
+            // no need to set them here.
             self.attributedText = content.text
             // Set selection to {0, 0} then to expected position
             // avoids an issue with autocapitalization.
             self.selectedRange = .zero
             self.selectedRange = content.selection
 
+            // Carry the paragraph style at the cursor position into
+            // typingAttributes so the cursor renders at the correct
+            // indented position (important for empty list item paragraphs).
+            if content.text.length > 0 {
+                let index = min(content.selection.location, content.text.length - 1)
+                if let paraStyle = content.text.attribute(.paragraphStyle, at: index, effectiveRange: nil) {
+                    self.typingAttributes[.paragraphStyle] = paraStyle
+                }
+            } else if let firstMarker = content.listMarkers.first {
+                // Empty composer in list context — build a paragraph style
+                // from the marker so the cursor sits at the indented position.
+                let para = NSMutableParagraphStyle()
+                para.firstLineHeadIndent = firstMarker.headIndent
+                para.headIndent = firstMarker.headIndent
+                self.typingAttributes[.paragraphStyle] = para
+            }
+
             // Force redraw when applying content
             // FIXME: this could be improved further as we sometimes draw twice in a row.
             self.drawBackgroundStyleLayers()
+            // List markers are drawn by updateListMarkers() called from applyUpdate.
+            self.setNeedsDisplay()
         }
     }
 
@@ -138,6 +212,17 @@ public class WysiwygTextView: UITextView {
         super.draw(rect)
 
         drawBackgroundStyleLayers()
+        // List markers are drawn via CALayer in apply() and repositioned
+        // in layoutSubviews(). No need to recreate them here.
+    }
+
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+        // Re-draw layer-based decorations whenever layout changes
+        // (e.g. scrolling, text edits that change line positions).
+        drawBackgroundStyleLayers()
+        guard !isDrawingMarkers else { return }
+        drawListMarkers(listMarkers)
     }
 
     override public func caretRect(for position: UITextPosition) -> CGRect {
