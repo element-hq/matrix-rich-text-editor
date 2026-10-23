@@ -17,7 +17,13 @@ export default defineConfig({
     // and there are only 3 tests, so serial execution is the right trade-off.
     workers: 1,
     reporter: process.env.CI
-        ? [['blob'], ['github']]
+        ? [
+              [
+                  'html',
+                  { outputFolder: 'playwright/html-report', open: 'never' },
+              ],
+              ['github'],
+          ]
         : [['html', { outputFolder: 'playwright/html-report' }]],
     use: {
         baseURL: 'http://localhost:5173',

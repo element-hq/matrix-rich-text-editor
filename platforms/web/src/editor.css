@@ -1,0 +1,90 @@
+/*
+Copyright 2026 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE in the repository root for full details.
+*/
+
+/*
+ * Formatting styles for the RTE contenteditable editor.
+ * Adapted from Element Web's EventContentBody.module.css / _common.pcss so
+ * that blockquotes, inline code, and code blocks render visibly in the demo.
+ */
+
+.rte-content {
+    pre,
+    code {
+        font-family: "Inconsolata", "Fira Code", "Apple Color Emoji", "Segoe UI Emoji", "Courier", monospace,
+            "Noto Color Emoji";
+        background-color: var(--cpd-color-bg-subtle-primary);
+    }
+
+    /* Inline code — not inside a pre block */
+    code:not(pre *) {
+        background-color: var(--cpd-color-bg-subtle-primary);
+        border: 1px solid var(--cpd-color-gray-400);
+        border-radius: var(--cpd-space-1x);
+        padding: var(--cpd-space-0-5x) var(--cpd-space-1x);
+        /* Avoid inline code blocks sticking together across multiple lines */
+        line-height: 1.375rem;
+        /* Small gap so the border doesn't butt against the surrounding text */
+        margin-right: var(--cpd-space-0-5x);
+    }
+
+    code {
+        white-space: pre-wrap; /* don't collapse spaces in inline code */
+    }
+
+    pre {
+        overflow-x: auto;
+        overflow-y: visible;
+        border: 1px solid var(--cpd-color-gray-400);
+        border-radius: var(--cpd-space-1x);
+        padding: var(--cpd-space-2x) var(--cpd-space-3x);
+        margin: var(--cpd-space-2x) 0;
+
+        &::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+
+        code {
+            white-space: pre; /* code blocks should scroll, not wrap */
+            background-color: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            margin: 0;
+        }
+    }
+
+    blockquote {
+        border-left: 2px solid var(--cpd-color-border-interactive-primary);
+        color: var(--cpd-color-text-secondary);
+        border-radius: 2px;
+        padding: 0 var(--cpd-space-3x);
+        margin-block: 0;
+        margin-inline: 0;
+    }
+
+    /* Kill browser default margins on p/ul/ol — the RTE wraps list items in <p>
+       tags, so without this every item gets a large top/bottom gap. */
+    p {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    ul,
+    ol {
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-inline-start: 1.75rem; /* ~28px, matches Element Web */
+    }
+
+    /* Cycle disc → circle → square → disc → … for nested unordered lists */
+    ul                   { list-style-type: disc;   }
+    ul ul                { list-style-type: circle; }
+    ul ul ul             { list-style-type: square; }
+    ul ul ul ul          { list-style-type: disc;   }
+    ul ul ul ul ul       { list-style-type: circle; }
+    ul ul ul ul ul ul    { list-style-type: square; }
+}

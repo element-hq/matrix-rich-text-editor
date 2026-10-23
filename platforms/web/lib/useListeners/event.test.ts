@@ -8,8 +8,7 @@ Please see LICENSE in the repository root for full details.
 
 import { initAsync, new_composer_model } from '@vector-im/matrix-wysiwyg-wasm';
 
-import { extractActionStates, handleKeyDown } from './event';
-import { type FormatBlockEvent } from './types';
+import { extractActionStates, getInputFromKeyDown } from './event';
 import { type FormattingFunctions } from '../types';
 import { WINDOWS_UA, mockUserAgent } from '../utils.test';
 
@@ -34,7 +33,7 @@ describe('getFormattingState', () => {
     });
 });
 
-describe('handleKeyDown', () => {
+describe('getInputFromKeyDown', () => {
     let originalUserAgent = '';
 
     beforeAll(() => {
@@ -62,28 +61,58 @@ describe('handleKeyDown', () => {
         ['sendMessage', { metaKey: true, key: 'Enter' }],
         ['formatStrikeThrough', { shiftKey: true, altKey: true, key: '5' }],
         ['deleteWordBackward', { ctrlKey: true, key: 'Backspace' }, WINDOWS_UA],
-    ])(
-        'Should dispatch %s when %o',
-        async (expected, input, userAgent?: string) => {
-            if (userAgent) {
-                mockUserAgent(userAgent);
-            }
+    ])('Should resolve %s from %o', (expected, input, userAgent?: string) => {
+        if (userAgent) {
+            mockUserAgent(userAgent);
+        }
 
-            const elem = document.createElement('input');
-            const event = new KeyboardEvent('keydown', input);
+        const event = new KeyboardEvent('keydown', input);
+        const model = new_composer_model();
 
-            const result = new Promise((resolve) => {
-                elem.addEventListener('wysiwygInput', (({
-                    detail: { blockType },
-                }: FormatBlockEvent) => {
-                    resolve(blockType);
-                }) as EventListener);
-            });
+        const result = getInputFromKeyDown(
+            event,
+            model,
+            {} as FormattingFunctions,
+            document.createElement('div'),
+        );
+        expect(result).toBe(expected);
+    });
 
-            const model = new_composer_model();
+    it('Should offer other key presses to the inputEventProcessor', () => {
+        const event = new KeyboardEvent('keydown', { key: 'a' });
+        const model = new_composer_model();
+        const editor = document.createElement('div');
+        const inputEventProcessor = vi.fn((e) => e);
 
-            handleKeyDown(event, elem, model, {} as FormattingFunctions);
-            expect(await result).toBe(expected);
-        },
-    );
+        const result = getInputFromKeyDown(
+            event,
+            model,
+            {} as FormattingFunctions,
+            editor,
+            inputEventProcessor,
+        );
+
+        expect(result).toBeNull();
+        expect(inputEventProcessor).toHaveBeenCalledWith(
+            event,
+            expect.anything(),
+            editor,
+        );
+    });
+
+    it('Should not call the inputEventProcessor without an editor', () => {
+        const event = new KeyboardEvent('keydown', { key: 'a' });
+        const model = new_composer_model();
+        const inputEventProcessor = vi.fn((e) => e);
+
+        getInputFromKeyDown(
+            event,
+            model,
+            {} as FormattingFunctions,
+            null,
+            inputEventProcessor,
+        );
+
+        expect(inputEventProcessor).not.toHaveBeenCalled();
+    });
 });
