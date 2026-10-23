@@ -12,6 +12,11 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     plugins: [react()],
     base: '',
+    define: {
+        // counterpart (used by compound-web) reads process.env.NODE_ENV at runtime;
+        // Vite doesn't provide a process polyfill in the browser, so define it here.
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
+    },
     build: {
         rollupOptions: {
             output: {
