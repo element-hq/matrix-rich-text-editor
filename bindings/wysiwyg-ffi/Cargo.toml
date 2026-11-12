@@ -18,7 +18,7 @@ assert-invariants = ["wysiwyg/assert-invariants"]
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-html-escape = "0.2.11"
+html-escape = "0.3.0"
 matrix_mentions = { path = "../../crates/matrix_mentions" }
 uniffi = { workspace = true }
 uniffi_macros = { workspace = true }
