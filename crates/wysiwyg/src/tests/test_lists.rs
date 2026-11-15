@@ -598,3 +598,38 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn toggling_list_off_repeatedly_after_nested_list_unwinds_one_level_at_a_time()
+{
+    let mut model = cm("<ul><li><ul><li><ul><li>foo</li><li>bar|</li></ul></li></ul></li></ul>");
+    model.unordered_list();
+    assert_eq!(
+        tx(&model),
+        "<ul><li><ul><li><ul><li>foo</li></ul><p>bar|</p></li></ul></li></ul>"
+    );
+    // The paragraph is still in a list item, after a nested list: toggling
+    // again takes it out of that item's list, rather than wrapping the item
+    // in another list item.
+    model.unordered_list();
+    assert_eq!(
+        tx(&model),
+        "<ul><li><ul><li>foo</li></ul><p>bar|</p></li></ul>"
+    );
+    model.unordered_list();
+    assert_eq!(tx(&model), "<ul><li>foo</li></ul><p>bar|</p>");
+}
+
+#[test]
+fn toggling_list_on_paragraph_after_list_with_empty_nested_item_creates_list() {
+    // The lists before the paragraph are in the extended selection, but the
+    // paragraph itself isn't in a list item.
+    let mut model = cm(
+        "<ul><li><ul><li></li></ul></li></ul><p>|foo</p><ul><li>bar</li></ul>",
+    );
+    model.unordered_list();
+    assert_eq!(
+        tx(&model),
+        "<ul><li><ul><li></li></ul></li><li>|foo</li><li>bar</li></ul>"
+    );
+}
