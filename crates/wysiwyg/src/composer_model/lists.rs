@@ -181,8 +181,16 @@ where
         list_type: ListType,
         range: Range,
     ) -> ComposerUpdate<S> {
-        let list_loc_in_range =
-            range.locations.iter().find(|l| l.kind == DomNodeKind::List);
+        // Prefer a list that the selection is in over one that only sits
+        // before it (e.g. a nested list earlier in the same list item):
+        // the latter says nothing about whether the selection is in a list.
+        let list_loc_in_range = range
+            .locations
+            .iter()
+            .filter(|l| l.kind == DomNodeKind::List)
+            .min_by_key(|l| {
+                l.relative_position() == DomLocationPosition::Before
+            });
         let list_is_before_selection = list_loc_in_range.is_some_and(|l| {
             l.relative_position() == DomLocationPosition::Before
         });
@@ -195,11 +203,23 @@ where
         if list_loc_in_range.is_some()
             && (!list_is_before_selection || list_is_last_node_in_selection)
         {
-            if let Some(block_location) = range.deepest_block_node(None) {
-                self.single_leaf_list_toggle(
-                    list_type,
-                    &block_location.node_handle,
-                )
+            let block_handle = range
+                .deepest_block_node(None)
+                .map(|location| location.node_handle.clone());
+            if let Some(handle) = block_handle {
+                // A list being in the range doesn't mean that the block the
+                // selection is in is part of one (e.g. a paragraph next to
+                // a list with an empty item): that block gets a new list.
+                let in_list_item = self
+                    .state
+                    .dom
+                    .find_ancestor_list_item_or_self(&handle)
+                    .is_some();
+                if in_list_item {
+                    self.single_leaf_list_toggle(list_type, &handle)
+                } else {
+                    self.create_list_from_range(list_type, range)
+                }
             } else {
                 // TODO: handle cases where a list is already present in the extended selection.
                 panic!("Partially creating/removing list is not handled yet")
@@ -261,7 +281,11 @@ where
     ) -> ComposerUpdate<S> {
         let list_node = self.state.dom.lookup_node_mut(list_handle);
         if let DomNode::Container(list) = list_node {
-            list.set_list_type(list_type);
+            // Only a list has a list type: leave anything else alone
+            // rather than panic.
+            if list.get_list_type().is_some() {
+                list.set_list_type(list_type);
+            }
         }
         self.create_update_replace_all()
     }

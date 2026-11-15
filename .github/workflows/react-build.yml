@@ -17,7 +17,10 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: the Playwright version in use has no Chromium build for
+    # ubuntu-latest (26.04) yet ("Playwright does not support chromium on
+    # ubuntu26.04-x64"). Go back to ubuntu-latest once Playwright supports it.
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
