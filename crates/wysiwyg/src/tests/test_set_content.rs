@@ -176,6 +176,24 @@ fn set_contents_with_line_break_in_code_block() {
 }
 
 #[test]
+fn set_content_from_markdown_paragraph_followed_by_list() {
+    let mut model = cm("|");
+    model
+        .set_content_from_markdown(&utf16("intro\n\n* a\n* b"))
+        .unwrap();
+    assert_eq!(tx(&model), "<p>intro</p><ul><li>a</li><li>b|</li></ul>");
+}
+
+#[test]
+fn set_content_from_markdown_paragraph_followed_by_codeblock() {
+    let mut model = cm("|");
+    model
+        .set_content_from_markdown(&utf16("intro\n\n```\ncode\n```"))
+        .unwrap();
+    assert_eq!(tx(&model), "<p>intro</p><pre><code>code|</code></pre>");
+}
+
+#[test]
 fn set_content_from_markdown_blockquote() {
     let mut model = cm("|");
     model.set_content_from_markdown(&utf16("> quote")).unwrap();

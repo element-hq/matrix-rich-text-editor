@@ -38,8 +38,14 @@ impl MarkdownHTMLParser {
         // correct way to handle a text block in Markdown. But it breaks our
         // assumption regarding the HTML markup. So let's remove it.
         let html = {
-            // only remove the external <p> if there is only one
-            if html.starts_with("<p>") && html.matches("<p>").count() == 1 {
+            // only remove the external <p> if there is only one, and it wraps
+            // the whole content: a single paragraph followed by another block
+            // (a list, a code block) must keep it, or we'd cut the end off
+            // that block's closing tag instead.
+            if html.starts_with("<p>")
+                && html.ends_with("</p>\n")
+                && html.matches("<p>").count() == 1
+            {
                 let p = "<p>".len();
                 let ppnl = "</p>\n".len();
 
