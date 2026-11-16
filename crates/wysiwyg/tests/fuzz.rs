@@ -12,6 +12,10 @@
 //! FUZZ_SEED=7 FUZZ_CASES=200000 FUZZ_OPS=60 cargo test ... (same as above)
 //! ```
 //!
+//! `FUZZ_SKIP=ReplaceHtml,Mention,add_line_break` leaves out the operations
+//! whose name (an `Op` variant or a model method) contains one of those
+//! strings, e.g. to match what one client calls or to get past known bugs.
+//!
 //! Add `--features assert-invariants` to also treat DOM invariant
 //! violations as failures (much noisier: these are not production panics).
 //!
@@ -477,6 +481,8 @@ fn fuzz() {
     let seed = env("FUZZ_SEED", 1);
     let cases = env("FUZZ_CASES", 20_000);
     let max_ops = env("FUZZ_OPS", 40) as usize;
+    let skip = std::env::var("FUZZ_SKIP").unwrap_or_default();
+    let skip: Vec<&str> = skip.split(',').filter(|s| !s.is_empty()).collect();
 
     panic::set_hook(Box::new(|info| {
         let site = info
@@ -507,6 +513,13 @@ fn fuzz() {
                 random_op(&mut rng, m.state.dom.text_len())
             };
             op.snap(&m);
+            let name = match &op {
+                Op::Simple(i) => SIMPLE[*i].0.to_owned(),
+                other => format!("{other:?}"),
+            };
+            if skip.iter().any(|s| name.contains(s)) {
+                continue;
+            }
             // A panicking op is recorded and then rolled back, so that it
             // does not hide whatever the rest of the case would have found.
             let before = (m.clone(), sugg.clone());
