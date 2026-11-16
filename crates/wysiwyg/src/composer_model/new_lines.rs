@@ -317,9 +317,14 @@ where
                 .insert_at(&insert_at, sub_tree.take_document());
         }
 
-        self.state
-            .dom
-            .insert_at(&insert_at, DomNode::new_paragraph(Vec::new()));
+        // The new block becomes a sibling of the ancestor block: next to a
+        // list item, it can only be another list item.
+        let new_block = if ancestor_block_location.kind == ListItem {
+            DomNode::new_list_item(Vec::new())
+        } else {
+            DomNode::new_paragraph(Vec::new())
+        };
+        self.state.dom.insert_at(&insert_at, new_block);
     }
 }
 
