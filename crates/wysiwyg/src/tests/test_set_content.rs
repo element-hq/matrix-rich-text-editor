@@ -236,3 +236,18 @@ fn set_content_from_markdown_ordered_list_with_start() {
     model.set_content_from_markdown(&utf16("3. First")).unwrap();
     assert_eq!(tx(&model), "<ol start=\"3\"><li>First|</li></ol>");
 }
+
+#[test]
+fn set_content_from_html_with_empty_container_in_code_block() {
+    // Used to panic when joining the code block's (empty) lines.
+    let mut model = cm("|");
+    model
+        .set_content_from_html(&utf16(
+            "<pre><code><blockquote></blockquote></code></pre>",
+        ))
+        .unwrap();
+    assert_eq!(
+        tx(&model),
+        "<pre><code><blockquote>|</blockquote></code></pre>"
+    );
+}

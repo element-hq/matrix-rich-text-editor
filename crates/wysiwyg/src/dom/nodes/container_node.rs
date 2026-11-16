@@ -469,9 +469,12 @@ where
         if other_node.kind != self.kind {
             panic!("Trying to push a non-matching container kind");
         }
-        let last_child = self.children.last().unwrap();
-        let other_node_first_child = other_node.get_child(0).unwrap();
-        if last_child.can_push(other_node_first_child) {
+        // Either container may be empty (e.g. two adjacent empty code blocks)
+        let can_join_children = matches!(
+            (self.children.last(), other_node.get_child(0)),
+            (Some(last), Some(first)) if last.can_push(first)
+        );
+        if can_join_children {
             let mut next_child = other_node.remove_child(0);
             self.last_child_mut().unwrap().push(&mut next_child);
         }
