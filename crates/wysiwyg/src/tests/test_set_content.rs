@@ -236,3 +236,31 @@ fn set_content_from_markdown_ordered_list_with_start() {
     model.set_content_from_markdown(&utf16("3. First")).unwrap();
     assert_eq!(tx(&model), "<ol start=\"3\"><li>First|</li></ol>");
 }
+
+#[test]
+fn set_content_from_html_moves_blocks_out_of_inline_nodes() {
+    // Used to be loaded as is, giving a Dom that enter, replace_text etc.
+    // then panicked on.
+    let mut model = cm("|");
+    model
+        .set_content_from_html(&"<b><p>a</p></b>".into())
+        .unwrap();
+    assert_eq!(tx(&model), "<p><b>a|</b></p>");
+    model.enter();
+    model.replace_text("b".into());
+    assert_eq!(tx(&model), "<p><b>a</b></p><p><b>b|</b></p>");
+
+    model
+        .set_content_from_html(
+            &"a<b>b<i>c<ul><li>d</li></ul></i></b>\
+            <a href=\"https://matrix.org\"><blockquote>e</blockquote></a>"
+                .into(),
+        )
+        .unwrap();
+    assert_eq!(
+        tx(&model),
+        "<p>a<b>b<i>c</i></b></p>\
+        <ul><li><b><i>d</i></b></li></ul>\
+        <blockquote><a href=\"https://matrix.org\">e|</a></blockquote>"
+    );
+}
