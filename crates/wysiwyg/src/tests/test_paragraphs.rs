@@ -527,3 +527,19 @@ fn several_new_lines_inside_block_node_then_text() {
     model.replace_text_in("o".into(), 4, 4);
     assert_eq!(tx(&model), "<blockquote><p>Ok</p></blockquote><p>o|</p>");
 }
+
+#[test]
+#[allow(deprecated)]
+fn enter_after_a_line_break_keeps_the_line_break_on_the_first_line() {
+    // Used to panic: "assertion failed: index <= self.children().len()"
+    let mut model = cm("a|");
+    model.add_line_break();
+    model.enter();
+    assert_eq!(tx(&model), "<p>a<br /></p><p>&nbsp;|</p>");
+
+    // Used to give "<p>a</p><p><br />|b</p>"
+    let mut model = cm("<p>a|b</p>");
+    model.add_line_break();
+    model.enter();
+    assert_eq!(tx(&model), "<p>a<br /></p><p>|b</p>");
+}
