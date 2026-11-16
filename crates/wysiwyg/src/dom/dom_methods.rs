@@ -82,11 +82,16 @@ where
                 );
             } else {
                 // `leading_is_end` case, as filtered by `first_shrinkable_link_node_handle`
+                // The nodes we just deleted come before the link, so its handle may have changed
+                let link_handle = handle_after_deletions(
+                    &starting_link.node_handle,
+                    &deleted_handles,
+                );
                 self.set_new_text_in_prev_sibling_node(
-                    starting_link.node_handle.clone(),
+                    link_handle.clone(),
                     new_text,
                 );
-                moved_handles.push(starting_link.node_handle.clone());
+                moved_handles.push(link_handle);
             }
 
             (deleted_handles, moved_handles)
@@ -1127,6 +1132,30 @@ fn first_shrinkable_link_node_handle(range: &Range) -> Option<&DomLocation> {
             && (loc.is_start() || loc.leading_is_end())
     })?;
     Some(link_loc)
+}
+
+/// Where the node at `handle` is now, given that the nodes at `deleted` (all
+/// handles as they were before any deletion) have been removed and that the
+/// node itself was not.
+fn handle_after_deletions(
+    handle: &DomHandle,
+    deleted: &[DomHandle],
+) -> DomHandle {
+    let old_path = handle.raw();
+    let mut path = old_path.clone();
+    for deleted_path in deleted.iter().map(|d| d.raw()) {
+        // An earlier sibling of the node or of one of its ancestors
+        if let Some((index, parent)) = deleted_path.split_last() {
+            let depth = parent.len();
+            if old_path.len() > depth
+                && old_path[..depth] == *parent
+                && *index < old_path[depth]
+            {
+                path[depth] -= 1;
+            }
+        }
+    }
+    DomHandle::from_raw(path)
 }
 
 fn sub_handle_up_to_or_none(

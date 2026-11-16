@@ -935,3 +935,12 @@ fn set_links_in_list_then_add_list_item() {
         "<ul><li><a href=\"https://matrix.org\">test</a></li><li>|</li></ul>"
     );
 }
+
+#[test]
+fn replace_text_before_a_link_keeps_the_text_before_the_link() {
+    // Used to give "<a href=\"https://matrix.org\">link</a>x|": the new text
+    // ended up after the link.
+    let mut model = cm("{a}|<a href=\"https://matrix.org\">link</a>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "x|<a href=\"https://matrix.org\">link</a>");
+}
