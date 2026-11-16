@@ -598,3 +598,17 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn enter_in_empty_paragraph_inside_list_item_adds_list_item() {
+    // Used to put a paragraph directly inside the list, next to the list
+    // items, which then made get_content_as_markdown panic.
+    let mut model = cm("<ul><li><p>a</p><p>|</p><p>b</p></li></ul>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<ul><li><p>a</p></li><li>|</li><li><p>b</p></li></ul>"
+    );
+    model.state.dom.explicitly_assert_invariants();
+    assert_eq!(model.get_content_as_markdown().to_string(), "* a\n* \n* b");
+}
