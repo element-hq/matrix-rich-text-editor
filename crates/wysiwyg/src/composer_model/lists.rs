@@ -100,7 +100,12 @@ where
     ) -> Vec<DomLocation> {
         // Find any selected leaves and block nodes
         let leaves_and_empty_block_nodes = locations.iter().filter(|l| {
-            l.is_leaf() || (l.kind.is_block_kind() && l.is_empty())
+            l.is_leaf()
+                || (l.kind.is_block_kind()
+                    && l.is_empty()
+                    // An empty block that ends where the selection starts
+                    // is not selected
+                    && l.relative_position() != Before)
         });
         // Gather their ancestor list items, if any
         let list_item_handles: Vec<DomHandle> = leaves_and_empty_block_nodes
