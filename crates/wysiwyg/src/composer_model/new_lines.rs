@@ -109,7 +109,26 @@ where
                     let list_handle =
                         block_location.node_handle.parent_handle();
                     // Remove the current list item
-                    let li = self.state.dom.remove(&block_location.node_handle);
+                    let li_index = block_location.node_handle.index_in_parent();
+                    let mut li =
+                        self.state.dom.remove(&block_location.node_handle);
+                    // The list items after it go to a list of their own, which
+                    // will follow the node that replaces the list item.
+                    let DomNode::Container(list) =
+                        self.state.dom.lookup_node_mut(&list_handle)
+                    else {
+                        panic!("List is not a container")
+                    };
+                    let mut following_items = Vec::new();
+                    while list.children().len() > li_index {
+                        following_items.push(list.remove_child(li_index));
+                    }
+                    let following_list =
+                        (!following_items.is_empty()).then(|| {
+                            DomNode::Container(
+                                list.clone_with_new_children(following_items),
+                            )
+                        });
 
                     if let Some(ancestor_list_handle) =
                         self.find_closest_ancestor_of_kind(&list_handle, List)
@@ -121,8 +140,25 @@ where
                             .index_in_parent();
                         let insert_at = ancestor_list_handle
                             .child_handle(new_item_index + 1);
+                        if let (Some(following_list), DomNode::Container(li)) =
+                            (following_list, &mut li)
+                        {
+                            // A list item with both inline nodes and a list needs the inline
+                            // nodes to be in a paragraph.
+                            let inline_nodes = li.remove_children();
+                            li.append_child(DomNode::new_paragraph(
+                                inline_nodes,
+                            ));
+                            li.append_child(following_list);
+                        }
                         self.state.dom.insert_at(&insert_at, li);
                     } else {
+                        if let Some(following_list) = following_list {
+                            self.state.dom.insert_at(
+                                &list_handle.next_sibling(),
+                                following_list,
+                            );
+                        }
                         // Otherwise, add new paragraph after the current list
                         let DomNode::Container(list_item) = li else {
                             panic!("List item is not a container")

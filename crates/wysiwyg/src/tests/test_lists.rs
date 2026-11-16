@@ -598,3 +598,31 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn enter_in_empty_list_item_in_the_middle_of_a_list_splits_the_list() {
+    // Used to give "<ul><li>a</li><li>|b</li></ul><p>&nbsp;</p>": the new
+    // paragraph was added after the whole list, with the cursor left in the
+    // next list item.
+    let mut model = cm("<ul><li>a</li><li>|</li><li>b</li></ul>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<ul><li>a</li></ul><p>&nbsp;|</p><ul><li>b</li></ul>"
+    );
+}
+
+#[test]
+fn enter_in_empty_nested_list_item_takes_the_following_items_along() {
+    // Used to give "<ol><li><p>a</p><ul><li>b</li><li>|c</li></ul></li>
+    // <li></li></ol>": the new outer list item was added after the item
+    // holding the nested list, with the cursor left in the next nested item.
+    let mut model =
+        cm("<ol><li>a<ul><li>b</li><li>|</li><li>c</li></ul></li></ol>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<ol><li><p>a</p><ul><li>b</li></ul></li>\
+        <li><p>&nbsp;|</p><ul><li>c</li></ul></li></ol>"
+    );
+}
