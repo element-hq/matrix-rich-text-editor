@@ -100,3 +100,24 @@ fn selecting_creates_a_selection_update() {
         panic!("TextUpdate should be a selection")
     }
 }
+
+#[test]
+fn selecting_past_the_end_is_clamped_to_the_text() {
+    let mut model = cm("abc|");
+    model.select(Location::from(1), Location::from(10));
+    assert_eq!(tx(&model), "a{bc}|");
+    // Used to panic
+    model.select(Location::from(10), Location::from(10));
+    model.backspace();
+    assert_eq!(tx(&model), "ab|");
+}
+
+#[test]
+fn replacing_and_deleting_past_the_end_is_clamped_to_the_text() {
+    // Used to panic
+    let mut model = cm("abc|");
+    model.delete_in(3, 4);
+    assert_eq!(tx(&model), "abc|");
+    model.replace_text_in("d".into(), 2, 9);
+    assert_eq!(tx(&model), "abd|");
+}

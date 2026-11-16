@@ -195,6 +195,8 @@ where
         end: usize,
     ) -> ComposerUpdate<S> {
         let text_string = new_text.to_string();
+        let len = self.state.dom.text_len();
+        let (start, end) = (start.min(len), end.min(len));
         // If passed start, end don't match the model's state, we can't fix them
         let (s, e) = self.safe_selection();
         let needs_to_recalculate_selection = s == start && e == end;
