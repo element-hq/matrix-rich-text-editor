@@ -356,3 +356,20 @@ fn formatting_in_an_empty_paragraph_applies_formatting() {
     model.replace_text("B".into());
     assert_eq!(tx(&model), "<p>A</p><p><strong>B|</strong></p>");
 }
+
+#[test]
+fn deleting_with_a_pending_format_keeps_it_pending() {
+    // Used to panic: the pending format was applied to an empty range.
+    let mut model = cm("|");
+    model.underline();
+    model.backspace();
+    model.delete();
+    model.replace_text(utf16("a"));
+    assert_eq!(tx(&model), "<u>a|</u>");
+
+    let mut model = cm("abc|");
+    model.bold();
+    model.backspace();
+    model.replace_text(utf16("d"));
+    assert_eq!(tx(&model), "ab<strong>d|</strong>");
+}
