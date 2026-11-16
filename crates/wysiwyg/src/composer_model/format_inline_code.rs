@@ -79,7 +79,10 @@ where
                     DomNode::LineBreak(_) | DomNode::Mention(_) => {
                         nodes_to_add.extend(
                             self.process_atomic_leaf_for_inline_code(
-                                node, leaf, &cur_text,
+                                node,
+                                leaf,
+                                &cur_text,
+                                &ancestor_child_handle,
                             ),
                         );
                         // Update insertion point and reset text
@@ -177,6 +180,7 @@ where
         node: DomNode<S>,
         location: &DomLocation,
         cur_text: &S,
+        ancestor_child_handle: &DomHandle,
     ) -> Vec<DomNode<S>> {
         let mut nodes_to_add = Vec::new();
         // Get any pending text and create a new TextNode to insert along with
@@ -185,7 +189,10 @@ where
             nodes_to_add.insert(0, DomNode::new_text(cur_text.clone()));
         }
         nodes_to_add.insert(0, node);
-        self.state.dom.remove(&location.node_handle);
+        self.remove_and_clean_up_empty_nodes_until(
+            &location.node_handle,
+            ancestor_child_handle,
+        );
         nodes_to_add
     }
 }
@@ -390,6 +397,21 @@ mod test {
             "<code>{a<a data-mention-type=\"user\" \
             href=\"https://matrix.to/#/@alice:matrix.org\" \
             contenteditable=\"false\">Alice</a> b}|</code>"
+        );
+    }
+
+    #[test]
+    fn inline_code_over_a_mention_in_a_formatting_node() {
+        // Used to leave an empty "<u></u>" after the inline code
+        let mut model = cm(
+            "<u>{<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a>}|</u>",
+        );
+        model.inline_code();
+        assert_eq!(
+            tx(&model),
+            "<code>{<a data-mention-type=\"user\" \
+            href=\"https://matrix.to/#/@alice:matrix.org\" \
+            contenteditable=\"false\">Alice</a>}|</code>"
         );
     }
 }
