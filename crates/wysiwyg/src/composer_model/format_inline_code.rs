@@ -74,10 +74,12 @@ where
                         // Update insertion position for the inline code node
                         insert_text_at = pos;
                     }
-                    DomNode::LineBreak(_) => {
+                    // Line breaks and mentions are moved into the inline
+                    // code node as they are.
+                    DomNode::LineBreak(_) | DomNode::Mention(_) => {
                         nodes_to_add.extend(
-                            self.process_line_break_for_inline_code(
-                                leaf, &cur_text,
+                            self.process_atomic_leaf_for_inline_code(
+                                node, leaf, &cur_text,
                             ),
                         );
                         // Update insertion point and reset text
@@ -170,18 +172,19 @@ where
         (text, insert_text_at)
     }
 
-    fn process_line_break_for_inline_code(
+    fn process_atomic_leaf_for_inline_code(
         &mut self,
+        node: DomNode<S>,
         location: &DomLocation,
         cur_text: &S,
     ) -> Vec<DomNode<S>> {
         let mut nodes_to_add = Vec::new();
         // Get any pending text and create a new TextNode to insert along with
-        // the LineBreak one, removing the old LineBreak node.
+        // the node, removing the old node.
         if !cur_text.is_empty() {
             nodes_to_add.insert(0, DomNode::new_text(cur_text.clone()));
         }
-        nodes_to_add.insert(0, DomNode::new_line_break());
+        nodes_to_add.insert(0, node);
         self.state.dom.remove(&location.node_handle);
         nodes_to_add
     }
@@ -373,5 +376,20 @@ mod test {
         model.inline_code();
         model.replace_text("code".into());
         assert_eq!(tx(&model), "<strong>bold</strong><code>code|</code>");
+    }
+
+    #[test]
+    fn inline_code_over_a_mention_keeps_the_mention() {
+        // Used to panic: "Leaf should be either a line break or a text node"
+        let mut model = cm(
+            "{a<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a> b}|",
+        );
+        model.inline_code();
+        assert_eq!(
+            tx(&model),
+            "<code>{a<a data-mention-type=\"user\" \
+            href=\"https://matrix.to/#/@alice:matrix.org\" \
+            contenteditable=\"false\">Alice</a> b}|</code>"
+        );
     }
 }
