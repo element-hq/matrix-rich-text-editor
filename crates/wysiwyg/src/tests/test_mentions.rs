@@ -726,3 +726,36 @@ fn insert_mention_at_selection(model: &mut ComposerModel<Utf16String>) {
         vec![],
     );
 }
+
+#[test]
+fn enter_in_text_followed_by_a_mention_moves_the_mention_to_the_new_line() {
+    // Used to give "<p>a(mention)|</p><p>b</p>": the mention stayed on the
+    // first line.
+    let mut model = cm(
+        "<p>a|b<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a></p>",
+    );
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<p>a</p><p>|b<a data-mention-type=\"user\" \
+        href=\"https://matrix.to/#/@alice:matrix.org\" \
+        contenteditable=\"false\">Alice</a></p>"
+    );
+}
+
+#[test]
+fn set_link_on_text_followed_by_a_mention() {
+    // Used to give "c(link around the text "Alice")(mention)": "ab" was
+    // lost and the mention duplicated as text in the link.
+    let mut model = cm(
+        "<p>a{b}|c<a href=\"https://matrix.to/#/@alice:matrix.org\">Alice</a></p>",
+    );
+    model.set_link("https://matrix.org".into(), vec![]);
+    assert_eq!(
+        tx(&model),
+        "<p>a<a href=\"https://matrix.org\">{b}|</a>c\
+        <a data-mention-type=\"user\" \
+        href=\"https://matrix.to/#/@alice:matrix.org\" \
+        contenteditable=\"false\">Alice</a></p>"
+    );
+}
