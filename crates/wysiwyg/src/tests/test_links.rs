@@ -935,3 +935,24 @@ fn set_links_in_list_then_add_list_item() {
         "<ul><li><a href=\"https://matrix.org\">test</a></li><li>|</li></ul>"
     );
 }
+
+#[test]
+fn set_link_on_text_after_a_formatting_node_keeps_the_text_in_place() {
+    // Used to give "<p><a href="https://matrix.org">u</a><del>{s}|</del>
+    // b</p>": the link was added before the formatting node.
+    let mut model = cm("<p><del>s</del>{u}|b</p>");
+    model.set_link(utf16("https://matrix.org"), vec![]);
+    assert_eq!(
+        tx(&model),
+        "<p><del>s</del><a href=\"https://matrix.org\">{u}|</a>b</p>"
+    );
+
+    // Used to give "<p><a href="https://matrix.org"><u>u{b</u></a>
+    // <del>s}|</del></p>"
+    let mut model = cm("<p><del>s</del><u>{ub}|</u></p>");
+    model.set_link(utf16("https://matrix.org"), vec![]);
+    assert_eq!(
+        tx(&model),
+        "<p><del>s</del><a href=\"https://matrix.org\"><u>{ub}|</u></a></p>"
+    );
+}
