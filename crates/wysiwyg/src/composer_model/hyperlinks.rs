@@ -198,6 +198,10 @@ where
             }
         }
 
+        // Turning the mentions inside a new link into text changes the
+        // length of the text, so start from the end: the offsets of the
+        // split points still to come stay valid.
+        split_points.sort_by_key(|(_, s, _)| std::cmp::Reverse(*s));
         for (_, s, e) in split_points.into_iter() {
             let range = self.state.dom.find_range(s, e);
 
@@ -270,6 +274,7 @@ where
                     &handle,
                     vec![DomNode::new_text(display_text.clone())],
                 );
+                self.state.dom.merge_text_nodes_around(&handle);
                 let selection_length_change: isize =
                     (display_text.len() - 1).try_into().unwrap_or(0);
                 self.state.extend_selection(selection_length_change)

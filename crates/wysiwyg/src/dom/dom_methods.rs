@@ -706,10 +706,12 @@ where
 
         let parent = self.parent_mut(handle);
         let idx = handle.index_in_parent();
+        // With the next one first: merging with the previous one moves
+        // the node.
+        merge_if_adjacent_text_nodes(parent, idx);
         if idx > 0 {
             merge_if_adjacent_text_nodes(parent, idx - 1);
         }
-        merge_if_adjacent_text_nodes(parent, idx);
 
         #[cfg(any(test, feature = "assert-invariants"))]
         self.assert_invariants();

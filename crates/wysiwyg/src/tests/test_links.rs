@@ -935,3 +935,33 @@ fn set_links_in_list_then_add_list_item() {
         "<ul><li><a href=\"https://matrix.org\">test</a></li><li>|</li></ul>"
     );
 }
+
+#[test]
+fn set_link_over_a_mention_and_the_next_paragraph() {
+    // Used to give "<p><a href="https://matrix.org">{Al<a
+    // href="https://matrix.org">i</a>ce</a></p><p>a}|</p>": the second
+    // paragraph's offsets were those from before the mention became text.
+    let mut model =
+        cm("<p>{<a href=\"https://matrix.to/#/@alice:matrix.org\">\
+        Alice</a></p><p>a}|</p>");
+    model.set_link(utf16("https://matrix.org"), vec![]);
+    assert_eq!(
+        tx(&model),
+        "<p><a href=\"https://matrix.org\">{Alice</a></p>\
+        <p><a href=\"https://matrix.org\">a}|</a></p>"
+    );
+}
+
+#[test]
+fn set_link_over_mentions_next_to_text_merges_the_text() {
+    // Used to leave adjacent text nodes in the link ("a", "Alice", "b")
+    let mut model =
+        cm("<p>{a<a href=\"https://matrix.to/#/@alice:matrix.org\">\
+        Alice</a>b}|</p>");
+    model.set_link(utf16("https://matrix.org"), vec![]);
+    assert_eq!(
+        tx(&model),
+        "<p><a href=\"https://matrix.org\">{aAliceb}|</a></p>"
+    );
+    model.state.dom.explicitly_assert_invariants();
+}
