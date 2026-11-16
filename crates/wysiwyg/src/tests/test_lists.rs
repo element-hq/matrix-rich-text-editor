@@ -633,3 +633,12 @@ fn toggling_list_on_paragraph_after_list_with_empty_nested_item_creates_list() {
         "<ul><li><ul><li></li></ul></li><li>|foo</li><li>bar</li></ul>"
     );
 }
+
+#[test]
+fn creating_list_from_a_list_and_the_paragraph_after_it() {
+    // Used to give "<ul><li><li>{a</li></li><li>b}|</li></ul>": the items of
+    // the existing list were wrapped in a list item of the new list.
+    let mut model = cm("<ol><li>{a</li></ol><p>b}|</p>");
+    model.unordered_list();
+    assert_eq!(tx(&model), "<ul><li>{a</li><li>b}|</li></ul>");
+}

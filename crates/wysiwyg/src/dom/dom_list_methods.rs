@@ -64,9 +64,15 @@ where
                 let DomNode::Container(block_node) = block_node else {
                     panic!("Block node must be a container node")
                 };
+                let is_list = block_node.is_list();
                 let children = block_node.take_children();
-                let list_item = DomNode::new_list_item(children);
-                list_items.push(list_item);
+                if is_list {
+                    // The items of a list that is already there become
+                    // items of the new list
+                    list_items.extend(children);
+                } else {
+                    list_items.push(DomNode::new_list_item(children));
+                }
             }
         } else {
             let mut list_item = ContainerNode::new_list_item(removed_nodes);
