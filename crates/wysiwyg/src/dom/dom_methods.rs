@@ -937,10 +937,15 @@ where
                 to_handle,
             ));
         } else if is_mention_node {
-            // Mentions only have 1 char length:
+            // Mentions only have 1 char length. If this is the node we are splitting at:
             // If the offset is 0 the selection was before the node and the mention should be part of the new subtree.
             // If it's 1 it should be kept in the current DOM (do nothing).
-            if start_offset == 0 {
+            // Otherwise the offset is not about this node, which is after the split: it is
+            // part of the new subtree.
+            let is_split_node = cur_handle == *from_handle
+                || (from_handle.is_ancestor_of(&cur_handle)
+                    && cur_handle.index_in_parent() == 0);
+            if start_offset == 0 || !is_split_node {
                 nodes.push(self.remove(&cur_handle));
             }
         } else {
