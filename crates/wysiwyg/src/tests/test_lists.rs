@@ -598,3 +598,12 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn unindent_after_an_empty_paragraph() {
+    // Used to do nothing: the empty paragraph before the cursor counted as
+    // selected, so its list item was the one to un-indent, and it cannot be.
+    let mut model = cm("<ul><li><p></p><ul><li>|b</li></ul></li></ul>");
+    model.unindent();
+    assert_eq!(tx(&model), "<ul><li></li><li>|b</li></ul>");
+}
