@@ -935,3 +935,11 @@ fn set_links_in_list_then_add_list_item() {
         "<ul><li><a href=\"https://matrix.org\">test</a></li><li>|</li></ul>"
     );
 }
+
+#[test]
+fn set_link_in_empty_model_does_nothing() {
+    // Used to panic looking for the (missing) leaves' shared parent.
+    let mut model = cm("|");
+    model.set_link(utf16("https://element.io"), vec![]);
+    assert_eq!(tx(&model), "|");
+}

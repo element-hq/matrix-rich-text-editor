@@ -388,8 +388,14 @@ impl Range {
     ///     
     fn find_shared_parent(&self, allow_covered_nodes: bool) -> DomHandle {
         let mut shared_path = vec![];
-        let min_leaf_path = self.leaves().min().unwrap().node_handle.raw();
-        let max_leaf_path = self.leaves().max().unwrap().node_handle.raw();
+        // A range with no leaves (e.g. in an empty Dom) only has the root
+        let (Some(min_leaf), Some(max_leaf)) =
+            (self.leaves().min(), self.leaves().max())
+        else {
+            return DomHandle::root();
+        };
+        let min_leaf_path = min_leaf.node_handle.raw();
+        let max_leaf_path = max_leaf.node_handle.raw();
 
         for i in 0..min(min_leaf_path.len() - 1, max_leaf_path.len() - 1) {
             if min_leaf_path[i] != max_leaf_path[i] {
