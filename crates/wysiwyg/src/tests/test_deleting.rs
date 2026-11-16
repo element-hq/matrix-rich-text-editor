@@ -1031,3 +1031,30 @@ fn backspacing_paragraphs_with_nbsp_at_start() {
     model.backspace();
     assert_eq!(tx(&model), "<p>|test</p>")
 }
+
+#[test]
+fn delete_word_and_backspace_word_with_emoji() {
+    // The offset in code units was used as the index of a char, which is
+    // wrong after any char that takes two code units.
+
+    // Used to panic, removing half of the emoji: "index out of bounds or not
+    // on char boundary".
+    let mut model = cm("|🙂 abc");
+    model.delete_word();
+    assert_eq!(tx(&model), "|&nbsp;abc");
+
+    // Used to give "🙂 |c def".
+    let mut model = cm("🙂 |abc def");
+    model.delete_word();
+    assert_eq!(tx(&model), "🙂&nbsp;|&nbsp;def");
+
+    // Used to do nothing.
+    let mut model = cm("🙂abc def|");
+    model.backspace_word();
+    assert_eq!(tx(&model), "🙂abc&nbsp;|");
+
+    // Used to do nothing.
+    let mut model = cm("abc 🙂🙂|");
+    model.backspace_word();
+    assert_eq!(tx(&model), "abc&nbsp;|");
+}

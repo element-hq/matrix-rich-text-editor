@@ -234,7 +234,15 @@ where
                 while node.offset_is_inside_node(current_offset, &direction)
                     && current_type == start_type
                 {
-                    let next_offset = direction.increment(current_offset);
+                    // Step over the whole char, which may be more than one
+                    // code unit
+                    let next_char_len = node
+                        .char_len_at_offset(current_offset, &direction)
+                        .unwrap();
+                    let next_offset = match direction {
+                        Direction::Forwards => current_offset + next_char_len,
+                        Direction::Backwards => current_offset - next_char_len,
+                    };
                     let next_type = node
                         .char_type_at_offset(current_offset, &direction)
                         .unwrap();
