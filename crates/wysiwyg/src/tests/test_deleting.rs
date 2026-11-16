@@ -1031,3 +1031,27 @@ fn backspacing_paragraphs_with_nbsp_at_start() {
     model.backspace();
     assert_eq!(tx(&model), "<p>|test</p>")
 }
+
+#[test]
+fn backspace_and_delete_with_the_cursor_inside_a_grapheme() {
+    // Offset 5 is between two code points of the family emoji (after its
+    // second woman). These used to remove one UTF-16 code unit, splitting a
+    // surrogate pair, and panicked: "index out of bounds or not on char
+    // boundary".
+    let family = "👩\u{200d}👩\u{200d}👧";
+
+    let mut model = cm("|");
+    model.replace_text(family.into());
+    model.select(5.into(), 5.into());
+    model.backspace();
+    assert_eq!(model.get_content_as_plain_text().to_string(), "\u{200d}👧");
+
+    let mut model = cm("|");
+    model.replace_text(family.into());
+    model.select(5.into(), 5.into());
+    model.delete();
+    assert_eq!(
+        model.get_content_as_plain_text().to_string(),
+        "👩\u{200d}👩"
+    );
+}

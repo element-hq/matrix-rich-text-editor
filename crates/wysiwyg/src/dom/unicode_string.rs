@@ -231,8 +231,9 @@ impl<S: UnicodeStr + ?Sized> UnicodeStrExt for S {
         self.as_ref().len()
     }
 
-    /// Assuming [index] is a boundary between graphemes, returns a pair with the previous and next
-    /// graphemes, if present.
+    /// Returns a pair with the graphemes before and after [index], if present. If [index] is
+    /// inside a grapheme but between two of its chars (e.g. between the emojis of a ZWJ
+    /// sequence), these are the parts of that grapheme before and after it.
     fn find_graphemes_at(
         &self,
         index: usize,
@@ -240,6 +241,11 @@ impl<S: UnicodeStr + ?Sized> UnicodeStrExt for S {
         let u8_str = self.to_string();
         let u8_index = self.u8_map_index(index);
         let graphemes = u8_str.grapheme_indices(true);
+        let mut char_end = 0;
+        let on_char_boundary = self.chars().any(|c| {
+            char_end += self.char_len(&c);
+            char_end == index
+        });
         let mut prev = None;
         let mut next = None;
         for g in graphemes {
@@ -249,6 +255,11 @@ impl<S: UnicodeStr + ?Sized> UnicodeStrExt for S {
             let length = g.1.len();
             if g.0 + length == u8_index {
                 prev = Some(Self::StringType::from(g.1))
+            }
+            if g.0 < u8_index && u8_index < g.0 + length && on_char_boundary {
+                let (before, after) = g.1.split_at(u8_index - g.0);
+                prev = Some(Self::StringType::from(before));
+                next = Some(Self::StringType::from(after));
             }
         }
         (prev, next)
@@ -377,6 +388,15 @@ mod test {
         let (prev, next) = str.find_graphemes_at(1);
         assert!(prev.is_none());
         assert!(next.is_none());
+    }
+
+    #[test]
+    fn test_index_inside_grapheme_between_chars_utf16() {
+        // 😮 is 2 code units and the joiner 1: index 3 is before the 💨
+        let str = Utf16String::from_str("😮‍💨");
+        let (prev, next) = str.find_graphemes_at(3);
+        assert_eq!("😮\u{200d}", prev.unwrap());
+        assert_eq!("💨", next.unwrap());
     }
 
     #[test]
