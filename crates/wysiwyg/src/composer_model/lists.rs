@@ -492,8 +492,22 @@ where
             removed_list_items.push(last_removed_list_item);
         }
 
+        // If the List was all that the parent ListItem held, the ListItem was not a line of
+        // its own: the removed ListItems take its place.
+        let parent_list_item_became_empty = self
+            .state
+            .dom
+            .lookup_container(&parent_list_item_handle)
+            .is_empty();
+        let insert_into_handle = if parent_list_item_became_empty {
+            self.state.dom.remove(&parent_list_item_handle);
+            parent_list_item_handle
+        } else {
+            insert_into_handle
+        };
+
         // Unwrap existing paragraph in the parent ListItem if needed
-        {
+        if !parent_list_item_became_empty {
             let orig_parent_list_item = self
                 .state
                 .dom

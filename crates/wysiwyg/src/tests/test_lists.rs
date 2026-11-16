@@ -608,3 +608,13 @@ fn unindent_keeps_what_follows_the_nested_list_after_the_item() {
     model.unindent();
     assert_eq!(tx(&model), "<ol><li>b</li><li><p>c|</p><p>x</p></li></ol>");
 }
+
+#[test]
+fn unindent_the_only_content_of_a_list_item_replaces_it() {
+    // Used to give "<ul><li>a</li><li></li><li>|d</li><li>e</li></ul>": an
+    // empty list item was left behind, which moved the text by one.
+    let mut model =
+        cm("<ul><li>a</li><li><ul><li>d|</li></ul></li><li>e</li></ul>");
+    model.unindent();
+    assert_eq!(tx(&model), "<ul><li>a</li><li>d|</li><li>e</li></ul>");
+}
