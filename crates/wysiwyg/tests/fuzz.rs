@@ -16,6 +16,9 @@
 //! whose name (an `Op` variant or a model method) contains one of those
 //! strings, e.g. to match what one client calls or to get past known bugs.
 //!
+//! Actions the model reports as disabled are not called, as clients grey
+//! them out; `FUZZ_DISABLED=1` calls them anyway.
+//!
 //! Add `--features assert-invariants` to also treat DOM invariant
 //! violations as failures (much noisier: these are not production panics).
 //!
@@ -32,8 +35,8 @@ use std::sync::Mutex;
 
 use widestring::Utf16String;
 use wysiwyg::{
-    ComposerModel, ComposerUpdate, DomNode, HtmlSource, Location, MenuAction,
-    SuggestionPattern,
+    ActionState, ComposerAction, ComposerModel, ComposerUpdate, DomNode,
+    HtmlSource, Location, MenuAction, SuggestionPattern,
 };
 
 type Model = ComposerModel<Utf16String>;
@@ -439,6 +442,32 @@ fn splits_surrogate_pair(m: &Model, p: usize) -> bool {
 }
 
 impl Op {
+    /// The toolbar action this op corresponds to, if any.
+    fn action(&self) -> Option<ComposerAction> {
+        use ComposerAction::*;
+        let Op::Simple(i) = self else {
+            let is_link =
+                matches!(self, Op::SetLink(_) | Op::SetLinkWithText(..));
+            return is_link.then_some(Link);
+        };
+        Some(match SIMPLE[*i].0 {
+            "m.bold();" => Bold,
+            "m.italic();" => Italic,
+            "m.underline();" => Underline,
+            "m.strike_through();" => StrikeThrough,
+            "m.inline_code();" => InlineCode,
+            "m.code_block();" => CodeBlock,
+            "m.quote();" => Quote,
+            "m.ordered_list();" => OrderedList,
+            "m.unordered_list();" => UnorderedList,
+            "m.indent();" => Indent,
+            "m.unindent();" => Unindent,
+            "m.undo();" => Undo,
+            "m.redo();" => Redo,
+            _ => return None,
+        })
+    }
+
     /// Move any offsets in this op off the middle of a surrogate pair.
     fn snap(&mut self, m: &Model) {
         if let Op::Select(s, e)
@@ -481,6 +510,7 @@ fn fuzz() {
     let seed = env("FUZZ_SEED", 1);
     let cases = env("FUZZ_CASES", 20_000);
     let max_ops = env("FUZZ_OPS", 40) as usize;
+    let call_disabled = env("FUZZ_DISABLED", 0) != 0;
     let skip = std::env::var("FUZZ_SKIP").unwrap_or_default();
     let skip: Vec<&str> = skip.split(',').filter(|s| !s.is_empty()).collect();
 
@@ -520,6 +550,12 @@ fn fuzz() {
             if skip.iter().any(|s| name.contains(s)) {
                 continue;
             }
+            // Clients grey out disabled actions, so states only reachable
+            // through them are not interesting by default.
+            let state = op.action().and_then(|a| m.action_states().get(&a));
+            if !call_disabled && state == Some(&ActionState::Disabled) {
+                continue;
+            }
             // A panicking op is recorded and then rolled back, so that it
             // does not hide whatever the rest of the case would have found.
             let before = (m.clone(), sugg.clone());
@@ -536,7 +572,11 @@ fn fuzz() {
             } else if run(&ops).is_some_and(|(s, ..)| s == site) {
                 let (_, msg, code) =
                     run(&minimise(ops.clone(), &site)).unwrap();
-                eprintln!("new panic site {site} (case {case}, seed {seed})");
+                // Printed as found: a long run is worth reading before it ends.
+                eprintln!(
+                    "\nnew panic site {site} (case {case}, seed {seed})\n    {}\n{code}",
+                    msg.chars().take(300).collect::<String>()
+                );
                 found.insert(site, (1, msg, code));
             } else {
                 // ponytail: happens when the ops before this one only reach
