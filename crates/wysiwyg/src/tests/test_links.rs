@@ -944,3 +944,26 @@ fn replace_text_before_a_link_keeps_the_text_before_the_link() {
     model.replace_text(utf16("x"));
     assert_eq!(tx(&model), "x|<a href=\"https://matrix.org\">link</a>");
 }
+
+#[test]
+fn replace_text_before_a_link_whose_ancestor_gets_merged() {
+    // Used to panic: "Handle is invalid: it refers to a child index which
+    // is too large for the number of children in this node."
+    let mut model = cm("<u>x</u><code>{a}|</code>\
+        <u><a href=\"https://matrix.org\">link</a></u>");
+    model.replace_text(utf16("b"));
+    assert_eq!(
+        tx(&model),
+        "<u>xb|<a href=\"https://matrix.org\">link</a></u>"
+    );
+}
+
+#[test]
+fn replace_text_between_two_links_that_get_merged() {
+    // Used to give "<a href="https://matrix.org">ab|</a>x": the text was
+    // added after the merged link.
+    let mut model = cm("<a href=\"https://matrix.org\">a</a>{-}|\
+        <a href=\"https://matrix.org\">b</a>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<a href=\"https://matrix.org\">ax|b</a>");
+}

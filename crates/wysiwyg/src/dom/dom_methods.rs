@@ -67,31 +67,37 @@ where
             (Vec::new(), Vec::new())
         // We check for the first starting_link_handle if any
         // Because for links we always add the text to the previous or next sibling
-        } else if let Some(starting_link) =
-            first_shrinkable_link_node_handle(&range)
-        {
+        } else if first_shrinkable_link_node_handle(&range).is_some() {
             // We replace and delete as normal with an empty string on the current range
             let deleted_handles =
                 self.replace_multiple_nodes(&range, "".into());
             let mut moved_handles = Vec::new();
-            // Then we set the new text value in the previous/next sibling node (or create a new one if none exists)
-            if starting_link.is_start() {
-                self.set_new_text_in_next_sibling_node(
-                    starting_link.node_handle.clone(),
-                    new_text,
-                );
-            } else {
-                // `leading_is_end` case, as filtered by `first_shrinkable_link_node_handle`
-                // The nodes we just deleted come before the link, so its handle may have changed
-                let link_handle = handle_after_deletions(
-                    &starting_link.node_handle,
-                    &deleted_handles,
-                );
+            // Then we set the new text value in the next sibling node of the link that now
+            // ends where the selection was, or the previous one of the link that now starts
+            // there (or create a new one if none exists). Deleting the selection may have
+            // moved the links (siblings removed, ancestors or the links themselves merged),
+            // so they have to be looked up again.
+            let range = self.find_range(start, start);
+            let link_handle = |at_end: bool| {
+                let is_at_edge = |loc: &&DomLocation| {
+                    loc.kind == DomNodeKind::Link
+                        && loc.start_offset
+                            == if at_end { loc.length } else { 0 }
+                };
+                let loc = range.locations.iter().find(is_at_edge);
+                loc.map(|loc| loc.node_handle.clone())
+            };
+            if let Some(link_handle) = link_handle(true) {
+                self.set_new_text_in_next_sibling_node(link_handle, new_text);
+            } else if let Some(link_handle) = link_handle(false) {
                 self.set_new_text_in_prev_sibling_node(
                     link_handle.clone(),
                     new_text,
                 );
                 moved_handles.push(link_handle);
+            } else {
+                // The selection was between two links that are now merged
+                self.replace_multiple_nodes(&range, new_text);
             }
 
             (deleted_handles, moved_handles)
@@ -1132,30 +1138,6 @@ fn first_shrinkable_link_node_handle(range: &Range) -> Option<&DomLocation> {
             && (loc.is_start() || loc.leading_is_end())
     })?;
     Some(link_loc)
-}
-
-/// Where the node at `handle` is now, given that the nodes at `deleted` (all
-/// handles as they were before any deletion) have been removed and that the
-/// node itself was not.
-fn handle_after_deletions(
-    handle: &DomHandle,
-    deleted: &[DomHandle],
-) -> DomHandle {
-    let old_path = handle.raw();
-    let mut path = old_path.clone();
-    for deleted_path in deleted.iter().map(|d| d.raw()) {
-        // An earlier sibling of the node or of one of its ancestors
-        if let Some((index, parent)) = deleted_path.split_last() {
-            let depth = parent.len();
-            if old_path.len() > depth
-                && old_path[..depth] == *parent
-                && *index < old_path[depth]
-            {
-                path[depth] -= 1;
-            }
-        }
-    }
-    DomHandle::from_raw(path)
 }
 
 fn sub_handle_up_to_or_none(
