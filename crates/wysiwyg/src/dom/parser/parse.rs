@@ -147,6 +147,7 @@ mod sys {
                         parse_errors: vec![err.to_string()],
                     }
                 })?;
+            let dom = post_process_blocks_inside_inline_nodes(dom);
             let dom_blocks_done = post_process_blocks(dom);
             let dom_inline_blocks_done =
                 post_process_for_block_and_inline_siblings(dom_blocks_done);
@@ -1370,6 +1371,62 @@ fn post_process_for_block_and_inline_siblings<S: UnicodeString>(
     dom
 }
 
+/// HTML allows block nodes inside inline ones (e.g. `<b><p>a</p></b>`), but
+/// our Dom does not. Move those blocks out of the inline node, and wrap their
+/// inline contents in a copy of it instead: `<p><b>a</b></p>`.
+fn post_process_blocks_inside_inline_nodes<S: UnicodeString>(
+    mut dom: Dom<S>,
+) -> Dom<S> {
+    let inline_handles: Vec<DomHandle> = dom
+        .iter_containers()
+        .filter(|c| c.is_formatting_node() || c.is_link())
+        .map(|c| c.handle())
+        .collect();
+    // Backwards so that the handles stay valid, and so that inline nodes are
+    // done before the inline nodes they are inside of.
+    for handle in inline_handles.iter().rev() {
+        let inline = dom.lookup_container(handle);
+        if inline.children().iter().any(|c| c.is_block_node()) {
+            let wrapper = inline.clone_with_new_children(vec![]);
+            let children = inline.children().clone();
+            dom.replace(handle, wrap_inline_runs(children, &wrapper));
+        }
+    }
+    dom
+}
+
+/// Wrap each run of consecutive inline nodes in a copy of `wrapper`, going
+/// into block nodes to do the same to their children.
+fn wrap_inline_runs<S: UnicodeString>(
+    nodes: Vec<DomNode<S>>,
+    wrapper: &ContainerNode<S>,
+) -> Vec<DomNode<S>> {
+    let mut output = Vec::new();
+    let mut run = Vec::new();
+    let flush = |run: &mut Vec<DomNode<S>>, output: &mut Vec<DomNode<S>>| {
+        if !run.is_empty() {
+            output.push(DomNode::Container(
+                wrapper.clone_with_new_children(std::mem::take(run)),
+            ));
+        }
+    };
+    for node in nodes {
+        match node {
+            DomNode::Container(block) if block.is_block_node() => {
+                flush(&mut run, &mut output);
+                let children =
+                    wrap_inline_runs(block.children().clone(), wrapper);
+                output.push(DomNode::Container(
+                    block.clone_with_new_children(children),
+                ));
+            }
+            inline => run.push(inline),
+        }
+    }
+    flush(&mut run, &mut output);
+    output
+}
+
 fn post_process_blocks<S: UnicodeString>(mut dom: Dom<S>) -> Dom<S> {
     let block_handles = find_blocks(&dom);
     for handle in block_handles.iter().rev() {
@@ -1653,6 +1710,7 @@ mod js {
 
             self.webdom_to_dom(document, html_source)
                 .map_err(to_dom_creation_error)
+                .map(post_process_blocks_inside_inline_nodes)
                 .map(post_process_blocks)
                 .map(post_process_for_block_and_inline_siblings)
                 .map(post_process_for_adjacent_text)
