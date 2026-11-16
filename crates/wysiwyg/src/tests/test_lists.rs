@@ -598,3 +598,40 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn indent_under_an_empty_list_item_keeps_its_line() {
+    // Used to give "<ul><li><ul><li>|b</li></ul></li></ul>" with the cursor
+    // one position too far ("b|"): the empty list item was no longer a line.
+    let mut model = cm("<ul><li></li><li>|b</li></ul>");
+    model.indent();
+    assert_eq!(
+        tx(&model),
+        "<ul><li><p>&nbsp;</p><ul><li>|b</li></ul></li></ul>"
+    );
+}
+
+#[test]
+fn indent_under_a_list_item_with_several_inline_nodes() {
+    // Used to leave the inline nodes and the new list side by side in the
+    // list item: "<ul><li>a<b>b</b><ul><li>c</li></ul></li></ul>", with
+    // the cursor one position too far (past the end of the text).
+    let mut model = cm("<ul><li>a<b>b</b></li><li>c|</li></ul>");
+    model.indent();
+    assert_eq!(
+        tx(&model),
+        "<ul><li><p>a<b>b</b></p><ul><li>c|</li></ul></li></ul>"
+    );
+}
+
+#[test]
+fn unindent_an_empty_list_item_followed_by_others_keeps_its_line() {
+    // Used to give "<ul><li>a</li><li><ul><li>|b</li></ul></li></ul>": the
+    // empty list item was no longer a line, and the cursor was in the next.
+    let mut model = cm("<ul><li>a<ul><li>|</li><li>b</li></ul></li></ul>");
+    model.unindent();
+    assert_eq!(
+        tx(&model),
+        "<ul><li>a</li><li><p>&nbsp;|</p><ul><li>b</li></ul></li></ul>"
+    );
+}

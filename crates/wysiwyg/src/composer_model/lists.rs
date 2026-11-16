@@ -342,9 +342,8 @@ where
             &mut self.state.dom.lookup_node_mut(&insert_into_handle)
         {
             // Wrap any existing inline nodes inside the destination ListItem into a paragraph
-            if dest_list_item.children().len() == 1
-                && !dest_list_item.get_child(0).unwrap().is_block_node()
-            {
+            // (an empty one if the ListItem is empty: it is still a line of its own)
+            if dest_list_item.children().iter().all(|n| !n.is_block_node()) {
                 let children = dest_list_item.remove_children();
                 let paragraph = DomNode::new_paragraph(children);
                 dest_list_item.append_child(paragraph);
@@ -452,8 +451,9 @@ where
             // to the last un-indented ListItem, 'Third'.
             let mut last_removed_list_item = removed_list_items.pop().unwrap();
             let container = last_removed_list_item.as_container_mut().unwrap();
+            // (an empty one if the ListItem is empty: it is still a line of its own)
             let needs_paragraph =
-                container.children().iter().any(|n| !n.is_block_node());
+                container.children().iter().all(|n| !n.is_block_node());
             if needs_paragraph {
                 let children = container.remove_children();
                 let paragraph = DomNode::new_paragraph(children);
