@@ -32,6 +32,27 @@ where
     }
 
     pub(crate) fn add_inline_code_in(&mut self, start: usize, end: usize) {
+        // The inline code node is added next to the formatting nodes holding
+        // the selection, so split those at both ends of the selection first:
+        // otherwise text in them and outside the selection would end up on
+        // the wrong side of the inline code.
+        for is_end in [true, false] {
+            let range = self.state.dom.find_range(start, end);
+            let leaf = if is_end {
+                range.leaves().last()
+            } else {
+                range.leaves().next()
+            };
+            if let Some(leaf) = leaf {
+                let offset = if is_end {
+                    leaf.end_offset
+                } else {
+                    leaf.start_offset
+                };
+                self.split_formatting_ancestor(&leaf.node_handle, offset);
+            }
+        }
+
         let range = self.state.dom.find_range(start, end);
         let leaves: Vec<&DomLocation> = range.leaves().collect();
         // We'll iterate through the leaves finding their closest structural node ancestor and
@@ -109,6 +130,37 @@ where
                 // Merge inline code nodes for clean up
                 self.merge_formatting_node_with_siblings(&insert_text_at);
             }
+        }
+    }
+
+    /// Split the top-most formatting ancestor of the leaf at `handle` in two,
+    /// at `offset` inside the leaf.
+    fn split_formatting_ancestor(&mut self, handle: &DomHandle, offset: usize) {
+        let dom = &mut self.state.dom;
+        let depth = dom
+            .find_structure_ancestor(handle)
+            .map_or(0, |ancestor| ancestor.depth())
+            + 1;
+        if handle.depth() <= depth {
+            // The leaf is not inside a formatting node
+            return;
+        }
+        let ancestor = handle.sub_handle_up_to(depth);
+        let mut right = dom.split_sub_tree_from(handle, offset, depth);
+        right.remove_nodes_matching(&|node| {
+            node.is_container_node() && node.text_len() == 0
+        });
+        let right = right.into_document_node();
+        if right.text_len() == 0 {
+            return;
+        }
+        // The split removes the ancestor if nothing is left in it
+        let left_remains =
+            offset > 0 || handle.raw()[depth..].iter().any(|index| *index > 0);
+        if left_remains {
+            dom.insert_at(&ancestor.next_sibling(), right);
+        } else {
+            dom.insert_at(&ancestor, right);
         }
     }
 
@@ -373,5 +425,34 @@ mod test {
         model.inline_code();
         model.replace_text("code".into());
         assert_eq!(tx(&model), "<strong>bold</strong><code>code|</code>");
+    }
+
+    #[test]
+    fn inline_code_inside_a_formatting_node_stays_in_place() {
+        // Used to give "<u>u{v</u><code>ab}|c</code>": the inline code was
+        // added after the whole formatting node instead of where the
+        // selection was.
+        let mut model = cm("<u>u{abc}|v</u>");
+        model.inline_code();
+        assert_eq!(tx(&model), "<u>u</u><code>{abc}|</code><u>v</u>");
+
+        // Used to give "<code>a{bc</code><u>u}|v</u>"
+        let mut model = cm("<u>u<b>{abc}|</b>v</u>");
+        model.inline_code();
+        assert_eq!(tx(&model), "<u>u</u><code>{abc}|</code><u>v</u>");
+
+        // Used to give "<u>u<b>x</b>{e</u><code>abc}|d</code>"
+        let mut model = cm("<u>u<b>x{abc</b>d}|e</u>");
+        model.inline_code();
+        assert_eq!(tx(&model), "<u>u<b>x</b></u><code>{abcd}|</code><u>e</u>");
+    }
+
+    #[test]
+    fn inline_code_over_an_emoji_in_nested_formatting_nodes() {
+        // Used to panic: "index out of bounds or not on char boundary",
+        // as the selection was left pointing at the wrong text
+        let mut model = cm("<u>u<b>{🙂}|</b></u>");
+        model.inline_code();
+        assert_eq!(tx(&model), "<u>u</u><code>{🙂}|</code>");
     }
 }
