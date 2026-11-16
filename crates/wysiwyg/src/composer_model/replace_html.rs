@@ -23,10 +23,6 @@ where
         new_html: S,
         external_source: HtmlSource,
     ) -> ComposerUpdate<S> {
-        self.push_state_to_history();
-        if self.has_selection() {
-            self.do_replace_text(S::default());
-        }
         // Remove meta tags from the HTML which caused errors in html5ever
         let meta_regex = Regex::new(r"<meta[^>]*>").unwrap();
         let mut cleaned_html = meta_regex
@@ -39,16 +35,25 @@ where
             cleaned_html = b_regex.replace(&cleaned_html, "$1").to_string();
         }
 
-        let result =
-            parse_from_source(&cleaned_html.to_string(), external_source);
+        // HTML we cannot parse (e.g. an unsupported tag from a Matrix source)
+        // is not inserted, and leaves the model untouched.
+        let Ok(dom) = parse_from_source(&cleaned_html, external_source) else {
+            return ComposerUpdate::keep();
+        };
+        let DomNode::Container(doc) = dom.into_document_node() else {
+            return ComposerUpdate::keep();
+        };
+        let new_children = doc.take_children();
 
-        let doc_node = result.unwrap().into_document_node();
+        self.push_state_to_history();
+        if self.has_selection() {
+            self.do_replace_text(S::default());
+        }
         let (start, end) = self.safe_selection();
         let range = self.state.dom.find_range(start, end);
 
         // We should only have 1 dom node, so add the children under a paragraph to take advantage of the exisitng
         // insert_node_at_cursor api and then delete the paragraph node promoting it's the children up a level.
-        let new_children = doc_node.into_container().unwrap().take_children();
         let child_count = new_children.len();
         let p = DomNode::Container(ContainerNode::new_paragraph(new_children));
 
@@ -58,14 +63,16 @@ where
             &self.state.dom.parent(&handle).handle(),
         );
 
-        // Track the index of the last inserted node for placing the cursor
-        let last_index = handle.index_in_parent() + child_count - 1;
-        let last_handle = handle.parent_handle().child_handle(last_index);
-        let location = self.state.dom.location_for_node(&last_handle);
+        // Place the cursor after the last inserted node, if there was one
+        if child_count > 0 {
+            let last_index = handle.index_in_parent() + child_count - 1;
+            let last_handle = handle.parent_handle().child_handle(last_index);
+            let location = self.state.dom.location_for_node(&last_handle);
 
-        self.state.start =
-            Location::from(location.position + location.length - 1);
-        self.state.end = self.state.start;
+            self.state.start =
+                Location::from(location.position + location.length - 1);
+            self.state.end = self.state.start;
+        }
         // add a trailing space in cases when we do not have a next sibling
         self.create_update_replace_all()
     }
@@ -77,7 +84,7 @@ mod test {
     use crate::dom::parser::{
         GOOGLE_DOC_HTML_PASTEBOARD, MS_DOC_HTML_PASTEBOARD,
     };
-    use crate::tests::testutils_composer_model::cm;
+    use crate::tests::testutils_composer_model::{cm, tx};
 
     #[test]
     fn test_replace_html_strips_meta_tags_google_docs() {
@@ -201,6 +208,22 @@ mod test {
         let html = model.get_content_as_html();
         let html_str = html.to_string();
         assert_eq!(html_str, "<p>hello</p><p>list item</p>");
+    }
+
+    #[test]
+    fn test_replace_html_with_unparseable_html_does_nothing() {
+        // Used to panic on the parse error.
+        let mut model = cm("Hello{world}|test");
+        let _ = model.replace_html("<h1>h</h1>".into(), HtmlSource::Matrix);
+        assert_eq!(tx(&model), "Hello{world}|test");
+    }
+
+    #[test]
+    fn test_replace_html_with_empty_html_does_nothing() {
+        // Used to panic placing the cursor after the (missing) last node.
+        let mut model = cm("|");
+        let _ = model.replace_html("".into(), HtmlSource::Matrix);
+        assert_eq!(tx(&model), "|");
     }
 }
 
