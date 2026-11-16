@@ -527,3 +527,16 @@ fn several_new_lines_inside_block_node_then_text() {
     model.replace_text_in("o".into(), 4, 4);
     assert_eq!(tx(&model), "<blockquote><p>Ok</p></blockquote><p>o|</p>");
 }
+
+#[test]
+fn pressing_enter_with_everything_selected() {
+    // Used to panic: the new line was added using a range that had been
+    // computed before the selection was deleted.
+    let mut model = cm("{abc}|");
+    model.enter();
+    assert_eq!(tx(&model), "<p>&nbsp;</p><p>&nbsp;|</p>");
+
+    let mut model = cm("<p>{abc</p><p>def}|</p>");
+    model.enter();
+    assert_eq!(tx(&model), "<p>&nbsp;</p><p>&nbsp;|</p>");
+}

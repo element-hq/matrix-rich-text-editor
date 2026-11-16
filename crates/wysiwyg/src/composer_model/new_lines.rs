@@ -39,6 +39,8 @@ where
         // If the selection covered several characters, remove them first
         if range.is_selection() {
             self.do_replace_text(S::default());
+            // The range is stale now: start again from the collapsed cursor
+            return self.do_enter();
         }
 
         let block_location = range.deepest_block_node(None).expect(
