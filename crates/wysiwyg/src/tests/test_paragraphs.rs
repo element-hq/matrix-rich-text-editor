@@ -527,3 +527,31 @@ fn several_new_lines_inside_block_node_then_text() {
     model.replace_text_in("o".into(), 4, 4);
     assert_eq!(tx(&model), "<blockquote><p>Ok</p></blockquote><p>o|</p>");
 }
+
+#[test]
+fn quote_and_code_block_on_a_paragraph_keep_it_in_place() {
+    // Used to give "<p>a</p><p>c|</p><blockquote><p>b</p></blockquote>
+    // <p>d</p>": with a block before and at least two after, the new quote
+    // was inserted one block too far.
+    let mut model = cm("<p>a</p><p>b|</p><p>c</p><p>d</p>");
+    model.quote();
+    assert_eq!(
+        tx(&model),
+        "<p>a</p><blockquote><p>b|</p></blockquote><p>c</p><p>d</p>"
+    );
+
+    let mut model = cm("<p>a</p><p>b|</p><p>c</p><p>d</p>");
+    model.code_block();
+    assert_eq!(
+        tx(&model),
+        "<p>a</p><pre><code>b|</code></pre><p>c</p><p>d</p>"
+    );
+
+    let mut model = cm("<ul><li>a</li><li>b|</li><li>c</li><li>d</li></ul>");
+    model.quote();
+    assert_eq!(
+        tx(&model),
+        "<ul><li>a</li><li><blockquote><p>b|</p></blockquote></li>\
+        <li>c</li><li>d</li></ul>"
+    );
+}
