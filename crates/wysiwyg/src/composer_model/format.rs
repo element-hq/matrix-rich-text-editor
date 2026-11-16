@@ -89,6 +89,11 @@ where
     }
 
     pub(crate) fn apply_pending_formats(&mut self, start: usize, end: usize) {
+        if start == end {
+            // Nothing was inserted (e.g. this was a deletion), so there is
+            // nothing to format: keep the formats pending for the next text.
+            return;
+        }
         // Reverse to pop and apply in expected order.
         self.state.toggled_format_types.reverse();
         while let Some(format) = self.state.toggled_format_types.pop() {
