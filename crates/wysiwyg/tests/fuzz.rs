@@ -427,8 +427,9 @@ fn run(ops: &[Op]) -> Option<(String, String, String)> {
 /// pair. No client can put the cursor there, so the fuzzer does not either.
 fn splits_surrogate_pair(m: &Model, p: usize) -> bool {
     let dom = &m.state.dom;
-    // Looking up a range can itself panic if an earlier op corrupted the
-    // DOM; that is reported when an op trips over it, not here.
+    // Looking up a range inside a surrogate pair can itself panic (as it can
+    // if an earlier op corrupted the DOM, which is reported when an op trips
+    // over it, not here).
     panic::catch_unwind(AssertUnwindSafe(|| {
         dom.find_range(p, p).locations.iter().any(|loc| {
             let DomNode::Text(t) = dom.lookup_node(&loc.node_handle) else {
@@ -438,7 +439,7 @@ fn splits_surrogate_pair(m: &Model, p: usize) -> bool {
             unit.is_some_and(|u| (0xDC00..0xE000).contains(u))
         })
     }))
-    .unwrap_or(false)
+    .unwrap_or(true)
 }
 
 impl Op {
@@ -475,7 +476,7 @@ impl Op {
         | Op::DeleteIn(s, e) = self
         {
             for p in [s, e] {
-                *p -= splits_surrogate_pair(m, *p) as usize;
+                *p = p.saturating_sub(splits_surrogate_pair(m, *p) as usize);
             }
         }
     }
