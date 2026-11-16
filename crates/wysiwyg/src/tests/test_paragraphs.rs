@@ -527,3 +527,51 @@ fn several_new_lines_inside_block_node_then_text() {
     model.replace_text_in("o".into(), 4, 4);
     assert_eq!(tx(&model), "<blockquote><p>Ok</p></blockquote><p>o|</p>");
 }
+
+#[test]
+fn typing_over_selection_from_start_of_block_into_next_block() {
+    // The typed text used to be lost: the block it was written into was
+    // then deleted for being covered by the selection.
+    let mut model = cm("<p>{a</p><p>b}|c</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<p>x|c</p>");
+
+    let mut model = cm("<p>z</p><p>{<b>a</b>b</p><p>c</p><p>d}|e</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<p>z</p><p><b>x|</b>e</p>");
+
+    let mut model = cm("<p>{a</p><p>b}|</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<p>x|</p>");
+
+    let mut model = cm("{a<br />}|b");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<p>x|b</p>");
+}
+
+#[test]
+fn typing_over_selection_from_start_of_nested_block_into_next_block() {
+    // These used to panic.
+    let mut model = cm("<ul><li>{a</li><li>b</li></ul><p>c}|d</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<ul><li>x|d</li></ul>");
+
+    let mut model = cm("<blockquote><p>{a</p></blockquote><p>b}|c</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<blockquote><p>x|c</p></blockquote>");
+
+    let mut model = cm("<pre><code>{a</code></pre><p>b}|c</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<pre><code>x|c</code></pre>");
+
+    let mut model = cm("<p>{a</p><ul><li>b}|c</li></ul>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<p>x|c</p>");
+}
+
+#[test]
+fn typing_over_selection_starting_with_block_without_text() {
+    let mut model = cm("<p>{@room</p><p>b}|c</p>");
+    model.replace_text(utf16("x"));
+    assert_eq!(tx(&model), "<p>x|c</p>");
+}

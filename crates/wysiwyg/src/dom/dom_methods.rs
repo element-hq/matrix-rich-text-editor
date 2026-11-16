@@ -149,6 +149,11 @@ where
         if let Some(leaf_handle) = self.first_leaf_handle_at_location(start) {
             self.remove_list_item_child_paragraph_if_needed(&leaf_handle);
         }
+        // The new text may have been added as a node of its own, next to
+        // another text node
+        if let Some(leaf_handle) = self.first_leaf_handle_at_location(start) {
+            self.merge_text_nodes_around(&leaf_handle);
+        }
 
         #[cfg(any(test, feature = "assert-invariants"))]
         self.assert_invariants();
@@ -505,6 +510,8 @@ where
     ) -> DomActionList<S> {
         let mut action_list = DomActionList::default();
         let mut first_text_node = true;
+        // The text node the new text was written into, if any
+        let mut new_text_handle: Option<DomHandle> = None;
 
         for loc in range.locations.iter() {
             let mut node = self.lookup_node_mut(&loc.node_handle);
@@ -532,11 +539,17 @@ where
                                     _ => panic!("A block node that can't contain inline nodes was selected, text can't be added to it."),
                                 }
                             }
-                        } else if !loc.is_empty() && loc.is_covered() {
+                        } else if !loc.is_empty()
+                            && loc.is_covered()
+                            && !new_text_handle.as_ref().is_some_and(|h| {
+                                loc.node_handle.is_ancestor_of(h)
+                            })
+                        {
+                            // A covered block is deleted, unless the new
+                            // text was written into one of its leaves.
                             action_list.push(DomAction::remove_node(
                                 loc.node_handle.clone(),
                             ));
-                            first_text_node = false;
                         } else if !first_text_node
                             && matches!(loc.kind, Paragraph)
                         {
@@ -616,6 +629,9 @@ where
                         // and replace with the new content
                         if first_text_node {
                             new_data.push(new_text.deref());
+                            if !new_text.is_empty() {
+                                new_text_handle = Some(loc.node_handle.clone());
+                            }
                         }
 
                         new_data.push(&old_data[loc.end_offset..]);
