@@ -28,7 +28,7 @@ use std::sync::Mutex;
 
 use widestring::Utf16String;
 use wysiwyg::{
-    ComposerModel, ComposerUpdate, HtmlSource, Location, MenuAction,
+    ComposerModel, ComposerUpdate, DomNode, HtmlSource, Location, MenuAction,
     SuggestionPattern,
 };
 
@@ -416,6 +416,38 @@ fn run(ops: &[Op]) -> Option<(String, String, String)> {
     })
 }
 
+/// Whether text offset `p` falls between the two halves of a surrogate
+/// pair. No client can put the cursor there, so the fuzzer does not either.
+fn splits_surrogate_pair(m: &Model, p: usize) -> bool {
+    let dom = &m.state.dom;
+    // Looking up a range can itself panic if an earlier op corrupted the
+    // DOM; that is reported when an op trips over it, not here.
+    panic::catch_unwind(AssertUnwindSafe(|| {
+        dom.find_range(p, p).locations.iter().any(|loc| {
+            let DomNode::Text(t) = dom.lookup_node(&loc.node_handle) else {
+                return false;
+            };
+            let unit = t.data().as_slice().get(loc.start_offset);
+            unit.is_some_and(|u| (0xDC00..0xE000).contains(u))
+        })
+    }))
+    .unwrap_or(false)
+}
+
+impl Op {
+    /// Move any offsets in this op off the middle of a surrogate pair.
+    fn snap(&mut self, m: &Model) {
+        if let Op::Select(s, e)
+        | Op::ReplaceTextIn(_, s, e)
+        | Op::DeleteIn(s, e) = self
+        {
+            for p in [s, e] {
+                *p -= splits_surrogate_pair(m, *p) as usize;
+            }
+        }
+    }
+}
+
 /// Greedily drop ops while the panic site stays the same.
 fn minimise(mut ops: Vec<Op>, site: &str) -> Vec<Op> {
     let mut i = 0;
@@ -469,11 +501,12 @@ fn fuzz() {
         let mut sugg = None;
         let mut ops = Vec::new();
         for i in 0..1 + rng.below(max_ops) {
-            let op = if i == 0 && rng.below(2) == 0 {
+            let mut op = if i == 0 && rng.below(2) == 0 {
                 Op::SetHtml(html(&mut rng))
             } else {
                 random_op(&mut rng, m.state.dom.text_len())
             };
+            op.snap(&m);
             // A panicking op is recorded and then rolled back, so that it
             // does not hide whatever the rest of the case would have found.
             let before = (m.clone(), sugg.clone());
