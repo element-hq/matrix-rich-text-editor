@@ -17,6 +17,11 @@ where
         start: Location,
         end: Location,
     ) -> ComposerUpdate<S> {
+        // Offsets past the end of the text are not valid positions: most of
+        // the model assumes the selection is within the text.
+        let len = self.state.dom.text_len();
+        let clamp = |l: Location| Location::from(usize::from(l).min(len));
+        let (start, end) = (clamp(start), clamp(end));
         if self.state.start == start && self.state.end == end {
             return ComposerUpdate::keep();
         }
