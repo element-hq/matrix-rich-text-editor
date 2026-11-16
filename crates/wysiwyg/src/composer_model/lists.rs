@@ -424,6 +424,27 @@ where
             list_items_after_removed_ones.insert(0, child);
         }
 
+        // Whatever follows the List inside its ListItem comes after the removed ListItems
+        // too, so it has to move with them.
+        let parent_list_item_handle = parent_handle.parent_handle();
+        let parent_list_item_child_count = self
+            .state
+            .dom
+            .lookup_container(&parent_list_item_handle)
+            .children()
+            .len();
+        let mut nodes_after_list = Vec::new();
+        for i in (parent_handle.index_in_parent() + 1
+            ..parent_list_item_child_count)
+            .rev()
+        {
+            let child = self
+                .state
+                .dom
+                .remove(&parent_list_item_handle.child_handle(i));
+            nodes_after_list.insert(0, child);
+        }
+
         let list_became_empty =
             self.state.dom.lookup_container(&parent_handle).is_empty();
         if list_became_empty {
@@ -431,7 +452,9 @@ where
             self.state.dom.remove(&parent_handle);
         }
 
-        if !list_items_after_removed_ones.is_empty() {
+        if !list_items_after_removed_ones.is_empty()
+            || !nodes_after_list.is_empty()
+        {
             // If the internal List didn't become empty, we need to move the remaining
             // second half of it into a List inside last removed ListItem.
             // Example case:
@@ -459,9 +482,13 @@ where
                 let paragraph = DomNode::new_paragraph(children);
                 container.append_child(paragraph);
             }
-            let new_list =
-                DomNode::new_list(list_type, list_items_after_removed_ones);
-            container.append_child(new_list);
+            if !list_items_after_removed_ones.is_empty() {
+                let new_list =
+                    DomNode::new_list(list_type, list_items_after_removed_ones);
+                container.append_child(new_list);
+            }
+            // The nodes that followed the List go to the same ListItem, after that
+            container.append_children(nodes_after_list);
             removed_list_items.push(last_removed_list_item);
         }
 

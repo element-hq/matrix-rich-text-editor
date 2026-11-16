@@ -598,3 +598,13 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn unindent_keeps_what_follows_the_nested_list_after_the_item() {
+    // Used to give "<ol><li><p>b</p><p>x|</p></li><li>c</li></ol>": the
+    // paragraph after the nested list ended up before the un-indented item.
+    let mut model =
+        cm("<ol><li><p>b</p><ol><li>c|</li></ol><p>x</p></li></ol>");
+    model.unindent();
+    assert_eq!(tx(&model), "<ol><li>b</li><li><p>c|</p><p>x</p></li></ol>");
+}
