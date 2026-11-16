@@ -119,9 +119,20 @@ where
         offset: usize,
         direction: &Direction,
     ) -> Option<char> {
-        self.data()
-            .chars()
-            .nth(direction.get_index_from_cursor(offset))
+        // The offset is in code units, so it is not the index of the char
+        let mut start = 0;
+        for char in self.data().chars() {
+            let end = start + self.data().char_len(&char);
+            let found = match direction {
+                Direction::Forwards => start == offset,
+                Direction::Backwards => end == offset,
+            };
+            if found {
+                return Some(char);
+            }
+            start = end;
+        }
+        None
     }
 
     /// This gets the character type at the cursor offset, considering the
@@ -133,6 +144,17 @@ where
     ) -> Option<CharType> {
         let char = self.char_at_offset(offset, direction);
         char.map(get_char_type)
+    }
+
+    /// The length in code units of the character at the cursor offset,
+    /// considering the direction of travel
+    pub fn char_len_at_offset(
+        &self,
+        offset: usize,
+        direction: &Direction,
+    ) -> Option<usize> {
+        let char = self.char_at_offset(offset, direction);
+        char.map(|c| self.data().char_len(&c))
     }
 
     /// When moving through a node, the cursor counts as inside the node
