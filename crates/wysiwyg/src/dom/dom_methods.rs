@@ -670,7 +670,13 @@ where
         // If we've ended up with adjacent text nodes, merge them
         if let Some(first_location) = replaced_range.locations.first() {
             let first_handle = &first_location.node_handle;
-            if deleted_handles.contains(first_handle) {
+            if deleted_handles
+                .iter()
+                .any(|h| h.is_ancestor_of(first_handle))
+            {
+                // The first node in the range went away with one of its
+                // ancestors: there is nothing left around it to merge.
+            } else if deleted_handles.contains(first_handle) {
                 // If we deleted the first node in the range ...
                 if first_handle.index_in_parent() > 0 {
                     // ... and that was not the first in its parent,
