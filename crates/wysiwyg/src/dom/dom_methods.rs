@@ -67,26 +67,37 @@ where
             (Vec::new(), Vec::new())
         // We check for the first starting_link_handle if any
         // Because for links we always add the text to the previous or next sibling
-        } else if let Some(starting_link) =
-            first_shrinkable_link_node_handle(&range)
-        {
+        } else if first_shrinkable_link_node_handle(&range).is_some() {
             // We replace and delete as normal with an empty string on the current range
             let deleted_handles =
                 self.replace_multiple_nodes(&range, "".into());
             let mut moved_handles = Vec::new();
-            // Then we set the new text value in the previous/next sibling node (or create a new one if none exists)
-            if starting_link.is_start() {
-                self.set_new_text_in_next_sibling_node(
-                    starting_link.node_handle.clone(),
-                    new_text,
-                );
-            } else {
-                // `leading_is_end` case, as filtered by `first_shrinkable_link_node_handle`
+            // Then we set the new text value in the next sibling node of the link that now
+            // ends where the selection was, or the previous one of the link that now starts
+            // there (or create a new one if none exists). Deleting the selection may have
+            // moved the links (siblings removed, ancestors or the links themselves merged),
+            // so they have to be looked up again.
+            let range = self.find_range(start, start);
+            let link_handle = |at_end: bool| {
+                let is_at_edge = |loc: &&DomLocation| {
+                    loc.kind == DomNodeKind::Link
+                        && loc.start_offset
+                            == if at_end { loc.length } else { 0 }
+                };
+                let loc = range.locations.iter().find(is_at_edge);
+                loc.map(|loc| loc.node_handle.clone())
+            };
+            if let Some(link_handle) = link_handle(true) {
+                self.set_new_text_in_next_sibling_node(link_handle, new_text);
+            } else if let Some(link_handle) = link_handle(false) {
                 self.set_new_text_in_prev_sibling_node(
-                    starting_link.node_handle.clone(),
+                    link_handle.clone(),
                     new_text,
                 );
-                moved_handles.push(starting_link.node_handle.clone());
+                moved_handles.push(link_handle);
+            } else if !new_text.is_empty() {
+                // The selection was between two links that are now merged
+                self.replace_multiple_nodes(&range, new_text);
             }
 
             (deleted_handles, moved_handles)
