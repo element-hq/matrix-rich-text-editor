@@ -434,7 +434,26 @@ where
                     &first_leave.node_handle,
                 )
             {
-                self.join_nodes_in_container(&ancestor_handle);
+                // (Unless it went with a block that was deleted.)
+                if !deleted_handles
+                    .iter()
+                    .any(|d| d.is_ancestor_of(&ancestor_handle))
+                {
+                    // Blocks deleted before it have moved it up
+                    let mut path = ancestor_handle.raw().clone();
+                    for i in 0..path.len() {
+                        path[i] -= deleted_handles
+                            .iter()
+                            .map(|d| d.raw())
+                            .filter(|d| {
+                                d.len() == i + 1
+                                    && d[..i] == path[..i]
+                                    && d[i] < path[i]
+                            })
+                            .count();
+                    }
+                    self.join_nodes_in_container(&DomHandle::from_raw(path));
+                }
             }
         }
 
@@ -505,13 +524,48 @@ where
     ) -> DomActionList<S> {
         let mut action_list = DomActionList::default();
         let mut first_text_node = true;
+        // (Not `range.start()` and `end()`: those only look at leaves, and
+        // an empty block has none.)
+        let root = range.locations.iter().find(|l| l.node_handle.is_root());
+        let (start, end) = root.map_or((0, 0), |l| {
+            (
+                l.start_offset.min(l.end_offset),
+                l.start_offset.max(l.end_offset),
+            )
+        });
+
+        // The blocks wholly inside the selection (neither end of it is in
+        // them) are deleted, with all they hold.
+        let inside: Vec<&DomHandle> = range
+            .locations
+            .iter()
+            .filter(|l| {
+                l.kind.is_block_kind()
+                    && l.kind != Generic
+                    && l.position > start
+                    && l.position + l.length <= end
+            })
+            .map(|l| &l.node_handle)
+            .collect();
+        let is_inside = |handle: &DomHandle| {
+            inside.iter().any(|h| h.is_ancestor_of(handle))
+        };
 
         for loc in range.locations.iter() {
+            if is_inside(&loc.node_handle) {
+                continue;
+            }
             let mut node = self.lookup_node_mut(&loc.node_handle);
             match &mut node {
                 DomNode::Container(container_node) => {
                     if loc.kind.is_block_kind() && loc.kind != Generic {
-                        if loc.is_empty() && loc.relative_position() == After {
+                        if inside.contains(&&loc.node_handle) {
+                            action_list.push(DomAction::remove_node(
+                                loc.node_handle.clone(),
+                            ));
+                        } else if loc.is_empty()
+                            && loc.relative_position() == After
+                        {
                             // Empty block node
                             if new_text.is_empty() {
                                 action_list.push(DomAction::remove_node(
@@ -531,26 +585,6 @@ where
                                     },
                                     _ => panic!("A block node that can't contain inline nodes was selected, text can't be added to it."),
                                 }
-                            }
-                        } else if !loc.is_empty() && loc.is_covered() {
-                            action_list.push(DomAction::remove_node(
-                                loc.node_handle.clone(),
-                            ));
-                            first_text_node = false;
-                        } else if !first_text_node
-                            && matches!(loc.kind, Paragraph)
-                        {
-                            // FIXME: Workaround for empty paragraphs. This is a hack, but trying to fix the root cause
-                            // breaks lots of other behaviours resulting in dozens of failing tests.
-                            let has_no_children = self
-                                .lookup_container(&loc.node_handle)
-                                .children()
-                                .is_empty();
-                            if has_no_children {
-                                action_list.push(DomAction::remove_node(
-                                    loc.node_handle.clone(),
-                                ));
-                                first_text_node = false;
                             }
                         }
                     } else if container_node.is_formatting_node()
@@ -638,12 +672,40 @@ where
 
         // If text wasn't added in any previous iteration, just append it next to the last leaf
         if first_text_node && !new_text.is_empty() {
-            if let Some(last_leaf) = range.leaves().last() {
+            if let Some(last_leaf) =
+                range.leaves().filter(|l| !is_inside(&l.node_handle)).last()
+            {
                 action_list.push(DomAction::add_node(
                     last_leaf.node_handle.parent_handle(),
                     last_leaf.node_handle.index_in_parent() + 1,
                     DomNode::new_text(new_text),
                 ));
+            } else if let Some(block) =
+                sorted_locations.iter().rev().find(|l| {
+                    l.kind.is_block_kind()
+                        && l.kind != Generic
+                        && l.position <= start
+                        && start < l.position + l.length
+                })
+            {
+                // No leaf of the range is left to take it (it only crosses
+                // block boundaries, or what it held is deleted): the text
+                // goes where the range starts, which is after what its
+                // block holds, if it holds anything.
+                let DomNode::Container(block_node) =
+                    self.lookup_node_mut(&block.node_handle)
+                else {
+                    unreachable!("A block is a container")
+                };
+                let index = match block.start_offset {
+                    0 => 0,
+                    _ => block_node.children().len(),
+                };
+                block_node.insert_child(index, DomNode::new_text(new_text));
+                merge_if_adjacent_text_nodes(
+                    block_node,
+                    index.saturating_sub(1),
+                );
             } else if let Some(block_node) = sorted_locations
                 .into_iter()
                 .rev()

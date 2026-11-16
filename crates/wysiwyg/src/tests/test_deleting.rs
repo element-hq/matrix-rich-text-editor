@@ -1031,3 +1031,76 @@ fn backspacing_paragraphs_with_nbsp_at_start() {
     model.backspace();
     assert_eq!(tx(&model), "<p>|test</p>")
 }
+
+#[test]
+fn replacing_a_selection_across_empty_blocks() {
+    // What is left is the block the selection starts in, holding what was
+    // before the selection and what was after it: every block in between
+    // goes, empty or not. (Empty ones used to be skipped, or to be taken
+    // for the block to keep, and some of these panicked.)
+    // Each is the model, then what backspace and typing "X" make of it.
+    let cases = [
+        ("<p>{</p><p></p><p>a}|b</p>", "<p>|b</p>", "<p>X|b</p>"),
+        ("<p>{</p><p></p><p>a}|</p>", "<p>&nbsp;|</p>", "<p>X|</p>"),
+        ("<p>x{</p><p></p><p>a}|b</p>", "<p>x|b</p>", "<p>xX|b</p>"),
+        ("<p>a{</p><p></p><p>}|b</p>", "<p>a|b</p>", "<p>aX|b</p>"),
+        ("<p>a{</p><p></p><p>}|</p>", "<p>a|</p>", "<p>aX|</p>"),
+        ("<p>{</p><p></p><p>}|</p>", "<p>&nbsp;|</p>", "<p>X|</p>"),
+        (
+            "<p>a</p><p>{</p><p></p><p>}|</p><p>b</p>",
+            "<p>a</p><p>&nbsp;|</p><p>b</p>",
+            "<p>a</p><p>X|</p><p>b</p>",
+        ),
+        (
+            "<ul><li>{</li><li></li></ul><p>a}|</p>",
+            "<ul><li>|</li></ul>",
+            "<ul><li>X|</li></ul>",
+        ),
+        (
+            "<ul><li>{</li><li></li><li>a}|b</li></ul>",
+            "<ul><li>|b</li></ul>",
+            "<ul><li>X|b</li></ul>",
+        ),
+        (
+            "<ul><li>a{</li><li></li></ul><p>}|b</p>",
+            "<ul><li>a|b</li></ul>",
+            "<ul><li>aX|b</li></ul>",
+        ),
+        (
+            "<ul><li>a</li><li>{</li></ul><p>}|b</p>",
+            "<ul><li>a</li><li>|b</li></ul>",
+            "<ul><li>a</li><li>X|b</li></ul>",
+        ),
+        (
+            "<blockquote><p>{</p><p></p></blockquote><p>a}|</p>",
+            "<blockquote><p>&nbsp;|</p></blockquote>",
+            "<blockquote><p>X|</p></blockquote>",
+        ),
+        (
+            "<p>{</p><ul><li></li><li>a}|b</li></ul>",
+            "<p>|b</p>",
+            "<p>X|b</p>",
+        ),
+        (
+            "<p>a{</p><ul><li></li><li>}|b</li></ul>",
+            "<p>a|b</p>",
+            "<p>aX|b</p>",
+        ),
+        // (The typed text used to go into the first text node of the
+        // range, here one in a block that is deleted.)
+        (
+            "<ul><li>q{</li><li><code>x</code></li></ul><p>}|r</p>",
+            "<ul><li>q|r</li></ul>",
+            "<ul><li>qX|r</li></ul>",
+        ),
+    ];
+    for (input, deleted, typed) in cases {
+        let mut model = cm(input);
+        model.backspace();
+        assert_eq!(tx(&model), deleted, "backspace in {input}");
+
+        let mut model = cm(input);
+        model.replace_text("X".into());
+        assert_eq!(tx(&model), typed, "typing in {input}");
+    }
+}
