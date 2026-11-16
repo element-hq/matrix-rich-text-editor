@@ -144,7 +144,9 @@ fn entering_with_entire_selection_in_one_node_deletes_list() {
 fn entering_with_entire_selection_across_multiple_nodes_deletes_list() {
     let mut model = cm("<ol><li>{abcd</li><li>}|</li></ol>");
     model.enter();
-    assert_eq!(tx(&model), "<p>&nbsp;|</p>");
+    // Deleting the selection leaves an empty document, and a new line in an
+    // empty document gives two paragraphs.
+    assert_eq!(tx(&model), "<p>&nbsp;</p><p>&nbsp;|</p>");
 }
 
 #[test]
@@ -597,4 +599,16 @@ fn backspacing_an_indented_list_item_with_siblings_doesnt_remove_parent_list_ite
 
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
+}
+
+#[test]
+fn entering_with_selection_across_list_items_keeps_list_valid() {
+    // Used to leave a paragraph directly inside the list.
+    let mut model = cm("<ul><li>{a</li><li>}|b</li></ul>");
+    model.enter();
+    assert_eq!(tx(&model), "<ul><li>|</li><li>b</li></ul>");
+
+    let mut model = cm("<ul><li>a{</li><li>b}|</li></ul>");
+    model.enter();
+    assert_eq!(tx(&model), "<ul><li>a</li><li>|</li></ul>");
 }
