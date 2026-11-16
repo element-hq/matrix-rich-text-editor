@@ -956,3 +956,16 @@ fn set_link_on_text_after_a_formatting_node_keeps_the_text_in_place() {
         "<p><del>s</del><a href=\"https://matrix.org\"><u>{ub}|</u></a></p>"
     );
 }
+
+#[test]
+fn set_link_ending_inside_nested_formatting_nodes() {
+    // Used to panic: "Handle is invalid: it refers to a child index (1)
+    // which is too large for the number of children in this node"
+    let mut model = cm("a{b<del>c<u>d}|e</u></del>");
+    model.set_link(utf16("https://matrix.org"), vec![]);
+    assert_eq!(
+        tx(&model),
+        "a<a href=\"https://matrix.org\">{b<del>c<u>d}|</u></del></a>\
+        <del><u>e</u></del>"
+    );
+}
