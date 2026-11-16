@@ -147,16 +147,17 @@ where
         if self.state.start == self.state.end {
             let (s, _) = self.safe_selection();
             // If we're dealing with complex graphemes, this value might not be 1
-            let next_char_len =
-                if let Some((text_node, loc)) = self.get_selected_text_node() {
-                    let selection_start_in_str = s - loc.position;
-                    Self::find_next_char_len(
-                        selection_start_in_str,
-                        text_node.data(),
-                    ) as isize
-                } else {
-                    1
-                };
+            let next_char_len = if let Some((text_node, loc)) =
+                self.get_selected_text_node(&Direction::Forwards)
+            {
+                let selection_start_in_str = s - loc.position;
+                Self::find_next_char_len(
+                    selection_start_in_str,
+                    text_node.data(),
+                ) as isize
+            } else {
+                1
+            };
             // Go forward `next_char_len` positions from the current location
             self.state.end += next_char_len;
         }
@@ -407,16 +408,17 @@ where
         if self.state.start == self.state.end {
             let (_, e) = self.safe_selection();
             // If we're dealing with complex graphemes, this value might not be 1
-            let prev_char_len =
-                if let Some((text_node, loc)) = self.get_selected_text_node() {
-                    let selection_end_in_str = e - loc.position;
-                    Self::find_previous_char_len(
-                        selection_end_in_str,
-                        text_node.data(),
-                    ) as isize
-                } else {
-                    1
-                };
+            let prev_char_len = if let Some((text_node, loc)) =
+                self.get_selected_text_node(&Direction::Backwards)
+            {
+                let selection_end_in_str = e - loc.position;
+                Self::find_previous_char_len(
+                    selection_end_in_str,
+                    text_node.data(),
+                ) as isize
+            } else {
+                1
+            };
             // Go back `prev_char_len` positions from the current location
             self.state.start -= prev_char_len;
         }
@@ -424,21 +426,30 @@ where
         self.do_replace_text(S::default())
     }
 
-    /// Returns the currently selected TextNode if it's the only leaf node and the cursor is inside
-    /// its range.
-    fn get_selected_text_node(&self) -> Option<(&TextNode<S>, DomLocation)> {
+    /// Returns the TextNode holding the character next to the cursor in the given direction,
+    /// if there is one. With the cursor between two leaves, that is the leaf on that side.
+    fn get_selected_text_node(
+        &self,
+        direction: &Direction,
+    ) -> Option<(&TextNode<S>, DomLocation)> {
         let (s, e) = self.safe_selection();
+        if s != e {
+            return None;
+        }
         let range = self.state.dom.find_range(s, e);
         let leaves: Vec<&DomLocation> = range.leaves().collect();
-        if s == e && leaves.len() == 1 {
-            let leaf = leaves[0];
-            if let DomNode::Text(text_node) =
-                self.state.dom.lookup_node(&leaf.node_handle)
-            {
-                return Some((text_node, leaf.clone()));
+        leaves.into_iter().find_map(|leaf| {
+            let has_char_in_direction = match direction {
+                Direction::Forwards => leaf.start_offset < leaf.length,
+                Direction::Backwards => leaf.start_offset > 0,
+            };
+            match self.state.dom.lookup_node(&leaf.node_handle) {
+                DomNode::Text(text_node) if has_char_in_direction => {
+                    Some((text_node, leaf.clone()))
+                }
+                _ => None,
             }
-        }
-        None
+        })
     }
 
     /// Returns the length of the [char] for the current [S] string encoding before the given [pos].

@@ -1031,3 +1031,17 @@ fn backspacing_paragraphs_with_nbsp_at_start() {
     model.backspace();
     assert_eq!(tx(&model), "<p>|test</p>")
 }
+
+#[test]
+fn backspace_and_delete_emoji_next_to_another_node() {
+    // With the cursor at the edge of a text node, these used to remove a
+    // single code unit, i.e. half of the emoji, and panicked: "index out of
+    // bounds or not on char boundary".
+    let mut model = cm("<b>🙂|</b>a");
+    model.backspace();
+    assert_eq!(tx(&model), "|a");
+
+    let mut model = cm("a|<b>🙂</b>");
+    model.delete();
+    assert_eq!(tx(&model), "a|");
+}
