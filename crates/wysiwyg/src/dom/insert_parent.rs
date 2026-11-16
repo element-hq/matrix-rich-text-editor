@@ -28,6 +28,15 @@ where
         if !matches!(new_node, DomNode::Container(_)) {
             panic!("New node is not a container");
         }
+        // Nodes that the range only touches (it starts where they end, or
+        // ends where they start) are not part of it.
+        let range = Range::new(
+            range
+                .locations
+                .iter()
+                .filter(|l| l.start_offset != l.end_offset || l.length == 0),
+        );
+
         // Check if the range has shared ancestry. The new parent node should not contain
         // these nodes, so filter them from the range.
         let shared_depth = range.shared_parent_outside().depth();
