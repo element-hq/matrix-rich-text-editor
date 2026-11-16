@@ -153,19 +153,21 @@ where
         if self.document().is_empty() {
             self.document_handle().child_handle(0)
         } else {
-            let mut insert_at_handle = if parent_handle.is_root() {
-                start_handle.sub_handle_up_to(parent_handle.depth() + 1)
+            let depth = if parent_handle.is_root() {
+                parent_handle.depth() + 1
             } else {
-                start_handle.sub_handle_up_to(parent_handle.depth())
+                parent_handle.depth()
             };
+            let insert_at_handle = start_handle.sub_handle_up_to(depth);
 
-            if insert_at_handle.index_in_parent() > 0
-                && self.next_sibling(&insert_at_handle).is_some()
-            {
-                insert_at_handle = insert_at_handle.next_sibling();
+            // If the extracted nodes were not the first ones of the node that
+            // was at this handle, what came before them is still there: the
+            // block goes after it.
+            if start_handle.raw()[depth..].iter().any(|index| *index > 0) {
+                insert_at_handle.next_sibling()
+            } else {
+                insert_at_handle
             }
-
-            insert_at_handle
         }
     }
 }
