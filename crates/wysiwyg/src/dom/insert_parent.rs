@@ -5,6 +5,7 @@
 
 use crate::{DomHandle, DomNode, UnicodeString};
 
+use super::nodes::ContainerNode;
 use super::{Dom, Range};
 
 impl<S> Dom<S>
@@ -16,7 +17,7 @@ where
     pub fn insert_parent(
         &mut self,
         range: &Range,
-        mut new_node: DomNode<S>,
+        new_node: DomNode<S>,
     ) -> DomHandle {
         #[cfg(any(test, feature = "assert-invariants"))]
         self.assert_invariants();
@@ -25,9 +26,6 @@ where
             panic!("Cannot add a parent to an empty range");
         }
 
-        if !matches!(new_node, DomNode::Container(_)) {
-            panic!("New node is not a container");
-        }
         // Nodes that the range only touches (it starts where they end, or
         // ends where they start) are not part of it.
         let range = Range::new(
@@ -37,96 +35,90 @@ where
                 .filter(|l| l.start_offset != l.end_offset || l.length == 0),
         );
 
-        // Check if the range has shared ancestry. The new parent node should not contain
-        // these nodes, so filter them from the range.
-        let shared_depth = range.shared_parent_outside().depth();
-        let range = Range::new(range.locations_from_depth(shared_depth));
-
-        // Prepare the new parent node to have the selected range moved into it:
-        // - Set the new node's handle to the start of the range
-        // - Get the mutable container node to move the selected range into
-        let new_handle: DomHandle = range.node_handles().min().unwrap().clone();
+        // The new parent node goes inside the deepest node holding the whole
+        // range, unless that node is completely covered.
+        let shared_parent = range.shared_parent_outside();
+        let depth = shared_parent.depth();
         let first_leaf = range.leaves().min().unwrap();
-        let new_handle = if first_leaf.is_covered()
-            || (first_leaf.ends_inside() && first_leaf.is_end())
-        {
-            new_handle
+        let last_leaf = range.leaves().max().unwrap();
+
+        // Split the shared parent at the end of the range and then at its
+        // start, so that the range is made of whole children of it.
+        let after = self.split_children_from(
+            &last_leaf.node_handle,
+            last_leaf.end_offset,
+            depth,
+        );
+        let starts_with_parent = first_leaf.start_offset == 0
+            && first_leaf.node_handle.raw()[depth..]
+                .iter()
+                .all(|i| *i == 0);
+        let inside = if starts_with_parent {
+            // Nothing to split (and splitting would remove the parent, as
+            // it would be left empty)
+            self.lookup_container_mut(&shared_parent).remove_children()
         } else {
-            // If the first leaf in the range is completely covered, then leave space
-            // for the first part of the existing split leaf.
-            new_handle.next_sibling()
+            self.split_children_from(
+                &first_leaf.node_handle,
+                first_leaf.start_offset,
+                depth,
+            )
         };
-        new_node.set_handle(new_handle.clone());
-        let container = new_node.as_container_mut().unwrap();
 
-        // Remove the selected nodes from the DOM and add them to the new container
-        for location in range.locations.iter().rev() {
-            let handle = &location.node_handle;
-
-            // If the location is covered, it can be moved to the container.
-            if location.is_covered() {
-                // Ignore children of covered nodes which are moved in their parents.
-                if handle.depth() != shared_depth + 1 {
-                    continue;
-                }
-                let node = self.remove(handle);
-                container.insert_child(0, node);
-            }
-            // ... else handle partially covered nodes
-            else {
-                // If the a leaf is partially included at the start of the range, split the tree
-                // and add the end part to the new container.
-                // If the leaf is partially included at the end of the range, split the tree and
-                // add the start part to the new container.
-                if !self.lookup_node(handle).is_leaf() {
-                    continue;
-                }
-
-                let offset = if location.ends_inside() {
-                    location.end_offset
-                } else {
-                    location.start_offset
-                };
-
-                let (left, left_handle, right, right_handle) =
-                    self.split_new_sub_trees(handle, offset, shared_depth);
-
-                // `outers` are the new subtrees outside the given range
-                let mut outers = if location.ends_inside() {
-                    vec![right.lookup_node(&right_handle).clone()]
-                } else {
-                    vec![left.lookup_node(&left_handle).clone()]
-                };
-
-                // `inner` is the new subtree within the given range
-                let mut inner =
-                    if location.ends_inside() { left } else { right };
-
-                // If the range both starts and ends inside this leaf then
-                // split the leaf again. We've already split the end off so
-                // now we need to split the start.
-                if location.ends_inside() && location.starts_inside() {
-                    let offset = location.start_offset;
-                    let before = inner
-                        .document_mut()
-                        .slice_before(offset)
-                        .take_children();
-                    outers.splice(0..0, before);
-                }
-                let inner_children = inner.into_container().take_children();
-
-                container.insert_children(0, inner_children);
-                self.replace(handle, outers);
-            }
-        }
-
-        // Insert the new container into the DOM
-        let inserted = self.insert_at(&new_handle, new_node);
+        // Move the range into the new node, and insert it between what
+        // comes before and after the range.
+        let new_node = new_node
+            .into_container()
+            .expect("New node is not a container");
+        let new_node =
+            DomNode::Container(new_node.clone_with_new_children(inside));
+        let parent = self.lookup_container_mut(&shared_parent);
+        let inserted = shared_parent.child_handle(parent.children().len());
+        parent.append_child(new_node);
+        parent.append_children(after);
 
         #[cfg(any(test, feature = "assert-invariants"))]
         self.assert_invariants();
 
         inserted
+    }
+
+    /// Split the node at depth `depth` above the leaf at `handle`, at
+    /// `offset` inside the leaf, and return its children from there on.
+    fn split_children_from(
+        &mut self,
+        handle: &DomHandle,
+        offset: usize,
+        depth: usize,
+    ) -> Vec<DomNode<S>> {
+        let mut right = self.split_sub_tree_from(handle, offset, depth);
+        // Splitting at the end of a node leaves an empty copy of it at the
+        // start of the right part: remove the top-most one.
+        let mut first = DomHandle::root().child_handle(0);
+        while right.contains(&first) {
+            let node = right.lookup_node(&first);
+            if !node.is_container_node() {
+                break;
+            }
+            if node.text_len() == 0 {
+                if !node.is_block_node() {
+                    right.remove(&first);
+                }
+                break;
+            }
+            first = first.child_handle(0);
+        }
+        right.into_container().take_children()
+    }
+
+    fn lookup_container_mut(
+        &mut self,
+        handle: &DomHandle,
+    ) -> &mut ContainerNode<S> {
+        match self.lookup_node_mut(handle) {
+            DomNode::Container(container) => container,
+            _ => panic!("Node is not a container"),
+        }
     }
 }
 
