@@ -935,3 +935,18 @@ fn set_links_in_list_then_add_list_item() {
         "<ul><li><a href=\"https://matrix.org\">test</a></li><li>|</li></ul>"
     );
 }
+
+#[test]
+fn enter_at_the_end_of_a_link_with_formatting_does_not_continue_the_link() {
+    // Used to give "...<p><a href="https://matrix.org"><del>|</del></a></p>":
+    // the new line was still in the link (and a later set_link over it
+    // panicked).
+    let mut model =
+        cm("<p><a href=\"https://matrix.org\"><del>a|</del></a></p>");
+    model.enter();
+    assert_eq!(
+        tx(&model),
+        "<p><a href=\"https://matrix.org\"><del>a</del></a></p>\
+        <p><del>|</del></p>"
+    );
+}

@@ -327,7 +327,8 @@ fn pre_process_sub_tree<S: UnicodeString>(sub_tree: &mut Dom<S>) {
     // Links are a special case, if they we split them at their last index, they'll generate empty
     // link nodes in the sub_tree, but we don't want that as links shouldn't grow when we add text
     // to its last index
-    sub_tree.remove_nodes_matching(&|n| n.kind() == Link && n.is_empty());
+    // (a link holding only empty formatting nodes counts as empty too)
+    sub_tree.remove_nodes_matching(&|n| n.kind() == Link && n.text_len() == 0);
 }
 
 #[cfg(test)]
