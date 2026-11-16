@@ -355,3 +355,12 @@ fn multiple_leading_and_trailing_whitespace_are_all_replaced_with_nbsp() {
 fn replace_text(model: &mut ComposerModel<Utf16String>, new_text: &str) {
     model.replace_text(utf16(new_text));
 }
+
+#[test]
+fn deleting_a_selection_of_empty_list_items_and_an_empty_paragraph() {
+    // Used to panic: "Handle is invalid: it refers to a child index which
+    // is too large for the number of children in this node."
+    let mut model = cm("<ul><li>{</li><li></li></ul><p>}|</p>");
+    model.backspace();
+    assert_eq!(tx(&model), "<ul><li>|</li></ul>");
+}

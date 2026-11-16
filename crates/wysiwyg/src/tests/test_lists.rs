@@ -144,9 +144,7 @@ fn entering_with_entire_selection_in_one_node_deletes_list() {
 fn entering_with_entire_selection_across_multiple_nodes_deletes_list() {
     let mut model = cm("<ol><li>{abcd</li><li>}|</li></ol>");
     model.enter();
-    // Deleting the selection leaves an empty document, and a new line in an
-    // empty document gives two paragraphs.
-    assert_eq!(tx(&model), "<p>&nbsp;</p><p>&nbsp;|</p>");
+    assert_eq!(tx(&model), "<p>&nbsp;|</p>");
 }
 
 #[test]
