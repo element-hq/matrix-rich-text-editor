@@ -307,15 +307,6 @@ impl Range {
             .filter(|l| !(l.relative_position() == DomLocationPosition::Before))
     }
 
-    pub fn locations_from_depth(
-        &self,
-        depth: usize,
-    ) -> impl Iterator<Item = &DomLocation> {
-        self.locations
-            .iter()
-            .filter(move |l| l.node_handle.depth() > depth)
-    }
-
     pub fn top_level_locations(&self) -> impl Iterator<Item = &DomLocation> {
         self.locations_at_depth(self.top_level_depth())
     }

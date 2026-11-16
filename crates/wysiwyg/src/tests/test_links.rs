@@ -935,3 +935,20 @@ fn set_links_in_list_then_add_list_item() {
         "<ul><li><a href=\"https://matrix.org\">test</a></li><li>|</li></ul>"
     );
 }
+
+#[test]
+fn set_link_from_a_list_into_the_following_paragraph() {
+    // Used to put the paragraph's link directly inside the list (next to
+    // the list item), which then made get_content_as_markdown panic.
+    let mut model = cm("<ol><li>{a</li></ol><p>b}|</p>");
+    model.set_link(utf16("https://matrix.org"), vec![]);
+    assert_eq!(
+        tx(&model),
+        "<ol><li><a href=\"https://matrix.org\">{a</a></li></ol>\
+        <p><a href=\"https://matrix.org\">b}|</a></p>"
+    );
+    assert_eq!(
+        model.get_content_as_markdown(),
+        utf16("1. [a](<https://matrix.org>)\n[b](<https://matrix.org>)")
+    );
+}

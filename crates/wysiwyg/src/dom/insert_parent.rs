@@ -29,9 +29,16 @@ where
             panic!("New node is not a container");
         }
         // Check if the range has shared ancestry. The new parent node should not contain
-        // these nodes, so filter them from the range.
-        let shared_depth = range.shared_parent_outside().depth();
-        let range = Range::new(range.locations_from_depth(shared_depth));
+        // these nodes, so filter them from the range, along with any node outside the
+        // shared parent that the range only touches (e.g. the end of the previous block).
+        let shared_parent = range.shared_parent_outside();
+        let shared_depth = shared_parent.depth();
+        let range = Range::new(
+            range
+                .locations
+                .iter()
+                .filter(|l| shared_parent.is_ancestor_of(&l.node_handle)),
+        );
 
         // Prepare the new parent node to have the selected range moved into it:
         // - Set the new node's handle to the start of the range
