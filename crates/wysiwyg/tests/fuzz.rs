@@ -410,7 +410,11 @@ fn run(ops: &[Op]) -> Option<(String, String, String)> {
         let mut m = Model::new();
         let mut sugg = None;
         for op in ops {
-            apply(&mut m, op, &mut sugg, &mut log);
+            // Offsets were snapped when the op was generated, but dropping
+            // earlier ops while minimising changes the text under them.
+            let mut op = op.clone();
+            op.snap(&m);
+            apply(&mut m, &op, &mut sugg, &mut log);
             check(&m, &mut log);
         }
     });
