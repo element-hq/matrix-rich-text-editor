@@ -95,7 +95,7 @@ where
                     new_text,
                 );
                 moved_handles.push(link_handle);
-            } else {
+            } else if !new_text.is_empty() {
                 // The selection was between two links that are now merged
                 self.replace_multiple_nodes(&range, new_text);
             }
